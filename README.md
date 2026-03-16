@@ -1,4 +1,4 @@
-# Vibes - a vibe coding stack made for coding agents
+# VibesOS - a GUI for Claude Code that makes unhackable mini-apps
 
 ![Vibes](assets/vibes.png)
 
