@@ -397,6 +397,77 @@ async function getWorkersSubdomain(accountId: string, apiToken: string): Promise
   return res.result.subdomain;
 }
 
+// --- Delete Worker ---
+
+async function deleteWorker(accountId: string, apiToken: string, scriptName: string): Promise<boolean> {
+  const res = await cfApi(
+    `/accounts/${accountId}/workers/scripts/${scriptName}`,
+    apiToken,
+    { method: 'DELETE' },
+  );
+  // Success or 10007 ("script not found") are both fine
+  return res.success || res.errors?.[0]?.code === 10007;
+}
+
+// --- Delete D1 Database ---
+
+async function deleteD1Database(accountId: string, apiToken: string, databaseId: string): Promise<boolean> {
+  const res = await cfApi(
+    `/accounts/${accountId}/d1/database/${databaseId}`,
+    apiToken,
+    { method: 'DELETE' },
+  );
+  return res.success || res.errors?.[0]?.code === 7003; // 7003 = not found
+}
+
+// --- Reset Connect (delete Workers, D1 databases, clear all sync state) ---
+
+export async function resetConnect(
+  accountId: string,
+  apiToken: string,
+  stage: string,
+  connectInfo?: { d1BackendId?: string; d1DashboardId?: string },
+): Promise<{ deleted: string[]; errors: string[] }> {
+  const cloudBackendName = `fireproof-cloud-${stage}`;
+  const dashboardName = `fireproof-dashboard-${stage}`;
+
+  const deleted: string[] = [];
+  const errors: string[] = [];
+
+  // Delete Workers (clears Durable Object state)
+  for (const name of [cloudBackendName, dashboardName]) {
+    try {
+      const ok = await deleteWorker(accountId, apiToken, name);
+      if (ok) deleted.push(name);
+      else errors.push(`${name}: delete returned false`);
+    } catch (e) {
+      errors.push(`${name}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  // Delete D1 databases (clears corrupted CRDT metadata)
+  if (connectInfo?.d1BackendId) {
+    try {
+      const ok = await deleteD1Database(accountId, apiToken, connectInfo.d1BackendId);
+      if (ok) deleted.push(`d1:${connectInfo.d1BackendId}`);
+      else errors.push(`d1-backend: delete returned false`);
+    } catch (e) {
+      errors.push(`d1-backend: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  if (connectInfo?.d1DashboardId) {
+    try {
+      const ok = await deleteD1Database(accountId, apiToken, connectInfo.d1DashboardId);
+      if (ok) deleted.push(`d1:${connectInfo.d1DashboardId}`);
+      else errors.push(`d1-dashboard: delete returned false`);
+    } catch (e) {
+      errors.push(`d1-dashboard: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  return { deleted, errors };
+}
+
 // --- Main Provisioning Function ---
 
 export async function provisionConnect(params: ProvisionParams): Promise<ConnectInfo> {

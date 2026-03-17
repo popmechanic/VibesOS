@@ -198,7 +198,7 @@ Then `npm run test:e2e:server` and open `http://test-app.local:3000`.
 |------|---------------|
 | `bundles/fireproof-oidc-bridge.js` | ES module bridge wrapping OIDC auth -- sync status, ledger routing, invite redemption |
 | `deploy-api/` | Deploy API Worker — accepts HTML + OIDC token, deploys to CF Workers server-side, provisions Connect |
-| `deploy-api/src/connect.ts` | Server-side Connect provisioning via CF REST API (R2, D1, Workers) |
+| `deploy-api/src/connect.ts` | Server-side Connect provisioning + reset via CF REST API (R2, D1, Workers) |
 | `deploy-api/src/crypto.ts` | Web Crypto token generation for Connect (EC P-256, base58, JWT certs) |
 | `deploy-api/bundles/` | Pre-built cloud-backend + dashboard Worker bundles (text modules) |
 | `scripts/lib/cli-auth.js` | CLI OIDC authentication with localhost callback, token caching |
@@ -212,6 +212,37 @@ Then `npm run test:e2e:server` and open `http://test-app.local:3000`.
 
 All apps deploy to Cloudflare Workers via the shared Deploy API Worker — no wrangler or user CF tokens needed. Connect is provisioned server-side on first app deploy. Connect metadata is stored in the Deploy API's KV (`subdomain:{name}` records). Local registry at `~/.vibes/deployments.json` caches Connect URLs from the Deploy API response.
 
+### Resetting Connect State
+
+**Diagnosis:** If a user reports `missing block` or `failed to advance head` errors in the browser console:
+
+1. **Try incognito/private window first.** If errors disappear → local IndexedDB is corrupted, clear site data.
+2. **If errors persist in incognito** → the corruption is server-side. Changing the Fireproof database name in `useFireproofClerk()` will NOT help — Connect routes by app subdomain, not database name.
+3. **Server-side reset is needed** (see below).
+
+**Before resetting, warn the user:** This destroys ALL synced data for the app across all devices. The data cannot be recovered. Every user on every device must also clear their browser's site data for the app URL afterward (IndexedDB holds stale CRDT blocks that will re-corrupt the fresh state).
+
+**Reset command:**
+
+```bash
+VIBES_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
+TOKEN=$(bun --input-type=module -e "
+import { getAccessToken } from '$VIBES_ROOT/scripts/lib/cli-auth.js';
+import { OIDC_AUTHORITY, OIDC_CLIENT_ID } from '$VIBES_ROOT/scripts/lib/auth-constants.js';
+const tokens = await getAccessToken({ authority: OIDC_AUTHORITY, clientId: OIDC_CLIENT_ID });
+process.stdout.write(tokens.accessToken);
+")
+curl -s -X POST "https://vibes-deploy-api.marcus-e.workers.dev/admin/reset-connect/<app-name>" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**What it deletes:** Cloud-backend Worker (Durable Object sync state), dashboard Worker, and both D1 databases (CRDT metadata + dashboard data). The KV record's `connectProvisioned` flag is cleared so the next deploy re-provisions all four resources fresh. Only the app owner can call this endpoint.
+
+**After resetting:**
+1. Redeploy the app from the desktop app or CLI
+2. **Every user** must clear site data for the app URL (desktop: DevTools → Application → Clear site data; mobile Safari: Settings → Safari → Advanced → Website Data → find and delete the domain)
+3. Verify in an incognito window first — if errors persist, the reset did not fully take effect
+
 ## Adding or Removing Skills
 
 Update `README.md` (Skills section).
@@ -221,6 +252,17 @@ Update `README.md` (Skills section).
 Update version in **both** files — they must match:
 1. `.claude-plugin/plugin.json` — `"name": "vibes"`
 2. `.claude-plugin/marketplace.json` — top-level `"name": "VibesOS"`, plugin entry `"name": "vibes"`
+
+## Terminal Workflow: Always Reassemble Before Deploy
+
+When editing `app.jsx` outside the editor (e.g., fixing bugs via terminal), **always reassemble before telling the user to deploy**:
+
+```bash
+VIBES_ROOT="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
+bun "$VIBES_ROOT/scripts/assemble.js" app.jsx index.html
+```
+
+The editor's deploy button auto-reassembles, but if the user deploys immediately after you edit `app.jsx` (before the editor picks it up), they'll deploy stale HTML. The rule: **never edit `app.jsx` and say "redeploy" without running assembly in between.**
 
 ## Commit Messages
 

@@ -8,7 +8,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env, DeployRequest, DeployResponse, JWTPayload, SubdomainRecord, ConnectInfo } from "./types";
-import { provisionConnect } from "./connect";
+import { provisionConnect, resetConnect } from "./connect";
 import CLOUD_BACKEND_BUNDLE from "../bundles/cloud-backend.txt";
 import DASHBOARD_BUNDLE from "../bundles/dashboard.txt";
 import {
@@ -916,6 +916,46 @@ app.post("/admin/migrate-dashboard-domains", async (c) => {
   }
 
   return c.json({ migrated: results.length, results });
+});
+
+// Admin: reset Connect state for an app (deletes cloud-backend + dashboard Workers,
+// clears connectProvisioned flag so next deploy re-provisions fresh)
+app.post("/admin/reset-connect/:name", async (c) => {
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return c.json({ error: "auth required" }, 401);
+  const payload = await verifyJWT(authHeader.slice(7), c.env.OIDC_ISSUER, c.env.POCKET_ID);
+  if (!payload) return c.json({ error: "invalid token" }, 401);
+
+  const name = c.req.param("name");
+  const kvKey = `subdomain:${name}`;
+  const raw = await c.env.REGISTRY_KV.get(kvKey);
+  if (!raw) return c.json({ error: "app not found" }, 404);
+
+  const record = JSON.parse(raw) as SubdomainRecord;
+
+  // Only the app owner can reset
+  if (record.owner !== payload.sub) {
+    return c.json({ error: "not owner" }, 403);
+  }
+
+  // Delete Workers (Durable Object state) and D1 databases (corrupted CRDT metadata)
+  const result = await resetConnect(c.env.CF_ACCOUNT_ID, c.env.CF_API_TOKEN, name, {
+    d1BackendId: record.connect?.d1BackendId,
+    d1DashboardId: record.connect?.d1DashboardId,
+  });
+
+  // Clear the connectProvisioned flag so next deploy re-provisions
+  record.connectProvisioned = false;
+  delete record.connect;
+  await c.env.REGISTRY_KV.put(kvKey, JSON.stringify(record));
+
+  return c.json({
+    ok: true,
+    app: name,
+    deleted: result.deleted,
+    errors: result.errors,
+    message: "Connect state cleared. Next deploy will re-provision fresh.",
+  });
 });
 
 // Invite endpoint — add user to app's Pocket ID group

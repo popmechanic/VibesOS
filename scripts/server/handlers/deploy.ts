@@ -5,7 +5,7 @@
  * The CLI just sends files and reads back Connect URLs from the response.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { getAccessToken } from '../../lib/cli-auth.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID, DEPLOY_API_URL } from '../../lib/auth-constants.js';
@@ -64,6 +64,15 @@ export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, t
   }
   const appJsxPath = join(appDir, 'app.jsx');
   const indexHtmlPath = join(appDir, 'index.html');
+
+  // Check for stale index.html before reassembly (diagnostic logging)
+  if (existsSync(appJsxPath) && existsSync(indexHtmlPath)) {
+    const jsxMtime = statSync(appJsxPath).mtimeMs;
+    const htmlMtime = statSync(indexHtmlPath).mtimeMs;
+    if (jsxMtime > htmlMtime) {
+      console.warn(`[Deploy] app.jsx is newer than index.html by ${Math.round((jsxMtime - htmlMtime) / 1000)}s — reassembling`);
+    }
+  }
 
   const assembleResult = await runBunScript(
     join(ctx.projectRoot, 'scripts/assemble.js'),
