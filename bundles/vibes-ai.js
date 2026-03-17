@@ -132,7 +132,59 @@
       }
     }, []);
 
-    return { ask, answer, loading, error };
+    // Non-streaming callAI for one-shot requests
+    const callAI = React.useCallback(async (options) => {
+      const config = window.__VIBES_CONFIG__ || {};
+      const proxyUrl = config.aiProxyUrl;
+      if (!proxyUrl) {
+        const err = { code: "NOT_CONFIGURED", message: "AI proxy not configured" };
+        setError(err);
+        throw new Error(err.message);
+      }
+
+      const token = window.__VIBES_OIDC_TOKEN__;
+      if (!token) {
+        const err = { code: "AUTH_REQUIRED", message: "Sign in to use AI features" };
+        setError(err);
+        throw new Error(err.message);
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(proxyUrl + "/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token,
+          },
+          body: JSON.stringify({
+            model: options.model || "anthropic/claude-sonnet-4.6",
+            messages: options.messages,
+            ...options,
+          }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          const err = { code: "API_ERROR", message: errData.error?.message || "API error: " + response.status };
+          setError(err);
+          throw err;
+        }
+
+        return await response.json();
+      } catch (err) {
+        if (!err.code) setError({ code: "NETWORK_ERROR", message: err.message || "Network error" });
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+
+    const clearError = React.useCallback(function () { setError(null); }, []);
+
+    return { ask, answer, callAI, loading, error, clearError };
   }
 
   // Also expose the non-streaming callAI for backward compat
