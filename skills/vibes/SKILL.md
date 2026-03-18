@@ -137,6 +137,10 @@ Do not default to ambient mood generators, floating orbs, or meditation apps unl
 - **Fireproof for data** - Use `useFireproofClerk` for database + sync
 - **Auto-detect Connect** - Template handles auth (via Pocket ID) automatically
 - **Tailwind for styling** - Mobile-first, responsive design
+- **Minimize external dependencies** - Implement dynamic components (autocomplete, drag-and-drop, modals) yourself instead of pulling in libraries. Every esm.sh dependency risks the React singleton problem and adds load time. Only use external packages when the functionality is truly essential.
+- **Stable database name** - Never change the database name passed to `useFireproofClerk()` between iterations. Renaming it means the user loses all their data.
+- **Data must be visible** - Every document type the app saves must be browseable in the UI. Lists should be on the main page, not hidden behind navigation. List items should be clickable for details. Never build a form that saves data the user can't find.
+- **Keep code concise** - Shorter files mean faster iteration in the editor. Don't pad with comments or verbose abstractions.
 
 ## Generation Process
 
