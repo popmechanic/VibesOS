@@ -2,19 +2,38 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // PUT /upload — upload a DMG (requires auth header)
+    // PUT /upload — upload a file (requires auth header)
     if (request.method === "PUT" && url.pathname === "/upload") {
       const auth = request.headers.get("X-Upload-Key");
       if (!auth || auth !== env.UPLOAD_KEY) {
         return new Response("Unauthorized", { status: 401 });
       }
       const filename = url.searchParams.get("filename") || "VibesOS.dmg";
+      const contentType = detectContentType(filename);
       await env.DMG_BUCKET.put(filename, request.body, {
-        httpMetadata: { contentType: "application/x-apple-diskimage" },
+        httpMetadata: { contentType },
       });
-      // Also store as "latest" pointer
-      await env.DMG_BUCKET.put("latest.txt", filename);
+      // Store "latest" pointer only for DMG files (not update artifacts)
+      if (filename.endsWith(".dmg")) {
+        await env.DMG_BUCKET.put("latest.txt", filename);
+      }
       return new Response(`Uploaded ${filename}`, { status: 200 });
+    }
+
+    // GET /updates/* — serve update artifacts from R2
+    if (url.pathname.startsWith("/updates/")) {
+      const key = url.pathname.slice(1); // strip leading slash → "updates/..."
+      const obj = await env.DMG_BUCKET.get(key);
+      if (!obj) {
+        return new Response("Not found", { status: 404 });
+      }
+      const contentType = detectContentType(key);
+      return new Response(obj.body, {
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=60",
+        },
+      });
     }
 
     // GET / — redirect to DMG download (browser) or serve install script (curl)
@@ -22,14 +41,12 @@ export default {
     const isCurl = ua.includes("curl") || ua.includes("wget");
 
     if (isCurl) {
-      // CLI users still get the shell script
       return Response.redirect(
         "https://raw.githubusercontent.com/popmechanic/VibesOS/main/scripts/install.sh",
         302
       );
     }
 
-    // Browser users get the DMG
     const latestObj = await env.DMG_BUCKET.get("latest.txt");
     const filename = latestObj ? await latestObj.text() : "VibesOS.dmg";
     const dmg = await env.DMG_BUCKET.get(filename);
@@ -47,3 +64,10 @@ export default {
     });
   },
 };
+
+function detectContentType(filename) {
+  if (filename.endsWith(".json")) return "application/json";
+  if (filename.endsWith(".dmg")) return "application/x-apple-diskimage";
+  // .tar.zst, .patch, and other binary artifacts
+  return "application/octet-stream";
+}
