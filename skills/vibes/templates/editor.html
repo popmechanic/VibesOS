@@ -615,8 +615,8 @@
     }
     .account-overlay.active .account-panel { transform: translateX(0); }
     .account-header {
-      display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
-      padding-bottom: 1.5rem; border-bottom: 1px dashed #555;
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 0.75rem;
     }
     .account-avatar {
       width: 48px; height: 48px; border-radius: 50%; background: #333;
@@ -625,13 +625,14 @@
     .account-name { font-weight: 700; font-size: 1rem; color: #f0f0f0; }
     .account-email { font-size: 0.8125rem; color: #999; margin-top: 0.125rem; }
     .account-signout {
-      font-size: 0.75rem; color: var(--vibes-variant-red, #DA291C); cursor: pointer;
+      font-size: 0.75rem; color: #999; cursor: pointer;
       margin-top: 0.25rem; background: none; border: none; padding: 0; text-align: left;
     }
-    .account-signout:hover { text-decoration: underline; }
+    .account-signout:hover { color: var(--vibes-red); }
     .claude-account-section {
-      padding: 0.75rem 1rem;
-      border-top: 1px solid #333;
+      padding: 0 0 1rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #444;
     }
     .claude-account-label {
       font-size: 0.6875rem;
@@ -639,12 +640,12 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #999;
-      margin-bottom: 0.35rem;
+      margin-bottom: 0.25rem;
     }
     .claude-account-email {
-      font-size: 0.875rem;
-      color: #f0f0f0;
-      margin-bottom: 0.25rem;
+      font-size: 0.8125rem;
+      color: #999;
+      margin-bottom: 0.125rem;
     }
     .claude-account-signout {
       background: none;
@@ -654,7 +655,6 @@
       cursor: pointer;
       padding: 0;
       font-family: inherit;
-      text-decoration: underline;
     }
     .claude-account-signout:hover { color: var(--vibes-red); }
     .deploy-card {
