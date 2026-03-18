@@ -629,6 +629,34 @@
       margin-top: 0.25rem; background: none; border: none; padding: 0; text-align: left;
     }
     .account-signout:hover { text-decoration: underline; }
+    .claude-account-section {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid #333;
+    }
+    .claude-account-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #999;
+      margin-bottom: 0.35rem;
+    }
+    .claude-account-email {
+      font-size: 0.875rem;
+      color: #f0f0f0;
+      margin-bottom: 0.25rem;
+    }
+    .claude-account-signout {
+      background: none;
+      border: none;
+      color: #999;
+      font-size: 0.75rem;
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+      text-decoration: underline;
+    }
+    .claude-account-signout:hover { color: var(--vibes-red); }
     .deploy-card {
       background: #2a2a2a; border: 2px solid #444; border-radius: 10px;
       padding: 0.75rem 1rem; margin-bottom: 0.75rem;
@@ -2942,6 +2970,11 @@
         <button class="account-signout" onclick="signOut()">Sign out</button>
       </div>
     </div>
+    <div class="claude-account-section" id="claudeAccountSection">
+      <div class="claude-account-label">Claude Account</div>
+      <div class="claude-account-email" id="claudeAccountEmail">Loading...</div>
+      <button class="claude-account-signout" id="claudeSignOutBtn" onclick="claudeSignOut()" style="display:none">Sign out</button>
+    </div>
     <div class="gallery-title">Deployed Apps</div>
     <div id="accountDeploymentsEdit"><div style="color:#888;font-size:0.875rem;">Loading...</div></div>
     <button class="go-home-btn" onclick="goHome()">
@@ -3157,6 +3190,29 @@
     location.reload();
   }
 
+  function claudeSignOut() {
+    if (!confirm('Sign out of Claude? You will need to sign in again to use AI features.')) return;
+    const btn = document.getElementById('claudeSignOutBtn');
+    btn.disabled = true;
+    btn.textContent = 'Signing out...';
+    fetch('/editor/claude-logout', { method: 'POST' }).then(r => r.json()).then(data => {
+      if (!data.ok) {
+        alert('Failed to sign out: ' + (data.error || 'Unknown error'));
+        btn.disabled = false;
+        btn.textContent = 'Sign out';
+        return;
+      }
+      // In desktop mode, the app will show re-auth screen and reload.
+      // In CLI mode (no desktop), update the UI directly.
+      document.getElementById('claudeAccountEmail').textContent = 'Not signed in';
+      btn.style.display = 'none';
+    }).catch(err => {
+      alert('Failed to sign out: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = 'Sign out';
+    });
+  }
+
   function openDeployUrl(url) {
     window.open(url, '_blank');
   }
@@ -3338,6 +3394,20 @@
     }).catch(() => {
       document.getElementById('accountDeploymentsEdit').innerHTML =
         '<div style="color:#888;font-size:0.875rem;">Could not load deployments.</div>';
+    });
+    // Fetch Claude auth status
+    fetch('/editor/claude-auth').then(r => r.json()).then(data => {
+      const emailEl = document.getElementById('claudeAccountEmail');
+      const btnEl = document.getElementById('claudeSignOutBtn');
+      if (data.loggedIn && data.email) {
+        emailEl.textContent = data.email;
+        btnEl.style.display = '';
+      } else {
+        emailEl.textContent = 'Not signed in';
+        btnEl.style.display = 'none';
+      }
+    }).catch(() => {
+      document.getElementById('claudeAccountEmail').textContent = 'Not signed in';
     });
     backdrop.style.display = 'block';
     panel.style.display = 'block';
