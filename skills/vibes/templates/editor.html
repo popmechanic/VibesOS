@@ -3791,7 +3791,16 @@
         // Server tells us which theme was selected (including auto-selection)
         currentThemeId = msg.themeId;
         // Store theme background for preview overlay placeholder
-        if (msg.themeBackground) window.__selectedThemeBg = msg.themeBackground;
+        if (msg.themeBackground) {
+          window.__selectedThemeBg = msg.themeBackground;
+          // Update overlay background if it's currently showing (generation in progress)
+          if (isGenerating) {
+            const overlay = document.getElementById('previewOverlay');
+            if (overlay && !overlay.classList.contains('hidden')) {
+              overlay.style.background = msg.themeBackground;
+            }
+          }
+        }
         const theme = themes.find(t => t.id === msg.themeId);
         const name = theme ? theme.name : msg.themeName || msg.themeId;
         // Update the dropdown to reflect the selected theme
