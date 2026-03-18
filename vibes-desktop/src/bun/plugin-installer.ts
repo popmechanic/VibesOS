@@ -16,9 +16,9 @@ export interface PluginInstallResult {
 }
 
 /**
- * Compute a content fingerprint of key plugin files.
- * Uses a fast hash of files that change when code changes — not the entire
- * tree (which includes node_modules, build artifacts, etc.)
+ * Compute a content fingerprint of all runtime code files.
+ * Walks key directories and hashes every .ts, .js, .html, .css, and .json file,
+ * skipping node_modules, build artifacts, and env files.
  */
 function computePluginFingerprint(pluginRoot: string): string {
 	const hash = createHash("sha256");
@@ -27,24 +27,43 @@ function computePluginFingerprint(pluginRoot: string): string {
 	const pluginJson = join(pluginRoot, ".claude-plugin", "plugin.json");
 	if (existsSync(pluginJson)) hash.update(readFileSync(pluginJson));
 
-	// Hash key code files that affect runtime behavior
-	const keyFiles = [
-		"scripts/server/handlers/deploy.ts",
-		"scripts/lib/claude-subprocess.js",
-		"scripts/deploy-cloudflare.js",
-		"scripts/assemble.js",
-		"scripts/server.ts",
-	];
+	// Walk key directories that contain runtime code
+	const keyDirs = ["scripts", "skills", "bundles", "source-templates", "components"];
+	const codeExts = new Set([".ts", ".js", ".html", ".css", ".json", ".txt", ".md"]);
+	const skipDirs = new Set(["node_modules", ".wrangler", "build", "artifacts"]);
 
-	for (const rel of keyFiles) {
-		const p = join(pluginRoot, rel);
-		if (existsSync(p)) {
-			hash.update(rel); // include path so renames are detected
-			hash.update(readFileSync(p));
-		}
+	for (const dir of keyDirs) {
+		const dirPath = join(pluginRoot, dir);
+		if (!existsSync(dirPath)) continue;
+		walkDir(dirPath, pluginRoot, hash, codeExts, skipDirs);
 	}
 
 	return hash.digest("hex").slice(0, 16);
+}
+
+function walkDir(
+	dir: string,
+	root: string,
+	hash: ReturnType<typeof createHash>,
+	exts: Set<string>,
+	skipDirs: Set<string>,
+): void {
+	let entries;
+	try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+	for (const entry of entries) {
+		if (entry.name.startsWith(".")) continue;
+		const full = join(dir, entry.name);
+		if (entry.isDirectory()) {
+			if (!skipDirs.has(entry.name)) walkDir(full, root, hash, exts, skipDirs);
+		} else {
+			const ext = entry.name.slice(entry.name.lastIndexOf("."));
+			if (exts.has(ext)) {
+				const rel = full.slice(root.length + 1);
+				hash.update(rel);
+				hash.update(readFileSync(full));
+			}
+		}
+	}
 }
 
 /**
