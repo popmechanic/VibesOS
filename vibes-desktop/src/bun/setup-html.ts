@@ -13,8 +13,8 @@ export const SETUP_HTML = `<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VibesOS Setup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
@@ -753,6 +753,72 @@ export const SETUP_HTML = `<!DOCTYPE html>
             <div class="welcome-hint">Don't have an account? You'll be able to create one.</div>
           </div>
 
+          <!-- Update screen (shown when update available) -->
+          <div class="update-screen" id="update-screen" style="display: none;">
+            <div class="term-line visible">
+              <span class="line-prefix" style="color: var(--accent-teal);">↑</span>
+              <span class="line-content">Update available</span>
+            </div>
+            <div style="padding-left: 26px; margin-top: 8px;">
+              <div style="color: var(--text-muted); font-size: 12px;">
+                Current: <span id="update-current-version" style="color: var(--text-main);">—</span>
+              </div>
+              <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">
+                Available: <span id="update-new-version" style="color: var(--accent-teal);">—</span>
+              </div>
+            </div>
+            <div class="ascii-buttons" style="margin-top: 12px;">
+              <button class="ascii-btn" id="update-now-btn" style="display: inline-block;" onclick="fetch('http://localhost:3335/update-now').catch(function(){})">
+                <span class="btn-highlight">┌──────────────────────────────┐</span>
+                <br>
+                <span class="btn-highlight">│</span>  ▸ Update Now                 <span class="btn-highlight">│</span>
+                <br>
+                <span class="btn-highlight">└──────────────────────────────┘</span>
+              </button>
+              <button class="ascii-btn" id="update-skip-btn" style="display: inline-block;" onclick="fetch('http://localhost:3335/update-skip').catch(function(){})">
+                <span class="btn-highlight">┌─────────────┐</span>
+                <br>
+                <span class="btn-highlight">│</span>  ▸ Skip     <span class="btn-highlight">│</span>
+                <br>
+                <span class="btn-highlight">└─────────────┘</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Update progress (shown during download) -->
+          <div class="update-progress" id="update-progress" style="display: none;">
+            <div class="term-line visible">
+              <span class="line-prefix"><span class="term-spinner">|</span></span>
+              <span class="line-content" id="update-status-text">Downloading update...</span>
+            </div>
+            <div class="progress-container visible" style="display: block;">
+              <div class="progress-stats">
+                <span id="update-progress-label">Downloading...</span>
+                <span id="update-progress-pct">0%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="update-progress-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Update error -->
+          <div class="update-error" id="update-error" style="display: none;">
+            <div class="term-line step-line error visible">
+              <span class="line-prefix" style="color: var(--btn-close);">✗</span>
+              <span class="line-content" id="update-error-text" style="color: var(--btn-close);">Download failed</span>
+            </div>
+            <div class="ascii-buttons" style="margin-top: 8px;">
+              <button class="ascii-btn" id="update-error-skip-btn" style="display: inline-block;" onclick="fetch('http://localhost:3335/update-skip').catch(function(){})">
+                <span class="btn-highlight">┌──────────────────────────────┐</span>
+                <br>
+                <span class="btn-highlight">│</span>  ▸ Continue without updating  <span class="btn-highlight">│</span>
+                <br>
+                <span class="btn-highlight">└──────────────────────────────┘</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Prompt line (shows after completion) -->
           <div class="prompt-line" id="ready-prompt" style="display: none;">
             <span class="prompt-arrow">❯</span>
@@ -927,6 +993,55 @@ function hideWelcomeScreen() {
   // Restore step-auth and ascii-buttons (hidden by showWelcomeScreen)
   document.getElementById('step-auth').style.display = '';
   document.querySelector('.ascii-buttons').style.display = '';
+}
+
+function showUpdateScreen(currentVersion, newVersion) {
+  // Hide setup steps and other screens
+  document.getElementById('step-claude').style.display = 'none';
+  document.getElementById('step-plugin').style.display = 'none';
+  document.getElementById('step-auth').style.display = 'none';
+  document.querySelector('.ascii-buttons').style.display = 'none';
+  document.getElementById('welcome-screen').style.display = 'none';
+  document.getElementById('ready-prompt').style.display = 'none';
+
+  // Update banner text
+  var banner = document.querySelector('.term-body > .term-line.visible .line-content');
+  if (banner) banner.textContent = 'VibesOS — update available';
+
+  // Update title
+  var termTitle = document.querySelector('.term-title');
+  if (termTitle) termTitle.textContent = 'vibes — update';
+
+  // Set version numbers
+  document.getElementById('update-current-version').textContent = 'v' + currentVersion;
+  document.getElementById('update-new-version').textContent = 'v' + newVersion;
+
+  // Show update screen
+  document.getElementById('update-screen').style.display = 'block';
+}
+
+function showUpdateProgress(statusText) {
+  document.getElementById('update-screen').style.display = 'none';
+  document.getElementById('update-progress').style.display = 'block';
+  if (statusText) {
+    document.getElementById('update-status-text').textContent = statusText;
+  }
+}
+
+function updateUpdateProgress(progress) {
+  var pct = Math.min(Math.round(progress), 100);
+  document.getElementById('update-progress-fill').style.width = pct + '%';
+  document.getElementById('update-progress-pct').textContent = pct + '%';
+  if (pct >= 100) {
+    document.getElementById('update-progress-label').textContent = 'Applying...';
+  }
+}
+
+function showUpdateError(errorMsg) {
+  document.getElementById('update-screen').style.display = 'none';
+  document.getElementById('update-progress').style.display = 'none';
+  document.getElementById('update-error').style.display = 'block';
+  document.getElementById('update-error-text').textContent = errorMsg || 'Download failed — try again later';
 }
 </script>
 </body>
