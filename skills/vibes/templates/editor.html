@@ -2556,6 +2556,11 @@
           <button class="account-signout" onclick="signOut()">Sign out</button>
         </div>
       </div>
+      <div class="claude-account-section" id="claudeAccountSectionOverlay">
+        <div class="claude-account-label">Claude Account</div>
+        <div class="claude-account-email" id="claudeAccountEmailOverlay">Loading...</div>
+        <button class="claude-account-signout" id="claudeSignOutBtnOverlay" onclick="claudeSignOut()" style="display:none">Sign out</button>
+      </div>
       <div class="gallery-title">Deployed Apps</div>
       <div id="accountDeployments"><div style="color:#888;font-size:0.875rem;">Loading...</div></div>
     </div>
@@ -2795,6 +2800,11 @@
             <div class="account-email" id="accountEmailInline"></div>
             <button class="account-signout" onclick="signOut()">Sign out</button>
           </div>
+        </div>
+        <div class="claude-account-section" id="claudeAccountSectionInline">
+          <div class="claude-account-label">Claude Account</div>
+          <div class="claude-account-email" id="claudeAccountEmailInline">Loading...</div>
+          <button class="claude-account-signout" id="claudeSignOutBtnInline" onclick="claudeSignOut()" style="display:none">Sign out</button>
         </div>
         <div class="gallery-title">Deployed Apps</div>
         <div id="accountDeploymentsInline"><div style="color:#888;font-size:0.875rem;">Loading...</div></div>
@@ -3157,6 +3167,7 @@
       avatar.style.display = 'none';
     }
     overlay.classList.add('active');
+    fetchClaudeAuthStatus('Overlay');
     // Fetch deployments
     fetch('/editor/deployments').then(r => r.json()).then(deps => {
       const container = document.getElementById('accountDeployments');
@@ -3188,6 +3199,25 @@
     closeAccountPanel();
     await fetch('/editor/auth/logout', { method: 'POST' });
     location.reload();
+  }
+
+  function fetchClaudeAuthStatus(suffix) {
+    suffix = suffix || '';
+    fetch('/editor/claude-auth').then(r => r.json()).then(data => {
+      const emailEl = document.getElementById('claudeAccountEmail' + suffix);
+      const btnEl = document.getElementById('claudeSignOutBtn' + suffix);
+      if (!emailEl) return;
+      if (data.loggedIn && data.email) {
+        emailEl.textContent = data.email;
+        if (btnEl) btnEl.style.display = '';
+      } else {
+        emailEl.textContent = 'Not signed in';
+        if (btnEl) btnEl.style.display = 'none';
+      }
+    }).catch(() => {
+      const emailEl = document.getElementById('claudeAccountEmail' + suffix);
+      if (emailEl) emailEl.textContent = 'Not signed in';
+    });
   }
 
   function claudeSignOut() {
@@ -3295,6 +3325,7 @@
     const avatar = document.getElementById('accountAvatarInline');
     if (currentUser.picture) { avatar.src = currentUser.picture; avatar.style.display = ''; }
     else { avatar.style.display = 'none'; }
+    fetchClaudeAuthStatus('Inline');
     // Fetch deployments
     fetch('/editor/deployments').then(r => r.json()).then(deps => {
       const container = document.getElementById('accountDeploymentsInline');
@@ -3395,20 +3426,7 @@
       document.getElementById('accountDeploymentsEdit').innerHTML =
         '<div style="color:#888;font-size:0.875rem;">Could not load deployments.</div>';
     });
-    // Fetch Claude auth status
-    fetch('/editor/claude-auth').then(r => r.json()).then(data => {
-      const emailEl = document.getElementById('claudeAccountEmail');
-      const btnEl = document.getElementById('claudeSignOutBtn');
-      if (data.loggedIn && data.email) {
-        emailEl.textContent = data.email;
-        btnEl.style.display = '';
-      } else {
-        emailEl.textContent = 'Not signed in';
-        btnEl.style.display = 'none';
-      }
-    }).catch(() => {
-      document.getElementById('claudeAccountEmail').textContent = 'Not signed in';
-    });
+    fetchClaudeAuthStatus('');
     backdrop.style.display = 'block';
     panel.style.display = 'block';
     panel.style.animation = 'slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
