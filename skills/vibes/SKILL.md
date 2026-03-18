@@ -339,10 +339,6 @@ const { attach } = useFireproof("db", { attach: toCloud() });  // WRONG - old pa
 
 ---
 
-> **⚠️ DEPRECATED API:** Never use the old `useFireproof` with `toCloud()` pattern. See [references/DEPRECATED.md](references/DEPRECATED.md) for migration details if you encounter legacy code.
-
----
-
 ## UI Style & Theming
 
 ### OKLCH Colors (Recommended)
