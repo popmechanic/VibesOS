@@ -285,6 +285,13 @@ async function main() {
 		}
 	};
 
+	// 4d. Wire up Claude re-auth callback
+	ctx.onClaudeReauth = async () => {
+		log("[vibes-desktop] Claude re-auth triggered");
+		await showLoginAndWait(mainWindow, "Sign in to continue");
+		mainWindow.webview.loadURL(SERVER_URL);
+	};
+
 	// 5. Native menu
 	ApplicationMenu.setApplicationMenu([
 		{
