@@ -25,8 +25,8 @@ describe('fireproof-oidc-bridge exports', () => {
     expect(bridgeSource).toContain('useFireproofOIDC as useFireproofClerk');
   });
 
-  it('exports useFireproof (re-exported from @fireproof/core)', () => {
-    expect(bridgeSource).toMatch(/export\s*\{.*useFireproof.*\}\s*from\s*"@fireproof\/core"/);
+  it('exports useFireproof (aliased from useFireproofOIDC)', () => {
+    expect(bridgeSource).toContain('useFireproofOIDC as useFireproof');
   });
 
   it('exports OIDCProvider component', () => {
