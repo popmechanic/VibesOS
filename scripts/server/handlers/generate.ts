@@ -460,7 +460,8 @@ DATABASE:
 - useLiveQuery("type",{key:"item"}) returns { docs, isLoading }
 - database.put({...doc, field:"val"}) for direct writes, database.del(doc) to delete${useAI ? AI_INSTRUCTIONS : ''}`;
 
-  onEvent({ type: 'theme_selected', themeId, themeName });
+  const themeColors = ctx.themeColors[themeId] || null;
+  onEvent({ type: 'theme_selected', themeId, themeName, themeBackground: themeColors?.bg || null });
 
   console.log(`[Generate] Starting — theme: ${themeId} (${themeName}), prompt: ${(prompt.length / 1024).toFixed(1)}KB`);
   await runOneShot(prompt, { lockType: 'generate', skipChat: true, maxTurns: 5, model, cwd: currentAppDir(ctx), tools: 'Write' }, onEvent, ctx.projectRoot);

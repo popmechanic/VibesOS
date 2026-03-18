@@ -1086,7 +1086,7 @@
       overflow: hidden;
       border-right: 2px solid var(--vibes-near-black);
     }
-    .preview-panel.thinking { opacity: 0.5; transition: opacity 0.3s; }
+    .preview-panel.thinking { transition: opacity 0.3s; }
     .preview-panel.updated {
       animation: flash-border 0.6s ease-out;
     }
@@ -1633,6 +1633,46 @@
     .chat-send:hover { background: rgba(255,255,255,0.2); color: white; }
     .chat-send:disabled { opacity: 0.3; cursor: not-allowed; }
     .chat-send svg { width: 18px; height: 18px; }
+    /* Preview overlay for generation progress */
+    .preview-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--vibes-near-black, #1a1a1a);
+      z-index: 10;
+      transition: opacity 0.3s ease;
+    }
+    .preview-overlay.hidden { opacity: 0; pointer-events: none; }
+    .preview-overlay.has-content { background: rgba(0,0,0,0.4); }
+    .preview-overlay .preview-progress-label {
+      font-size: 0.8125rem; color: #999; margin-bottom: 0.5rem; font-weight: 600;
+    }
+    .preview-overlay .preview-progress-bar {
+      width: 60%; max-width: 240px; height: 4px; background: #333;
+      border-radius: 2px; overflow: hidden;
+    }
+    .preview-overlay .preview-progress-fill {
+      height: 100%; background: var(--vibes-blue, #4a9eff);
+      border-radius: 2px; transition: width 0.3s ease;
+    }
+    .preview-overlay .preview-live-badge {
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      font-size: 0.5rem; font-weight: 800;
+      background: var(--vibes-blue, #4a9eff); color: #fff;
+      padding: 0.1rem 0.4rem; border-radius: 3px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .preview-overlay .vibes-logo-loader {
+      width: 64px; height: 64px; margin-bottom: 1rem;
+      opacity: 0.6; animation: vibesLogoPulse 2s ease-in-out infinite;
+    }
+    @keyframes vibesLogoPulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.95); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
 
     /* Animation category bar */
     .animation-icons {
@@ -2815,7 +2855,20 @@
   <!-- Phase 3: Edit + Deploy -->
   <div class="phase edit-phase" id="phaseEdit">
     <!-- Preview -->
-    <div class="preview-panel" id="previewPanel">
+    <div class="preview-panel" id="previewPanel" style="position:relative;">
+      <div class="preview-overlay hidden" id="previewOverlay">
+        <div class="preview-live-badge" style="display:none" id="previewLiveBadge">LIVE</div>
+        <div id="previewLogoLoader" class="vibes-logo-loader">
+          <svg viewBox="0 0 100 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="100" height="40" rx="20" fill="#222"/>
+            <text x="50" y="26" text-anchor="middle" fill="#f0f0f0" font-family="system-ui" font-size="16" font-weight="800">VIBES</text>
+          </svg>
+        </div>
+        <div class="preview-progress-label" id="previewProgressLabel">Starting Claude...</div>
+        <div class="preview-progress-bar">
+          <div class="preview-progress-fill" id="previewProgressFill" style="width:0%"></div>
+        </div>
+      </div>
       <iframe class="preview-iframe" id="previewFrame" src="about:blank"></iframe>
       <div class="version-bar" id="versionBar">
         <button class="version-btn" id="undoBtn" onclick="versionUndo()" disabled title="Undo">&#8592;</button>
@@ -3073,6 +3126,8 @@
   const WS_BASE_DELAY = 2000;
   const WS_MAX_DELAY = 30000;
   let isThinking = false;
+  let isGenerating = false;
+  let lastBlobUrl = null;
   let themes = [];
   let currentPhase = 'loading';
   let deployTargets = { cloudflare: false };
@@ -3656,6 +3711,9 @@
       if (msg.type === 'status') {
         if (msg.status === 'saving_theme') {
           updateSaveThemeProgress(msg.progress, msg.stage, msg.elapsed);
+        } else if (isGenerating) {
+          setThinking(true, msg.progress, msg.stage, msg.elapsed);
+          updatePreviewOverlay(msg.progress, msg.stage);
         } else if (currentPhase === 'generate') {
           updateGenerateProgress(msg.progress, msg.stage, msg.elapsed);
         } else {
@@ -3667,19 +3725,27 @@
       } else if (msg.type === 'app_created') {
         currentAppName = msg.name;
       } else if (msg.type === 'app_updated') {
-        console.log('[app_updated] phase:', currentPhase, 'pendingTheme:', pendingThemeId);
+        console.log('[app_updated] phase:', currentPhase, 'isGenerating:', isGenerating);
         setThinking(false);
         if (!isVersionNav) versionPush();
-        if (currentPhase === 'generate') {
+        if (isGenerating) {
+          isGenerating = false;
+          hidePreviewOverlay();
+          reloadPreview();
+          autoSaveApp();
+        } else if (currentPhase === 'generate') {
           setPhase('edit');
           loadPreview();
-          // Auto-save only on initial generate to set the app name
           autoSaveApp();
         } else {
           reloadPreview();
         }
       } else if (msg.type === 'error') {
         setThinking(false);
+        if (isGenerating) {
+          isGenerating = false;
+          hidePreviewOverlay();
+        }
         if (currentPhase === 'generate') {
           document.getElementById('generateProgress').classList.remove('active');
           document.getElementById('generateActions').style.display = '';
@@ -3689,8 +3755,27 @@
           errEl.style.display = '';
         }
         addMessage('error', msg.message);
+      } else if (msg.type === 'hmr_update') {
+        // Live preview update — replace iframe content via blob URL
+        const frame = document.getElementById('previewFrame');
+        if (frame && msg.html) {
+          if (lastBlobUrl) URL.revokeObjectURL(lastBlobUrl);
+          const blob = new Blob([msg.html], { type: 'text/html' });
+          lastBlobUrl = URL.createObjectURL(blob);
+          frame.src = lastBlobUrl;
+          // Show live content — make overlay semi-transparent and show LIVE badge
+          const overlay = document.getElementById('previewOverlay');
+          if (overlay) {
+            overlay.classList.add('has-content');
+            document.getElementById('previewLiveBadge').style.display = '';
+          }
+        }
       } else if (msg.type === 'cancelled') {
         setThinking(false);
+        if (isGenerating) {
+          isGenerating = false;
+          hidePreviewOverlay();
+        }
         if (currentPhase === 'generate') {
           document.getElementById('generateProgress').classList.remove('active');
           document.getElementById('generateActions').style.display = '';
@@ -3700,6 +3785,8 @@
       } else if (msg.type === 'theme_selected') {
         // Server tells us which theme was selected (including auto-selection)
         currentThemeId = msg.themeId;
+        // Store theme background for preview overlay placeholder
+        if (msg.themeBackground) window.__selectedThemeBg = msg.themeBackground;
         const theme = themes.find(t => t.id === msg.themeId);
         const name = theme ? theme.name : msg.themeName || msg.themeId;
         // Update the dropdown to reflect the selected theme
@@ -4239,18 +4326,14 @@
       return;
     }
 
-    // If re-generating from edit phase, reset UI state
-    if (currentPhase === 'edit') {
-      document.getElementById('chatMessages').innerHTML = '';
-      setPhase('generate');
-    }
+    // Clear chat for fresh generation
+    document.getElementById('chatMessages').innerHTML = '';
 
     const themeId = document.getElementById('themeSelect').value;
     if (themeId) currentThemeId = themeId;
     document.getElementById('generateBtn').disabled = true;
     document.getElementById('generateActions').style.display = 'none';
     document.getElementById('generateError').style.display = 'none';
-    document.getElementById('generateProgress').classList.add('active');
 
     const hasReference = !!genReferenceFile;
     // Skip theme in custom mode (user toggle or reference attached)
@@ -4266,6 +4349,13 @@
     }
     ws.send(JSON.stringify(payload));
     genClearReference();
+
+    // Immediately transition to edit view
+    isGenerating = true;
+    setPhase('edit');
+    addMessage('user', prompt);
+    setThinking(true, 0, 'Starting Claude...', 0);
+    showPreviewOverlay();
   }
 
   function useExistingApp() {
@@ -5329,6 +5419,33 @@
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'cancel' }));
     }
+  }
+
+  function showPreviewOverlay() {
+    const overlay = document.getElementById('previewOverlay');
+    overlay.classList.remove('hidden', 'has-content');
+    document.getElementById('previewLiveBadge').style.display = 'none';
+    document.getElementById('previewProgressLabel').textContent = 'Starting Claude...';
+    document.getElementById('previewProgressFill').style.width = '0%';
+    if (window.__selectedThemeBg) {
+      overlay.style.background = window.__selectedThemeBg;
+    } else {
+      overlay.style.background = '';
+    }
+  }
+
+  function hidePreviewOverlay() {
+    const overlay = document.getElementById('previewOverlay');
+    overlay.classList.add('hidden');
+    if (lastBlobUrl) {
+      URL.revokeObjectURL(lastBlobUrl);
+      lastBlobUrl = null;
+    }
+  }
+
+  function updatePreviewOverlay(progress, stage) {
+    document.getElementById('previewProgressFill').style.width = (progress || 0) + '%';
+    if (stage) document.getElementById('previewProgressLabel').textContent = stage;
   }
 
   function setThinking(thinking, progress, stage, elapsed) {
