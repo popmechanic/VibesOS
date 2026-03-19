@@ -199,6 +199,7 @@ Write the complete app to app.jsx. Rules:
 - Add rich visual effects: Canvas 2D backgrounds, animated SVG illustrations, CSS @property animations, hover effects
 - JSX with React hooks (useState, useEffect, useRef, useCallback, useMemo)
 - useFireproofClerk("db-name") for database — returns { database, useLiveQuery, useDocument }
+  useFireproofClerk is a PRE-EXISTING GLOBAL — call it directly. Do NOT declare, redefine, wrap, or alias it. Do NOT create useFireproof or any fallback — just call useFireproofClerk().
 - NO import statements — runs in Babel script block with globals
 - NO TypeScript. End with: export default App
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
@@ -311,6 +312,7 @@ Write the complete app to app.jsx. Rules:
 - Add rich visual effects: Canvas 2D backgrounds, animated SVG illustrations, CSS @property animations, hover effects
 - JSX with React hooks (useState, useEffect, useRef, useCallback, useMemo)
 - useFireproofClerk("db-name") for database — returns { database, useLiveQuery, useDocument }
+  useFireproofClerk is a PRE-EXISTING GLOBAL — call it directly. Do NOT declare, redefine, wrap, or alias it. Do NOT create useFireproof or any fallback — just call useFireproofClerk().
 - NO import statements — runs in Babel script block with globals
 - NO TypeScript. End with: export default App
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
