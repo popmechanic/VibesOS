@@ -5,7 +5,7 @@
  * The CLI just sends files and reads back Connect URLs from the response.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { buildPlatformFiles } from '../../lib/deploy-files.js';
 import { getAccessToken } from '../../lib/cli-auth.js';

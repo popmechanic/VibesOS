@@ -680,10 +680,14 @@ app.post("/deploy", async (c) => {
   if (!sharedLedgerId && connectInfo?.d1DashboardId) {
     // Try D1 discovery for apps that have been used but not yet cached
     sharedLedgerId = await discoverLedgerId({
-      accountId: c.env.CF_ACCOUNT_ID,
-      apiToken: c.env.CF_API_TOKEN,
-      d1DatabaseId: connectInfo.d1DashboardId,
+      apiUrl: connectInfo.apiUrl ? `${connectInfo.apiUrl}` : `https://${name}-dashboard.vibesos.com/api`,
+      serviceToken: c.env.SERVICE_API_KEY,
       appName: name,
+      d1Fallback: {
+        accountId: c.env.CF_ACCOUNT_ID,
+        apiToken: c.env.CF_API_TOKEN,
+        d1DatabaseId: connectInfo.d1DashboardId,
+      },
     }) ?? undefined;
     if (sharedLedgerId) {
       console.log(`[deploy] Discovered shared ledger for ${name}: ${sharedLedgerId}`);
