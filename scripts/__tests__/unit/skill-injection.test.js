@@ -73,3 +73,20 @@ describe('extract-import-map.js', () => {
     expect(elapsed).toBeLessThan(500);
   });
 });
+
+describe('sell SKILL.md import map consistency', () => {
+  it('uses dynamic injection instead of hardcoded import map', () => {
+    const skillPath = join(PLUGIN_ROOT, 'skills', 'sell', 'SKILL.md');
+    const content = readFileSync(skillPath, 'utf8');
+
+    // Should contain the !`command` injection placeholder
+    expect(content).toContain('!`');
+    expect(content).toContain('extract-import-map.js');
+
+    // Should NOT contain hardcoded version strings from the import map
+    // (Version strings in prose text like "React 19" are fine;
+    //  hardcoded esm.sh URLs in the import map section are not)
+    const importMapSection = content.split('## Import Map')[1]?.split('##')[0] || '';
+    expect(importMapSection).not.toMatch(/esm\.sh\/stable\/react@[\d.]+/);
+  });
+});
