@@ -112,15 +112,15 @@ export function createWsHandler(ctx: ServerContext) {
       try {
         switch (msg.type) {
           case 'chat':
-            await handleChat(ctx, onEvent, msg.message, msg.effects || [], msg.animationId || null, msg.model, msg.reference || null, msg.skillId || null);
+            await handleChat(ctx, onEvent, msg.message, msg.effects || [], msg.animationId || null, msg.model, msg.reference || null, msg.skillId || null, msg.app || undefined);
             break;
 
           case 'generate':
-            await handleGenerate(ctx, onEvent, msg.prompt, msg.themeId, msg.model, msg.reference || null, !!msg.useAI);
+            await handleGenerate(ctx, onEvent, msg.prompt, msg.themeId, msg.model, msg.reference || null, !!msg.useAI, msg.previousApp || undefined);
             break;
 
           case 'theme':
-            await handleThemeSwitch(ctx, onEvent, msg.themeId, msg.model);
+            await handleThemeSwitch(ctx, onEvent, msg.themeId, msg.model, msg.app || undefined);
             break;
 
           case 'cancel':
@@ -130,7 +130,7 @@ export function createWsHandler(ctx: ServerContext) {
             break;
 
           case 'deploy':
-            await handleDeploy(ctx, onEvent, msg.target, msg.name);
+            await handleDeploy(ctx, onEvent, msg.target, msg.name, undefined, msg.app || undefined);
             break;
 
           case 'save_theme': {
@@ -139,7 +139,7 @@ export function createWsHandler(ctx: ServerContext) {
               onEvent({ type: 'error', message: 'Theme name is required' });
               break;
             }
-            await handleSaveTheme(ctx, onEvent, name, msg.model);
+            await handleSaveTheme(ctx, onEvent, name, msg.model, msg.app || undefined);
             break;
           }
 
@@ -148,7 +148,7 @@ export function createWsHandler(ctx: ServerContext) {
             break;
 
           case 'palette_theme':
-            await handlePaletteTheme(ctx, onEvent, msg.colors);
+            await handlePaletteTheme(ctx, onEvent, msg.colors, msg.app || undefined);
             break;
 
           case 'window_control':
@@ -187,7 +187,8 @@ export function createWsHandler(ctx: ServerContext) {
               onEvent({ type: 'error', message: 'App name is required' });
               break;
             }
-            const appSrc = resolveAppJsxPath(ctx);
+            const sourceApp = msg.app || undefined;
+            const appSrc = resolveAppJsxPath(ctx, sourceApp);
             if (!existsSync(appSrc)) {
               onEvent({ type: 'error', message: 'No app.jsx to save' });
               break;
@@ -197,7 +198,6 @@ export function createWsHandler(ctx: ServerContext) {
             if (resolve(appSrc) !== resolve(join(dest, 'app.jsx'))) {
               copyFileSync(appSrc, join(dest, 'app.jsx'));
             }
-            ctx.currentApp = name;
             onEvent({ type: 'app_saved', name });
             console.log(`[Save] Saved app to ${dest}`);
             break;
