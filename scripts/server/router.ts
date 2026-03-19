@@ -273,7 +273,7 @@ function parseUserFromIdToken(idToken: string | undefined): any {
   }
 }
 
-async function checkAuthStatus(): Promise<any> {
+export async function checkAuthStatus(): Promise<any> {
   const cached = readCachedTokens();
   if (!cached) return { auth: { state: 'none', user: null } };
   if (!isTokenExpired(cached.expiresAt)) {
@@ -293,7 +293,7 @@ async function editorStatus(ctx: ServerContext): Promise<Response> {
   return json(result);
 }
 
-async function editorAuthLogin(ctx: ServerContext): Promise<Response> {
+export async function editorAuthLogin(ctx: ServerContext): Promise<Response> {
   console.log('[Auth] POST /editor/auth/login received');
   try {
     console.log('[Auth] Starting login flow...');

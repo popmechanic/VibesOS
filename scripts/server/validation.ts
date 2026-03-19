@@ -1,9 +1,7 @@
 /**
  * Shared validation functions — SSRF guards + credential validation.
  *
- * Single source of truth imported by both router.ts (production Bun server)
- * and handlers/editor-api.js (test-only Node.js shim). Avoids ~300 lines of
- * duplicated business logic drifting between the two files.
+ * Shared validation functions imported by router.ts.
  */
 
 // --- Clerk helpers (inlined from deprecated env-utils Clerk functions) ---
