@@ -4131,8 +4131,10 @@
     const savedPromise = new Promise(resolve => { _appSavedResolve = resolve; });
     ws.send(JSON.stringify({ type: 'save_app', name, app: name }));
     lastSavedVersion = versionIndex;
-    addMessage('system', 'Saved as "' + name + '".');
-    savedPromise.then(() => captureScreenshot());
+    addMessage('system', 'Saving "' + name + '"...');
+    savedPromise.then(() => captureScreenshot().then(() => {
+      addMessage('system', 'Saved "' + name + '".');
+    }));
     setTimeout(() => { if (_appSavedResolve) { _appSavedResolve(); _appSavedResolve = null; } }, 2000);
   }
 
