@@ -75,7 +75,9 @@ export function stripWindowDestructuring(code) {
     // Multi-line first (greedy): const {\n  useFireproofClerk,\n} = window;
     .replace(/^const\s+\{[\s\S]*?\}\s*=\s*window\s*;?\s*$/gm, '')
     // Single-line: const { useFireproofClerk } = window;
-    .replace(/^const\s+\{[^}]*\}\s*=\s*window\s*;?\s*$/gm, '');
+    .replace(/^const\s+\{[^}]*\}\s*=\s*window\s*;?\s*$/gm, '')
+    // Conditional: const { useFireproof } = React.useMemo ? window : {};
+    .replace(/^const\s+\{[^}]*\}\s*=\s*React\.useMemo\s*\?\s*window\s*:\s*\{\}\s*;?\s*$/gm, '');
 }
 
 /**

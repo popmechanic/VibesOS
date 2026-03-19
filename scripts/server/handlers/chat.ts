@@ -213,6 +213,7 @@ RULES:
 - ADD to the existing app — never rewrite from scratch
 - Preserve all components, hooks, state, data models, __VIBES_THEMES__, useVibesTheme()
 - Do NOT add imports, do NOT use TypeScript, keep export default App
+- The database hook is useFireproofClerk("db-name") — NEVER rename it to useFireproof. It returns { database, useLiveQuery, useDocument, syncStatus }.
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
 - Never change Fireproof document types or query filters${useAI ? AI_INSTRUCTIONS_CHAT : ''}`;
 

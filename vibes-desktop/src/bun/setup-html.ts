@@ -1138,7 +1138,7 @@ export const LOADING_HTML = `<!DOCTYPE html>
       <path fill-rule="evenodd" clip-rule="evenodd" fill="#fff" d="M416.875,210.721c0.068-3.305,1.849-5.306,4.727-5.309c2.765-0.003,4.924,2.404,4.816,5.371c-0.106,2.956-2.355,5.212-5.12,5.138C418.626,215.849,416.813,213.718,416.875,210.721z"/>
       <path fill-rule="evenodd" clip-rule="evenodd" fill="#fff" d="M449.933,210.636c0.102-3.331,1.886-5.279,4.778-5.22c2.67,0.055,4.829,2.432,4.762,5.243c-0.073,3.021-2.404,5.36-5.242,5.261C451.606,215.829,449.84,213.657,449.933,210.636z"/>
     </svg>
-    <div class="loading-text">Starting Vibes</div>
+    <div class="loading-text">Booting Up</div>
   </div>
 </div>
 </div>

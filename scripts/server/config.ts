@@ -457,6 +457,8 @@ export function extractPass2ThemeContext(themeContent, maxBytes = 12000) {
 
 /**
  * Auto-select theme based on user prompt keywords.
+ * When multiple themes match, picks randomly weighted by score.
+ * When nothing matches, picks randomly from all available themes.
  */
 export function autoSelectTheme(ctx, userPrompt) {
   const catalogPath = join(ctx.projectRoot, 'skills/vibes/themes/catalog.txt');
@@ -478,8 +480,23 @@ export function autoSelectTheme(ctx, userPrompt) {
     if (score > 0) scores[themeId] = score;
   }
 
-  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  return sorted.length > 0 ? sorted[0][0] : 'default';
+  const matched = Object.entries(scores);
+  if (matched.length > 0) {
+    // Weighted random selection — higher scores are more likely but not guaranteed
+    const totalScore = matched.reduce((sum, [, s]) => sum + s, 0);
+    let roll = Math.random() * totalScore;
+    for (const [id, s] of matched) {
+      roll -= s;
+      if (roll <= 0) return id;
+    }
+    return matched[0][0];
+  }
+
+  // No keyword matches — pick randomly from all available themes
+  if (ctx.themes.length > 0) {
+    return ctx.themes[Math.floor(Math.random() * ctx.themes.length)].id;
+  }
+  return 'default';
 }
 
 /**
