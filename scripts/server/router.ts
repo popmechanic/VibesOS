@@ -5,7 +5,7 @@
  * Static file fallback uses Bun.file() for zero-copy serving.
  */
 
-import { readFileSync, existsSync, readdirSync, mkdirSync, copyFileSync, statSync, writeFileSync } from 'fs';
+import { readFileSync, existsSync, readdirSync, mkdirSync, copyFileSync, statSync, writeFileSync, renameSync } from 'fs';
 import { join, extname, resolve } from 'path';
 import { homedir } from 'os';
 import { resolveClaudeBin, cleanEnv } from '../lib/claude-subprocess.js';
@@ -13,7 +13,7 @@ import type { ServerContext } from './config.ts';
 import { getRecommendedThemeIds, loadOpenRouterKey } from './config.ts';
 import { currentAppDir, resolveAppJsxPath } from './app-context.js';
 import { assembleAppFrame } from './handlers/generate.ts';
-import { loadRegistry, getCloudflareConfig, setCloudflareConfig, getApp, setApp } from '../lib/registry.js';
+import { loadRegistry, saveRegistry, getCloudflareConfig, setCloudflareConfig, getApp, setApp } from '../lib/registry.js';
 import { readCachedTokens, isTokenExpired, getAccessToken, startLoginFlow, removeCachedTokens } from '../lib/cli-auth.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID } from '../lib/auth-constants.js';
 import { validateClerkKey, validateClerkSecretKey, validateClerkCredentials, validateCloudflareCredentials } from './validation.ts';
@@ -564,6 +564,34 @@ function editorSaveApp(ctx: ServerContext, url: URL): Response {
   return json({ ok: true });
 }
 
+function editorRenameApp(ctx: ServerContext, url: URL): Response {
+  const from = sanitizeAppName(url.searchParams.get('from') || '');
+  const to = sanitizeAppName(url.searchParams.get('to') || '');
+  if (!from || !to) return new Response('Missing from/to', { status: 400, headers: corsHeaders() });
+  if (from === to) return json({ ok: true, name: to });
+
+  const srcDir = join(ctx.appsDir, from);
+  const destDir = join(ctx.appsDir, to);
+  if (!existsSync(srcDir)) return new Response('App not found', { status: 404, headers: corsHeaders() });
+  if (existsSync(destDir)) return new Response('Destination already exists', { status: 409, headers: corsHeaders() });
+
+  renameSync(srcDir, destDir);
+
+  // Update deployment registry if this app was deployed
+  try {
+    const reg = loadRegistry();
+    if (reg.apps[from]) {
+      reg.apps[to] = { ...reg.apps[from], name: to };
+      delete reg.apps[from];
+      saveRegistry(reg);
+    }
+  } catch (e: any) {
+    console.warn(`[Rename] Registry update failed: ${e.message}`);
+  }
+
+  return json({ ok: true, name: to });
+}
+
 async function editorSaveScreenshot(ctx: ServerContext, req: Request, url: URL): Promise<Response> {
   const name = sanitizeAppName(url.searchParams.get('name') || '');
   if (!name) return new Response('Missing name', { status: 400, headers: corsHeaders() });
@@ -656,9 +684,17 @@ export function createRouter(ctx: ServerContext) {
       case 'POST /editor/credentials/validate-clerk': return editorValidateClerk(ctx, req);
       case 'POST /editor/apps/load':        return editorLoadApp(ctx, url);
       case 'POST /editor/apps/save':        return editorSaveApp(ctx, url);
+      case 'POST /editor/apps/rename':     return editorRenameApp(ctx, url);
       case 'POST /editor/apps/screenshot':  return editorSaveScreenshot(ctx, req, url);
       case 'POST /editor/apps/write':       return editorWriteApp(ctx, req, url);
       case 'GET /editor/deployments':       return editorListDeployments(ctx);
+    }
+
+    // Vendored libraries (served from assets/vendor/)
+    if (key === 'GET /vendor/dom-to-image-more.min.js') {
+      const vendorPath = join(ctx.projectRoot, 'assets', 'vendor', 'dom-to-image-more.min.js');
+      const vendorFile = Bun.file(vendorPath);
+      return new Response(vendorFile, { headers: { 'Content-Type': 'text/javascript', ...corsHeaders() } });
     }
 
     // Bundle files
