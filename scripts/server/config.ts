@@ -29,7 +29,6 @@ export interface ServerContext {
   themeDir: string;
   animationDir: string;
   pluginSkills: any[];
-  currentApp: string | null;
   backupTimestamps: Record<string, number>;
   managed?: boolean;
   onWindowControl?: (action: string) => void;
@@ -108,7 +107,6 @@ export function loadConfig(): ServerContext {
     themeDir,
     animationDir,
     pluginSkills,
-    currentApp: null,
     backupTimestamps: {},
   };
 }
