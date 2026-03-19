@@ -25,6 +25,7 @@ import {
 } from "./pocket-id";
 import { generateCodeVerifier, generateCodeChallenge } from "./pkce";
 import { discoverLedgerId } from "./ledger-discovery";
+import { base64UrlDecode } from "./base64url";
 
 // ---------------------------------------------------------------------------
 // JWT Verification — Dynamic JWKS
@@ -53,15 +54,6 @@ async function importJwk(jwk: JsonWebKey): Promise<CryptoKey> {
     false,
     ["verify"]
   );
-}
-
-/**
- * Decode base64url (JWT encoding) to string
- */
-function base64UrlDecode(str: string): string {
-  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-  return atob(padded);
 }
 
 /**
@@ -680,10 +672,14 @@ app.post("/deploy", async (c) => {
   if (!sharedLedgerId && connectInfo?.d1DashboardId) {
     // Try D1 discovery for apps that have been used but not yet cached
     sharedLedgerId = await discoverLedgerId({
-      accountId: c.env.CF_ACCOUNT_ID,
-      apiToken: c.env.CF_API_TOKEN,
-      d1DatabaseId: connectInfo.d1DashboardId,
+      apiUrl: connectInfo.apiUrl ? `${connectInfo.apiUrl}` : `https://${name}-dashboard.vibesos.com/api`,
+      serviceToken: `${c.env.SERVICE_API_KEY}|${existing?.owner || userId}|`,
       appName: name,
+      d1Fallback: {
+        accountId: c.env.CF_ACCOUNT_ID,
+        apiToken: c.env.CF_API_TOKEN,
+        d1DatabaseId: connectInfo.d1DashboardId,
+      },
     }) ?? undefined;
     if (sharedLedgerId) {
       console.log(`[deploy] Discovered shared ledger for ${name}: ${sharedLedgerId}`);

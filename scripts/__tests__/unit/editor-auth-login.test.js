@@ -13,24 +13,21 @@ vi.mock('../../lib/auth-constants.js', () => ({
   OIDC_CLIENT_ID: 'test-client-id',
 }));
 
-import { startLoginFlow } from '../../lib/cli-auth.js';
-import { handleAuthLogin } from '../../server/handlers/editor-api.js';
+// Mock broadcast so we can verify WebSocket messages
+const mockBroadcast = vi.fn();
+vi.mock('../../server/ws.ts', () => ({
+  broadcast: (...args) => mockBroadcast(...args),
+}));
 
-describe('handleAuthLogin', () => {
-  let ctx, req, res;
+import { startLoginFlow } from '../../lib/cli-auth.js';
+import { editorAuthLogin } from '../../server/router.ts';
+
+describe('editorAuthLogin', () => {
+  let ctx;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    ctx = {
-      wss: {
-        clients: new Set(),
-      },
-    };
-    req = {};
-    res = {
-      writeHead: vi.fn(),
-      end: vi.fn(),
-    };
+    ctx = {};
   });
 
   it('calls startLoginFlow and returns authorizeUrl', async () => {
@@ -43,23 +40,19 @@ describe('handleAuthLogin', () => {
       tokenPromise,
     });
 
-    await handleAuthLogin(ctx, req, res);
+    const response = await editorAuthLogin(ctx);
 
     expect(startLoginFlow).toHaveBeenCalledWith({
       authority: 'https://test-authority.example.com',
       clientId: 'test-client-id',
     });
-    expect(res.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
-    const body = JSON.parse(res.end.mock.calls[0][0]);
+    expect(response.status).toBe(200);
+    const body = await response.json();
     expect(body.ok).toBe(true);
     expect(body.authorizeUrl).toContain('https://test-authority.example.com');
   });
 
-  it('broadcasts auth_complete to WebSocket clients after token resolves', async () => {
-    const mockSend = vi.fn();
-    const mockClient = { readyState: 1, send: mockSend };
-    ctx.wss.clients.add(mockClient);
-
+  it('broadcasts auth_complete after token resolves', async () => {
     const tokenPromise = Promise.resolve({
       accessToken: 'tok',
       idToken: 'eyJhbGciOiJSUzI1NiJ9.eyJuYW1lIjoiTWFyY3VzIn0.fake',
@@ -69,22 +62,22 @@ describe('handleAuthLogin', () => {
       tokenPromise,
     });
 
-    await handleAuthLogin(ctx, req, res);
+    await editorAuthLogin(ctx);
     // Wait for the background tokenPromise to resolve
     await tokenPromise;
     // Allow microtasks to flush
     await new Promise(r => setTimeout(r, 10));
 
-    expect(mockSend).toHaveBeenCalledWith(
-      expect.stringContaining('"type":"auth_complete"')
+    expect(mockBroadcast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'auth_complete' })
     );
   });
 
   it('returns 500 on startLoginFlow failure', async () => {
     startLoginFlow.mockRejectedValue(new Error('Could not start server'));
 
-    await handleAuthLogin(ctx, req, res);
+    const response = await editorAuthLogin(ctx);
 
-    expect(res.writeHead).toHaveBeenCalledWith(500, expect.any(Object));
+    expect(response.status).toBe(500);
   });
 });

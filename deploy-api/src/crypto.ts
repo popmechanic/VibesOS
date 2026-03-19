@@ -4,6 +4,8 @@
  * Ported from scripts/lib/crypto-utils.js — no Node.js deps.
  */
 
+import { base64UrlEncode as toBase64Url } from "./base64url.ts";
+
 const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
 export function base58Encode(bytes: Uint8Array): string {
@@ -35,13 +37,6 @@ export function jwkToEnv(jwk: JsonWebKey): string {
   const jsonStr = JSON.stringify(jwk);
   const bytes = new TextEncoder().encode(jsonStr);
   return 'z' + base58Encode(bytes);
-}
-
-function toBase64Url(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export async function generateSessionTokens(): Promise<{ publicEnv: string; privateEnv: string }> {

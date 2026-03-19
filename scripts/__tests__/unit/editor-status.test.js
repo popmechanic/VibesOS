@@ -5,7 +5,7 @@ vi.mock('../../lib/cli-auth.js', () => ({
   readCachedTokens: vi.fn(),
   isTokenExpired: vi.fn(),
   getAccessToken: vi.fn(),
-  loginWithBrowser: vi.fn(),
+  startLoginFlow: vi.fn(),
   removeCachedTokens: vi.fn(),
 }));
 
@@ -15,8 +15,13 @@ vi.mock('../../lib/auth-constants.js', () => ({
   OIDC_CLIENT_ID: 'test-client-id',
 }));
 
+// Mock broadcast (imported by router.ts)
+vi.mock('../../server/ws.ts', () => ({
+  broadcast: vi.fn(),
+}));
+
 import { readCachedTokens, isTokenExpired, getAccessToken } from '../../lib/cli-auth.js';
-import { checkAuthStatus } from '../../server/handlers/editor-api.js';
+import { checkAuthStatus } from '../../server/router.ts';
 
 describe('checkAuthStatus', () => {
   beforeEach(() => {

@@ -10,12 +10,6 @@
  * All tasks get unrestricted tool access (no --tools flag).
  */
 export const TASK_PROFILES = {
-  chatEdit:         { outputFormat: 'stream-json', maxTurns: 8 },
-  chatEditAnimated: { outputFormat: 'stream-json', maxTurns: 12 },
-  themeCreative:    { outputFormat: 'stream-json', maxTurns: 5 },
-  themeLegacy:      { outputFormat: 'stream-json', maxTurns: 8 },
-  generate:         { outputFormat: 'stream-json', maxTurns: 5 },
-  themeExtract:     { outputFormat: 'stream-json', maxTurns: 5, timeoutMs: 120_000 },
   riffGenerate:     { outputFormat: 'json', maxTurns: 1 },
 };
 
@@ -82,10 +76,7 @@ export function buildClaudeArgs(config = {}) {
   // Pass permissionMode: false to omit the flag entirely.
   const mode = config.permissionMode !== undefined
     ? config.permissionMode
-    : (config.bypassPermissions === true ? 'bypassPermissions'
-       : config.bypassPermissions === false ? false
-       : config.tools ? 'bypassPermissions'
-       : 'dontAsk');
+    : (config.tools ? 'bypassPermissions' : 'dontAsk');
   if (mode) {
     args.push('--permission-mode', mode);
   }

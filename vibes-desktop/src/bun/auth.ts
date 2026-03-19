@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, unlinkSync, statSync, renameSync, chmodSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
@@ -193,11 +193,10 @@ export async function installClaude(onProgress?: ProgressCallback): Promise<stri
 
 	const exitCode = await proc.exited;
 	if (exitCode !== 0) {
-		try { require("fs").unlinkSync(tmpPath); } catch {}
+		try { unlinkSync(tmpPath); } catch {}
 		throw new Error(`Failed to download binary (curl exit ${exitCode})`);
 	}
 
-	const { statSync } = require("fs");
 	const size = statSync(tmpPath).size;
 	console.log(`[auth] Download complete (${(size / 1024 / 1024).toFixed(1)}MB)`);
 
@@ -208,13 +207,12 @@ export async function installClaude(onProgress?: ProgressCallback): Promise<stri
 	);
 	const actual = shaResult.stdout.toString().trim().split(/\s+/)[0];
 	if (actual !== checksum) {
-		try { require("fs").unlinkSync(tmpPath); } catch {}
+		try { unlinkSync(tmpPath); } catch {}
 		throw new Error(`Checksum verification failed: expected ${checksum.slice(0, 16)}..., got ${actual?.slice(0, 16)}...`);
 	}
 	console.log(`[auth] Checksum verified`);
 
 	// Step 5: Atomic move into place and make executable
-	const { renameSync, chmodSync } = require("fs");
 	chmodSync(tmpPath, 0o755);
 	renameSync(tmpPath, VIBES_CLAUDE_BIN);
 

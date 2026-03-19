@@ -26,36 +26,8 @@ const MAX_APP_WRITE_SIZE = 5 * 1024 * 1024; // 5MB for app.jsx writes (inline SV
 const MAX_SCREENSHOT_SIZE = 5 * 1024 * 1024; // 5MB
 
 export async function parseJsonBody(req: Request, maxSize = MAX_BODY_SIZE): Promise<any> {
-  // Fast-path optimization: reject obviously oversized bodies before reading.
-  // Not a security boundary — the streaming accumulator below is the actual enforcement.
-  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
-  if (contentLength > maxSize) {
-    throw Object.assign(new Error('Request body too large'), { status: 413 });
-  }
-
-  const reader = req.body?.getReader();
-  if (!reader) throw new Error('No request body');
-
-  const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      totalBytes += value.byteLength;
-      if (totalBytes > maxSize) {
-        reader.cancel();
-        throw Object.assign(new Error('Request body too large'), { status: 413 });
-      }
-      chunks.push(value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-
-  const body = new TextDecoder().decode(Buffer.concat(chunks));
-  return JSON.parse(body);
+  const buf = await readBodyWithLimit(req, maxSize);
+  return JSON.parse(new TextDecoder().decode(buf));
 }
 
 export async function readBodyWithLimit(req: Request, maxSize: number): Promise<Buffer> {
@@ -301,7 +273,7 @@ function parseUserFromIdToken(idToken: string | undefined): any {
   }
 }
 
-async function checkAuthStatus(): Promise<any> {
+export async function checkAuthStatus(): Promise<any> {
   const cached = readCachedTokens();
   if (!cached) return { auth: { state: 'none', user: null } };
   if (!isTokenExpired(cached.expiresAt)) {
@@ -321,7 +293,7 @@ async function editorStatus(ctx: ServerContext): Promise<Response> {
   return json(result);
 }
 
-async function editorAuthLogin(ctx: ServerContext): Promise<Response> {
+export async function editorAuthLogin(ctx: ServerContext): Promise<Response> {
   console.log('[Auth] POST /editor/auth/login received');
   try {
     console.log('[Auth] Starting login flow...');
@@ -686,7 +658,7 @@ export function createRouter(ctx: ServerContext) {
     }
 
     // Bundle files
-    if (url.pathname === '/fireproof-oidc-bridge.js' || url.pathname === '/fireproof-vibes-bridge.js' || url.pathname === '/fireproof-clerk-bundle.js' || url.pathname === '/vibes-ai.js') {
+    if (url.pathname === '/fireproof-oidc-bridge.js' || url.pathname === '/vibes-ai.js') {
       const bundlePath = join(ctx.projectRoot, 'bundles', url.pathname.slice(1));
       const file = Bun.file(bundlePath);
       if (await file.exists()) {
