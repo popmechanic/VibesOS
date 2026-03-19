@@ -3654,8 +3654,7 @@
               <input type="text" id="deployNameInput" placeholder="my-app"
                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
                 onclick="event.stopPropagation()"
-                onkeydown="event.stopPropagation()"
-                onblur="this.value=this.value.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')" />
+                onkeydown="event.stopPropagation();if(event.key===' '){event.preventDefault();var i=this,p=i.selectionStart;i.value=i.value.slice(0,p)+'-'+i.value.slice(i.selectionEnd);i.setSelectionRange(p+1,p+1);}" />
             </div>
             <button class="deploy-publish-btn" id="deployCf" onclick="startDeploy('cloudflare')">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
