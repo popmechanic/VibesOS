@@ -25,6 +25,7 @@ import {
 } from "./pocket-id";
 import { generateCodeVerifier, generateCodeChallenge } from "./pkce";
 import { discoverLedgerId } from "./ledger-discovery";
+import { base64UrlDecode } from "./base64url";
 
 // ---------------------------------------------------------------------------
 // JWT Verification — Dynamic JWKS
@@ -53,15 +54,6 @@ async function importJwk(jwk: JsonWebKey): Promise<CryptoKey> {
     false,
     ["verify"]
   );
-}
-
-/**
- * Decode base64url (JWT encoding) to string
- */
-function base64UrlDecode(str: string): string {
-  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-  return atob(padded);
 }
 
 /**

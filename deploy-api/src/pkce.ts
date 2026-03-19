@@ -1,13 +1,6 @@
 // PKCE helpers using Web Crypto API (CF Workers compatible)
 
-function base64UrlEncode(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let str = "";
-  for (let i = 0; i < bytes.length; i++) {
-    str += String.fromCharCode(bytes[i]);
-  }
-  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
+import { base64UrlEncode } from "./base64url.ts";
 
 export async function generateCodeVerifier(): Promise<string> {
   const buffer = new Uint8Array(32);

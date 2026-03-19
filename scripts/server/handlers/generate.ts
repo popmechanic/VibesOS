@@ -14,7 +14,7 @@ import { APP_PLACEHOLDER } from '../../lib/assembly-utils.js';
 import { populateConnectConfig } from '../../lib/env-utils.js';
 import { TEMPLATES } from '../../lib/paths.js';
 import { currentAppDir, slugifyPrompt, resolveAppName } from '../app-context.js';
-import { AI_INSTRUCTIONS_GENERATE } from '../ai-instructions.ts';
+import { AI_INSTRUCTIONS_GENERATE, THEME_SECTION_MARKERS } from '../ai-instructions.ts';
 
 export async function handleGenerate(ctx: ServerContext, onEvent: EventCallback, userPrompt: string, themeId: string | undefined, model: string | undefined, reference: any = null, useAI: boolean = false) {
   if (!userPrompt) {
@@ -205,50 +205,7 @@ Write the complete app to app.jsx. Rules:
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
 - Responsive (mobile-first with Tailwind). className="btn" for buttons, "grid-background" on root
 
-=== THEME SECTION MARKERS ===
-
-Organize ALL visual CSS into marked sections. This enables fast theme switching.
-
-In your <style> tag, wrap CSS in comment markers:
-
-\`\`\`css
-/* @theme:tokens */
-:root { --comp-bg: ...; --comp-text: ...; /* all color variables */ }
-/* @theme:tokens:end */
-
-/* @theme:typography */
-@import url('...');  /* Google Fonts or other font imports */
-/* @theme:typography:end */
-
-/* @theme:surfaces */
-.glass-card { backdrop-filter: ...; }
-.nav-button { display: flex; gap: 0.5rem; background: var(--comp-accent); border: 2px solid var(--comp-border); }
-/* @theme:surfaces:end */
-
-/* @theme:motion */
-@keyframes drift { ... } /* all @keyframes and animation definitions */
-/* @theme:motion:end */
-
-/* Pure-layout ONLY — no visual properties */
-.grid-wrapper { display: grid; gap: 1rem; max-width: 800px; margin: 0 auto; }
-\`\`\`
-
-In your JSX, wrap decorative elements:
-
-\`\`\`jsx
-{/* @theme:decoration */}
-<svg className="atmospheric-bg">...</svg>
-<div className="scan-line" />
-{/* @theme:decoration:end */}
-\`\`\`
-
-Rules:
-- EVERY :root block must be inside @theme:tokens markers
-- EVERY @import font URL must be inside @theme:typography markers
-- EVERY @keyframes must be inside @theme:motion markers
-- Decorative SVGs and atmospheric elements go in @theme:decoration
-- ANY class with visual properties (color, background, border, box-shadow, font-family, font-size, font-weight, text-shadow, fill, stroke, opacity, gradients) MUST go inside @theme:surfaces — even if it also has layout properties
-- ONLY pure-layout classes go outside markers: display, grid-template, gap, padding, margin, position, z-index, width, max-width, height, flex-*, align-items, justify-content, overflow, box-sizing
+${THEME_SECTION_MARKERS}
 
 DATABASE:
 - useDocument({text:"",type:"item"}) returns { doc, merge, submit, reset, save }
@@ -360,50 +317,7 @@ Write the complete app to app.jsx. Rules:
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
 - Responsive (mobile-first with Tailwind). className="btn" for buttons, "grid-background" on root
 
-=== THEME SECTION MARKERS ===
-
-Organize ALL visual CSS into marked sections. This enables fast theme switching.
-
-In your <style> tag, wrap CSS in comment markers:
-
-\`\`\`css
-/* @theme:tokens */
-:root { --comp-bg: ...; --comp-text: ...; /* all color variables */ }
-/* @theme:tokens:end */
-
-/* @theme:typography */
-@import url('...');  /* Google Fonts or other font imports */
-/* @theme:typography:end */
-
-/* @theme:surfaces */
-.glass-card { backdrop-filter: ...; }
-.nav-button { display: flex; gap: 0.5rem; background: var(--comp-accent); border: 2px solid var(--comp-border); }
-/* @theme:surfaces:end */
-
-/* @theme:motion */
-@keyframes drift { ... } /* all @keyframes and animation definitions */
-/* @theme:motion:end */
-
-/* Pure-layout ONLY — no visual properties */
-.grid-wrapper { display: grid; gap: 1rem; max-width: 800px; margin: 0 auto; }
-\`\`\`
-
-In your JSX, wrap decorative elements:
-
-\`\`\`jsx
-{/* @theme:decoration */}
-<svg className="atmospheric-bg">...</svg>
-<div className="scan-line" />
-{/* @theme:decoration:end */}
-\`\`\`
-
-Rules:
-- EVERY :root block must be inside @theme:tokens markers
-- EVERY @import font URL must be inside @theme:typography markers
-- EVERY @keyframes must be inside @theme:motion markers
-- Decorative SVGs and atmospheric elements go in @theme:decoration
-- ANY class with visual properties (color, background, border, box-shadow, font-family, font-size, font-weight, text-shadow, fill, stroke, opacity, gradients) MUST go inside @theme:surfaces — even if it also has layout properties
-- ONLY pure-layout classes go outside markers: display, grid-template, gap, padding, margin, position, z-index, width, max-width, height, flex-*, align-items, justify-content, overflow, box-sizing
+${THEME_SECTION_MARKERS}
 
 DATABASE:
 - useDocument({text:"",type:"item"}) returns { doc, merge, submit, reset, save }
