@@ -673,7 +673,7 @@ app.post("/deploy", async (c) => {
     // Try D1 discovery for apps that have been used but not yet cached
     sharedLedgerId = await discoverLedgerId({
       apiUrl: connectInfo.apiUrl ? `${connectInfo.apiUrl}` : `https://${name}-dashboard.vibesos.com/api`,
-      serviceToken: c.env.SERVICE_API_KEY,
+      serviceToken: `${c.env.SERVICE_API_KEY}|${existing?.owner || userId}|`,
       appName: name,
       d1Fallback: {
         accountId: c.env.CF_ACCOUNT_ID,
