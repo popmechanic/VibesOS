@@ -3284,7 +3284,6 @@
   }
 
   function claudeSignOut() {
-    if (!confirm('Sign out of Claude? You will need to sign in again to use AI features.')) return;
     const btn = document.getElementById('claudeSignOutBtn');
     btn.disabled = true;
     btn.textContent = 'Signing out...';
