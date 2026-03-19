@@ -20,9 +20,9 @@ const EFFECT_INSTRUCTIONS = {
   'shader': `MANDATORY: Add a WebGL fragment shader background. Create a fullscreen quad with vertex shader, pass u_time/u_resolution/u_mouse uniforms. Use effects like: aurora (sine wave color mixing), plasma (layered sine interference), noise gradient mesh (hash-based noise with mouse reactivity), or animated color fields. Use precision mediump float. Graceful fallback if WebGL unavailable.`,
 };
 
-export async function handleChat(ctx: ServerContext, onEvent: EventCallback, message: string, effects: string[] = [], animationId: string | null = null, model: string | undefined, reference: any = null, skillId: string | null = null) {
+export async function handleChat(ctx: ServerContext, onEvent: EventCallback, message: string, effects: string[] = [], animationId: string | null = null, model: string | undefined, reference: any = null, skillId: string | null = null, appName: string | undefined = undefined) {
   // Auto-detect useAI from existing app code — no manual toggle needed for chat
-  const appDir = currentAppDir(ctx) || ctx.projectRoot;
+  const appDir = currentAppDir(ctx, appName) || ctx.projectRoot;
   const appJsxPath = join(appDir, 'app.jsx');
   const useAI = existsSync(appJsxPath) && readFileSync(appJsxPath, 'utf-8').includes('useAI(');
   let effectBlock = '';
@@ -217,7 +217,7 @@ RULES:
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
 - Never change Fireproof document types or query filters${useAI ? AI_INSTRUCTIONS_CHAT : ''}`;
 
-  await runOneShot(prompt, { lockType: 'chat', model, cwd: currentAppDir(ctx) || ctx.projectRoot, tools: 'Read,Edit,Write,Glob,Grep' }, onEvent, ctx.projectRoot);
+  await runOneShot(prompt, { lockType: 'chat', model, cwd: currentAppDir(ctx, appName) || ctx.projectRoot, tools: 'Read,Edit,Write,Glob,Grep' }, onEvent, ctx.projectRoot);
 
-  sanitizeAppJsx(currentAppDir(ctx) || ctx.projectRoot);
+  sanitizeAppJsx(currentAppDir(ctx, appName) || ctx.projectRoot);
 }

@@ -19,7 +19,7 @@ import { currentAppDir } from '../app-context.js';
 /**
  * Assemble and deploy an app via the Deploy API.
  */
-export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, target: string, name: string, token?: string) {
+export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, target: string, name: string, token?: string, appNameOverride: string | undefined = undefined) {
   if (!target || target !== 'cloudflare') {
     onEvent({ type: 'error', message: 'Invalid deploy target. Use "cloudflare".' });
     return;
@@ -58,7 +58,7 @@ export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, t
 
   onEvent({ type: 'progress', progress: 5, stage: 'Assembling app...', elapsed: 0 });
 
-  const appDir = currentAppDir(ctx);
+  const appDir = currentAppDir(ctx, appNameOverride);
   if (!appDir) {
     onEvent({ type: 'error', message: 'No app active. Generate or load an app first.' });
     return;

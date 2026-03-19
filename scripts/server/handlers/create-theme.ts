@@ -154,8 +154,9 @@ export async function handleSaveTheme(
   onEvent: EventCallback,
   themeName: string,
   model: string | undefined,
+  appName: string | undefined = undefined,
 ): Promise<void> {
-  const appJsxPath = resolveAppJsxPath(ctx);
+  const appJsxPath = resolveAppJsxPath(ctx, appName);
   if (!existsSync(appJsxPath)) {
     onEvent({ type: 'error', message: 'No app.jsx found — generate an app first.' });
     return;

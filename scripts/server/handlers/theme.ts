@@ -59,7 +59,7 @@ function updateThemeMeta(code, themeId, themeName) {
 /**
  * Handle theme switch — dispatches to multi-pass or legacy based on markers.
  */
-export async function handleThemeSwitch(ctx: ServerContext, onEvent: EventCallback, themeId: string, model: string | undefined) {
+export async function handleThemeSwitch(ctx: ServerContext, onEvent: EventCallback, themeId: string, model: string | undefined, appName: string | undefined = undefined) {
   const txtFile = join(ctx.themeDir, `${themeId}.txt`);
   const mdFile = join(ctx.themeDir, `${themeId}.md`);
   let themeContent = '';
@@ -76,7 +76,7 @@ export async function handleThemeSwitch(ctx: ServerContext, onEvent: EventCallba
 
   onEvent({ type: 'theme_selected', themeId, themeName });
 
-  const appDir = currentAppDir(ctx);
+  const appDir = currentAppDir(ctx, appName);
   if (!appDir) {
     onEvent({ type: 'error', message: 'No app active.' });
     return;
@@ -91,16 +91,16 @@ export async function handleThemeSwitch(ctx: ServerContext, onEvent: EventCallba
   const colors = parseThemeColors(ctx.themeDir, themeId);
 
   if (hasThemeMarkers(appCode)) {
-    await handleThemeSwitchMultiPass(ctx, onEvent, themeId, themeName, themeContent, appCode, appJsxPath, colors, model);
+    await handleThemeSwitchMultiPass(ctx, onEvent, themeId, themeName, themeContent, appCode, appJsxPath, colors, model, appName);
   } else {
-    await handleThemeSwitchLegacy(ctx, onEvent, themeId, themeName, themeContent, colors, model);
+    await handleThemeSwitchLegacy(ctx, onEvent, themeId, themeName, themeContent, colors, model, appName);
   }
 }
 
 /**
  * Multi-pass theme switch: instant tokens/typography (Pass 1) + Claude creative (Pass 2).
  */
-async function handleThemeSwitchMultiPass(ctx, onEvent, themeId, themeName, themeContent, appCode, appJsxPath, colors, model) {
+async function handleThemeSwitchMultiPass(ctx, onEvent, themeId, themeName, themeContent, appCode, appJsxPath, colors, model, appName: string | undefined = undefined) {
   console.log(`[ThemeSwitch] Multi-pass for "${themeName}" (${themeId})`);
 
   // === Pass 1: Mechanical token + typography replacement (instant) ===
@@ -176,7 +176,7 @@ ${extractDataSchema(pass1Code)}`;
   console.log(`[ThemeSwitch] Pass 2: Claude creative restyle, prompt: ${(prompt.length / 1024).toFixed(1)}KB`);
 
   // Use skipChat in onEvent — the wsAdapter will check event.skipChat
-  const claudeResult = await runOneShot(prompt, { lockType: 'theme', skipChat: true, maxTurns: 5, model, cwd: currentAppDir(ctx), tools: 'Read,Edit' }, onEvent, ctx.projectRoot);
+  const claudeResult = await runOneShot(prompt, { lockType: 'theme', skipChat: true, maxTurns: 5, model, cwd: currentAppDir(ctx, appName), tools: 'Read,Edit' }, onEvent, ctx.projectRoot);
 
   if (claudeResult === null) {
     onEvent({ type: 'app_updated' });
@@ -203,21 +203,21 @@ ${extractDataSchema(pass1Code)}`;
     });
   } else {
     console.log(`[ThemeSwitch] Pass 2 validated — non-theme content unchanged`);
-    sanitizeAppJsx(currentAppDir(ctx) || ctx.projectRoot);
+    sanitizeAppJsx(currentAppDir(ctx, appName) || ctx.projectRoot);
   }
 }
 
 /**
  * Legacy theme switch: full-file Claude restyle (no markers).
  */
-async function handleThemeSwitchLegacy(ctx, onEvent, themeId, themeName, themeContent, colors, model) {
+async function handleThemeSwitchLegacy(ctx, onEvent, themeId, themeName, themeContent, colors, model, appName: string | undefined = undefined) {
   let rootCss = colors?.rootBlock || '';
   if (!rootCss) {
     const rootMatch = themeContent.match(/:root\s*\{[\s\S]*?\}/);
     if (rootMatch) rootCss = rootMatch[0];
   }
 
-  const appDir = currentAppDir(ctx);
+  const appDir = currentAppDir(ctx, appName);
   if (!appDir) {
     onEvent({ type: 'error', message: 'No app active.' });
     return;
@@ -266,21 +266,21 @@ KEEP UNCHANGED:
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.`;
 
   console.log(`[ThemeSwitch] Legacy mode for "${themeName}" (${themeId}), prompt: ${(prompt.length / 1024).toFixed(1)}KB`);
-  await runOneShot(prompt, { lockType: 'theme', skipChat: true, maxTurns: 8, model, cwd: currentAppDir(ctx), tools: 'Read,Edit' }, onEvent, ctx.projectRoot);
+  await runOneShot(prompt, { lockType: 'theme', skipChat: true, maxTurns: 8, model, cwd: currentAppDir(ctx, appName), tools: 'Read,Edit' }, onEvent, ctx.projectRoot);
 
-  sanitizeAppJsx(currentAppDir(ctx) || ctx.projectRoot);
+  sanitizeAppJsx(currentAppDir(ctx, appName) || ctx.projectRoot);
 }
 
 /**
  * Apply a custom color palette to app.jsx by replacing :root block.
  */
-export async function handlePaletteTheme(ctx: ServerContext, onEvent: EventCallback, colors: Record<string, string>) {
+export async function handlePaletteTheme(ctx: ServerContext, onEvent: EventCallback, colors: Record<string, string>, appName: string | undefined = undefined) {
   if (!colors || typeof colors !== 'object' || Object.keys(colors).length === 0) {
     onEvent({ type: 'error', message: 'Invalid palette colors' });
     return;
   }
 
-  const appDir = currentAppDir(ctx);
+  const appDir = currentAppDir(ctx, appName);
   if (!appDir) {
     onEvent({ type: 'error', message: 'No app active.' });
     return;
