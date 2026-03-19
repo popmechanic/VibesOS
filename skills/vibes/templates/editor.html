@@ -4015,8 +4015,8 @@
         if (matchedApp) currentMatchName = matchedApp.name;
         const cardName = matchedApp ? matchedApp.name : 'Continue current app';
         const cardThumb = matchedApp && matchedApp.hasScreenshot
-          ? `<img src="/editor/apps/screenshot?name=${encodeURIComponent(matchedApp.name)}" alt="${escapeHtml(matchedApp.name)}" loading="lazy">`
-          : `<img src="/editor/assets/screen-saver.png" alt="App preview" loading="lazy">`;
+          ? `<img src="/editor/apps/screenshot?name=${encodeURIComponent(matchedApp.name)}" alt="${escapeHtml(matchedApp.name)}" loading="eager">`
+          : `<img src="/editor/assets/screen-saver.png" alt="App preview" loading="eager">`;
         gridHtml += `<div class="app-card" onclick="useExistingApp()">
           <div class="app-card-thumb">${cardThumb}</div>
           <div class="app-card-info">
@@ -4036,8 +4036,8 @@
         const meta = app.example ? 'Example' : timeAgo(new Date(app.modified));
         const themeLabel = app.themeName ? ' \u00b7 ' + escapeHtml(app.themeName) : '';
         const thumbContent = app.hasScreenshot
-          ? `<img src="/editor/apps/screenshot?name=${encodeURIComponent(app.name)}" alt="${escapeHtml(app.name)}" loading="lazy">`
-          : `<img src="/editor/assets/screen-saver.png" alt="App preview" loading="lazy">`;
+          ? `<img src="/editor/apps/screenshot?name=${encodeURIComponent(app.name)}" alt="${escapeHtml(app.name)}" loading="eager">`
+          : `<img src="/editor/assets/screen-saver.png" alt="App preview" loading="eager">`;
         gridHtml += `<div class="app-card" onclick="loadSavedApp('${escapeHtml(app.name)}')">
           <div class="app-card-thumb">${thumbContent}</div>
           <div class="app-card-info">
