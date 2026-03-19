@@ -58,21 +58,26 @@ export function resolveAppJsxPath(ctx, appName) {
 }
 ```
 
-**`router.ts`** — HTTP handlers read app name from `?app=` query parameter:
+**`router.ts`** — HTTP handlers read app name from `?app=` query parameter. Handlers that currently accept only `(ctx)` gain a `url` parameter to read query params:
 
-- `GET /app.jsx?app=name` — serve the named app's JSX
-- `GET /app-frame?app=name` — assemble and serve the named app's preview
+- `GET /app.jsx?app=name` — `serveAppJsx(ctx, url)` reads `url.searchParams.get('app')`
+- `GET /app-frame?app=name` — `serveAppFrame(ctx, url)` reads app name, passes to `assembleAppFrame(ctx, appName)`
 - `GET /editor/app-exists?app=name` — check if named app exists
+- `GET /themes?app=name` — `serveThemes(ctx, url)` passes app name to `getRecommendedThemeIds(ctx, appName)`
 - `POST /editor/apps/save?name=X` — save (unchanged, already uses `?name=`)
 - `POST /editor/apps/write?app=name` — write app code
 
 Remove `ctx.currentApp = name` from `editorLoadApp()` and `editorSaveApp()`. The `editorLoadApp` endpoint simplifies to a file-existence check + copy-on-write for examples (no longer needs to set server state).
 
-**`ws.ts`** — `save_app` handler already receives `name` in the message. Stop setting `ctx.currentApp`. Pass `name` through to `resolveAppJsxPath(ctx, name)`.
+**`ws.ts`** — `save_app` handler already receives `name` in the message as the destination. Add `msg.app` as the source app name: `resolveAppJsxPath(ctx, msg.app)` resolves which `app.jsx` to copy, `msg.name` is where to copy it. Stop setting `ctx.currentApp`.
 
 **Subprocess handlers** (`generate.ts`, `chat.ts`, `theme.ts`, `deploy.ts`, `create-theme.ts`) — Receive `appName` as a parameter from the WebSocket dispatch. Replace `currentAppDir(ctx)` calls with `currentAppDir(ctx, appName)`.
 
-**Special case — `handleGenerate()`**: The server creates the app name from the prompt slug. It already uses a local `appDir` variable (line 43). Replace the remaining `currentAppDir(ctx)` calls with the local variable. The client learns the name via the `app_created` event, which already exists.
+**`assembleAppFrame(ctx)`** — Signature changes to `assembleAppFrame(ctx, appName)`. Its internal `currentAppDir(ctx)` call at line 350 becomes `currentAppDir(ctx, appName)`. Called from `router.ts` (serveAppFrame) and `generate.ts` (auto-save).
+
+**`getRecommendedThemeIds(ctx)`** in `config.ts:212` — Signature changes to `getRecommendedThemeIds(ctx, appName)`. Its internal `currentAppDir(ctx)` call reads the app's JSX to recommend themes. The `/themes` route passes the app name from `?app=`.
+
+**Special case — `handleGenerate()`**: The server creates the app name from the prompt slug. It already uses a local `appDir` variable (line 43). Replace the remaining `currentAppDir(ctx)` calls with the local variable. The auto-save of the *previous* app (lines 28-37) uses `msg.previousApp` sent by the client (see Frontend Changes). The client learns the *new* name via the `app_created` event, which already exists.
 
 **Remove `ctx.currentApp`** from `ServerContext` in `config.ts`.
 
@@ -82,7 +87,9 @@ Remove `ctx.currentApp = name` from `editorLoadApp()` and `editorSaveApp()`. The
 
 - `loadPreview()` / `reloadPreview()` — `frame.src = '/app-frame?app=' + encodeURIComponent(currentAppName) + '&t=' + Date.now()`
 - `versionPush()` — `fetch('/app.jsx?app=' + encodeURIComponent(currentAppName))`
-- WebSocket messages (`chat`, `theme_switch`) — add `app: currentAppName` field
+- `GET /themes?app=name` — for theme recommendations based on current app
+- WebSocket messages (`chat`, `theme_switch`, `save_theme`, `palette_theme`, `save_app`) — add `app: currentAppName` field
+- `generate` message — add `previousApp: currentAppName` so the server can auto-save the previous app's `index.html` before creating the new one
 - `useExistingApp()` simplifies — just calls `setPhase('edit')` and `loadPreview()`. Since the client sends the app name with the iframe request, no server sync needed. The two-path divergence between `useExistingApp` and `loadSavedApp` collapses.
 - `loadSavedApp()` simplifies — the `POST /editor/apps/load` call is only needed for copy-on-write (bundled examples). After that, just set `currentAppName` and load.
 
@@ -110,13 +117,16 @@ Remove `ctx.currentApp = name` from `editorLoadApp()` and `editorSaveApp()`. The
 The WS message handler in `ws.ts` dispatches to subprocess handlers. Each dispatch call adds the app name from the message or from a new `app` field:
 
 ```
-case 'chat':     handleChat(ctx, onEvent, ..., msg.app)
-case 'generate': handleGenerate(ctx, onEvent, ...)  // generates its own name
-case 'theme':    handleThemeSwitch(ctx, onEvent, ..., msg.app)
-case 'deploy':   handleDeploy(ctx, onEvent, ..., msg.app)
+case 'chat':          handleChat(ctx, onEvent, ..., msg.app)
+case 'generate':      handleGenerate(ctx, onEvent, ..., msg.previousApp)  // creates new name, auto-saves previous
+case 'theme_switch':  handleThemeSwitch(ctx, onEvent, ..., msg.app)
+case 'save_theme':    handleSaveTheme(ctx, onEvent, ..., msg.app)
+case 'palette_theme': handlePaletteTheme(ctx, onEvent, ..., msg.app)
+case 'deploy':        handleDeploy(ctx, onEvent, ..., msg.app)
+case 'save_app':      // uses msg.app (source) and msg.name (destination)
 ```
 
-`generate` is the exception — it creates the app name server-side and communicates it back via `app_created`.
+`generate` is the exception — it creates the app name server-side and communicates it back via `app_created`. It receives `msg.previousApp` to auto-save the previous app's `index.html` before creating the new one.
 
 ## Bug Fixes (on top of architecture change)
 
@@ -203,15 +213,16 @@ Add an optional `silent` parameter to `captureScreenshot(silent)`. The `deploy_c
 
 ## Files Changed
 
-- `scripts/server/config.ts` — remove `currentApp` from `ServerContext`
+- `scripts/server/config.ts` — remove `currentApp` from `ServerContext`, update `getRecommendedThemeIds(ctx, appName)`
 - `scripts/server/app-context.js` — add `appName` parameter to `currentAppDir()`, `resolveAppJsxPath()`
-- `scripts/server/router.ts` — read `?app=` param in handlers, add rename endpoint, add vendor route
-- `scripts/server/ws.ts` — pass app name through to handlers, stop setting `ctx.currentApp`
-- `scripts/server/handlers/generate.ts` — use local `appDir` variable throughout
+- `scripts/server/router.ts` — read `?app=` param in handlers (update signatures for `serveAppJsx`, `serveAppFrame`, `editorAppExists`, `editorWriteApp`, `serveThemes`), add rename endpoint, add vendor route
+- `scripts/server/ws.ts` — pass app name through to all handlers, stop setting `ctx.currentApp`
+- `scripts/server/handlers/generate.ts` — use local `appDir` variable, receive `previousApp` for auto-save, update `assembleAppFrame(ctx, appName)` signature
 - `scripts/server/handlers/chat.ts` — receive `appName` parameter
-- `scripts/server/handlers/theme.ts` — receive `appName` parameter
+- `scripts/server/handlers/theme.ts` — receive `appName` parameter (affects `handleThemeSwitch`, `handlePaletteTheme`)
 - `scripts/server/handlers/deploy.ts` — receive `appName` parameter
-- `scripts/server/handlers/create-theme.ts` — receive `appName` parameter
+- `scripts/server/handlers/create-theme.ts` — receive `appName` parameter (affects `handleSaveTheme`)
 - `scripts/lib/registry.js` — rename updates deployment registry entries
-- `skills/vibes/templates/editor.html` — send `currentAppName` with all requests, simplify `useExistingApp()`, update `navigateHome()`, `promptRenameApp()`, `captureScreenshot()`
+- `scripts/__tests__/unit/app-context.test.js` — update tests for new `currentAppDir(ctx, appName)` signature
+- `skills/vibes/templates/editor.html` — send `currentAppName` with all requests (HTTP + WS), add `previousApp` to generate message, simplify `useExistingApp()`, update `navigateHome()`, `promptRenameApp()`, `captureScreenshot()`
 - `assets/vendor/dom-to-image-more.min.js` (new) — vendored library
