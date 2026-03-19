@@ -558,9 +558,7 @@ https://{domain}?subdomain=admin → Admin dashboard
 
 The unified template uses React 19 with the OIDC bridge for auth and Fireproof sync. The current authoritative import map (from `source-templates/base/template.html`):
 
-```json
 !`bun scripts/lib/extract-import-map.js`
-```
 
 Note: `use-fireproof` maps to the local OIDC bridge (`/fireproof-oidc-bridge.js`), and `@fireproof/core` uses `?external=react,react-dom` to prevent the React singleton problem.
 

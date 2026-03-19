@@ -4,6 +4,7 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { parseSkillFrontmatter } from '../../server/config.js';
+import { extractImportMapFromHtml, extractImportMap, IMPORTMAP_REGEX } from '../../lib/extract-import-map.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = join(__dirname, '..', '..');
@@ -46,14 +47,12 @@ describe('extract-import-map.js', () => {
   });
 
   it('matches the base template import map exactly', () => {
-    // Read import map from base template directly
+    // Use the exported function to extract directly from the template
     const templatePath = join(PLUGIN_ROOT, 'source-templates', 'base', 'template.html');
     const templateHtml = readFileSync(templatePath, 'utf8');
-    const match = templateHtml.match(/<script\s+type="importmap">\s*([\s\S]*?)\s*<\/script>/);
-    expect(match).toBeTruthy();
-    const templateImports = JSON.parse(match[1]).imports;
+    const templateImports = extractImportMapFromHtml(templateHtml);
 
-    // Get output from the extraction script
+    // Get output from the extraction script (CLI mode)
     const result = execSync(`bun ${join(SCRIPTS_DIR, 'lib', 'extract-import-map.js')}`, {
       cwd: PLUGIN_ROOT,
       encoding: 'utf8',
@@ -73,6 +72,30 @@ describe('extract-import-map.js', () => {
     const elapsed = performance.now() - start;
     expect(elapsed).toBeLessThan(500);
   });
+
+  it('extractImportMapFromHtml throws on HTML without importmap', () => {
+    const html = '<html><head></head><body></body></html>';
+    expect(() => extractImportMapFromHtml(html)).toThrow('No <script type="importmap"> found');
+  });
+
+  it('extractImportMap returns the same result as CLI invocation', () => {
+    const fnResult = extractImportMap();
+    const cliResult = JSON.parse(
+      execSync(`bun ${join(SCRIPTS_DIR, 'lib', 'extract-import-map.js')}`, {
+        cwd: PLUGIN_ROOT,
+        encoding: 'utf8',
+      }).trim()
+    );
+    expect(fnResult).toEqual(cliResult);
+  });
+
+  it('IMPORTMAP_REGEX handles script tags with extra attributes', () => {
+    const html = '<script type="importmap" data-foo="bar">{"imports":{"react":"https://esm.sh/react"}}</script>';
+    const match = html.match(IMPORTMAP_REGEX);
+    expect(match).toBeTruthy();
+    const parsed = JSON.parse(match[1]);
+    expect(parsed.imports).toHaveProperty('react');
+  });
 });
 
 describe('sell SKILL.md import map consistency', () => {
@@ -89,6 +112,28 @@ describe('sell SKILL.md import map consistency', () => {
     //  hardcoded esm.sh URLs in the import map section are not)
     const importMapSection = content.split('## Import Map')[1]?.split('##')[0] || '';
     expect(importMapSection).not.toMatch(/esm\.sh\/stable\/react@[\d.]+/);
+  });
+
+  it('injection placeholder is outside markdown code fences', () => {
+    const skillPath = join(PLUGIN_ROOT, 'skills', 'sell', 'SKILL.md');
+    const content = readFileSync(skillPath, 'utf8');
+
+    // The !`command` placeholder must NOT be inside a ``` code fence,
+    // because Claude Code's text substitution may not process inside fences
+    const importMapSection = content.split('## Import Map')[1]?.split('##')[0] || '';
+    const lines = importMapSection.split('\n');
+    let inFence = false;
+    for (const line of lines) {
+      if (line.trim().startsWith('```')) {
+        inFence = !inFence;
+      }
+      if (inFence && line.includes('!`')) {
+        throw new Error(
+          '!`command` placeholder found inside a code fence: "' + line.trim() + '". ' +
+          'Claude Code may not process dynamic injection inside fenced code blocks.'
+        );
+      }
+    }
   });
 });
 
@@ -114,35 +159,18 @@ describe('SKILL.md frontmatter integrity', () => {
 });
 
 describe('SKILL.md source-of-truth consistency', () => {
-  // Read the authoritative import map once
+  // Read the authoritative import map once using the exported function
   const templatePath = join(PLUGIN_ROOT, 'source-templates', 'base', 'template.html');
   const templateHtml = readFileSync(templatePath, 'utf8');
-  const importMapMatch = templateHtml.match(/<script\s+type="importmap">\s*([\s\S]*?)\s*<\/script>/);
-  const authoritativeImports = JSON.parse(importMapMatch[1]).imports;
+  const authoritativeImports = extractImportMapFromHtml(templateHtml);
 
-  // Extract React version from authoritative import map
-  const reactVersionMatch = authoritativeImports['react'].match(/react@([\d.]+)/);
-  const reactVersion = reactVersionMatch[1];
-
-  // Extract Fireproof version
-  const fpVersionMatch = authoritativeImports['@fireproof/core'].match(/use-fireproof@([\d.]+)/);
-  const fpVersion = fpVersionMatch[1];
-
-  it('sell SKILL.md does not hardcode stale esm.sh URLs', () => {
+  it('sell SKILL.md import map section contains no hardcoded esm.sh URLs', () => {
     const content = readFileSync(join(PLUGIN_ROOT, 'skills', 'sell', 'SKILL.md'), 'utf8');
-    // After our edit, the import map section should use !`command`, not hardcoded URLs
-    // But if there are any remaining esm.sh URLs in the import map section, they should match
+    // After our edit, the import map section uses !`command` injection, not hardcoded URLs.
+    // Verify that there are truly no esm.sh versioned URLs remaining in the section.
     const importMapSection = content.split('## Import Map')[1]?.split('---')[0] || '';
     const esmUrls = importMapSection.match(/esm\.sh\/stable\/\S+/g) || [];
-    for (const url of esmUrls) {
-      // Any remaining esm.sh URL should match the authoritative version
-      if (url.includes('react@')) {
-        expect(url).toContain(`react@${reactVersion}`);
-      }
-      if (url.includes('use-fireproof@')) {
-        expect(url).toContain(`use-fireproof@${fpVersion}`);
-      }
-    }
+    expect(esmUrls).toHaveLength(0);
   });
 
   it('OIDC constants in auth-constants.js match expected format', () => {
