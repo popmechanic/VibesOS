@@ -18,14 +18,16 @@ afterEach(() => {
 });
 
 describe('currentAppDir', () => {
-  it('returns null when no app is active', () => {
-    const ctx = { currentApp: null, appsDir: '/tmp/apps' };
+  it('returns null when no app name given', () => {
+    const ctx = { appsDir: '/tmp/apps' };
     expect(currentAppDir(ctx)).toBeNull();
+    expect(currentAppDir(ctx, null)).toBeNull();
+    expect(currentAppDir(ctx, '')).toBeNull();
   });
 
-  it('returns the app directory path when app is active', () => {
-    const ctx = { currentApp: 'my-app', appsDir: '/tmp/apps' };
-    expect(currentAppDir(ctx)).toBe('/tmp/apps/my-app');
+  it('returns the app directory path when app name given', () => {
+    const ctx = { appsDir: '/tmp/apps' };
+    expect(currentAppDir(ctx, 'my-app')).toBe('/tmp/apps/my-app');
   });
 });
 

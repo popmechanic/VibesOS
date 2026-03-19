@@ -8,13 +8,13 @@ const FILLER_WORDS = new Set([
   'some', 'this', 'it', 'of', 'to', 'and', 'in', 'on', 'is',
 ]);
 
-export function currentAppDir(ctx) {
-  if (!ctx.currentApp) return null;
-  return join(ctx.appsDir, ctx.currentApp);
+export function currentAppDir(ctx, appName) {
+  if (!appName) return null;
+  return join(ctx.appsDir, appName);
 }
 
-export function resolveAppJsxPath(ctx) {
-  const dir = currentAppDir(ctx);
+export function resolveAppJsxPath(ctx, appName) {
+  const dir = currentAppDir(ctx, appName);
   return join(dir || ctx.projectRoot, 'app.jsx');
 }
 
