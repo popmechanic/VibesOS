@@ -12,6 +12,7 @@ import type { ServerContext } from '../config.ts';
 import { stripForTemplate } from '../../lib/strip-code.js';
 import { APP_PLACEHOLDER } from '../../lib/assembly-utils.js';
 import { populateConnectConfig } from '../../lib/env-utils.js';
+import { OIDC_AUTHORITY, OIDC_CLIENT_ID, DEPLOY_API_URL, AI_PROXY_URL } from '../../lib/auth-constants.js';
 import { TEMPLATES } from '../../lib/paths.js';
 import { currentAppDir, slugifyPrompt, resolveAppName } from '../app-context.js';
 import { AI_INSTRUCTIONS_GENERATE, THEME_SECTION_MARKERS } from '../ai-instructions.ts';
@@ -366,9 +367,16 @@ export function assembleAppFrame(ctx, appName?: string) {
   }
   template = template.replace(APP_PLACEHOLDER, strippedCode);
 
-  // Preview mode: don't populate Connect URLs — run local-only (no auth, no sync).
-  // Sync + auth are added on deploy via assemble scripts.
-  template = populateConnectConfig(template, {});
+  // Preview mode: inject safe defaults for TinyBase config (local-only, no sync, no auth).
+  // Full config (wsUrl, oidcClientId) is injected at deploy time by the Deploy API.
+  const resolvedName = appName || 'preview-app';
+  template = populateConnectConfig(template, { '__APP_NAME__': resolvedName });
+
+  // Inject OIDC constants (same as assemble.js does for CLI assembly)
+  template = template.replaceAll('__OIDC_AUTHORITY__', OIDC_AUTHORITY);
+  template = template.replaceAll('__OIDC_CLIENT_ID__', OIDC_CLIENT_ID);
+  template = template.replaceAll('__DEPLOY_API_URL__', DEPLOY_API_URL);
+  template = template.replaceAll('__AI_PROXY_URL__', AI_PROXY_URL);
 
   return template;
 }
