@@ -17,7 +17,8 @@ import { homedir } from "os";
 import { discoverVibesPlugin } from "./plugin-discovery.ts";
 import { CLAUDE_BIN, isClaudeInstalled, VIBES_CONFIG_DIR } from "./auth.ts";
 import { hideZoomButton } from "./window-controls.ts";
-import { isSetupComplete, runSetup, getBundledPluginPath } from "./setup.ts";
+import { isSetupComplete, runSetup, getBundledPluginPath, markSetupComplete } from "./setup.ts";
+import { installPlugin } from "./plugin-installer.ts";
 import { SETUP_HTML, LOADING_HTML } from "./setup-html.ts";
 import { checkClaudeAuth, startClaudeLogin, waitForClaudeAuth, jsStr, type ClaudeAuthResult } from "./claude-auth.ts";
 import { waitForSetupAction, stopSetupIpc } from "./setup-ipc.ts";
@@ -133,8 +134,21 @@ async function main() {
 	log(`[vibes-desktop] Starting ${BUILD_ID}`);
 
 	const appVersion = getAppVersion();
-	const needsSetup = !isSetupComplete(appVersion);
+	let needsSetup = !isSetupComplete(appVersion);
 	log(`[vibes-desktop] Version: ${appVersion}, needsSetup: ${needsSetup}`);
+
+	// Silent upgrade: if all prerequisites are already met (Claude installed,
+	// user authenticated), skip the setup wizard — just update the plugin and
+	// mark complete. This prevents version bumps from showing a gray setup screen.
+	if (needsSetup && isClaudeInstalled() && checkClaudeAuth().loggedIn) {
+		const bundledPath = getBundledPluginPath();
+		if (bundledPath) {
+			log("[vibes-desktop] Silent upgrade — prerequisites met, skipping setup wizard");
+			await installPlugin(bundledPath);
+			markSetupComplete(appVersion);
+			needsSetup = false;
+		}
+	}
 
 	// Create window early — setup UI and editor both use it
 	const mainWindow = new BrowserWindow({

@@ -29,7 +29,7 @@ export function isSetupComplete(appVersion: string): boolean {
 /**
  * Write the setup-complete marker for this version.
  */
-function markSetupComplete(appVersion: string): void {
+export function markSetupComplete(appVersion: string): void {
 	mkdirSync(VIBES_DIR, { recursive: true });
 	writeFileSync(join(VIBES_DIR, `setup-complete-${appVersion}`), new Date().toISOString());
 }
