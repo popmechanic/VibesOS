@@ -29,6 +29,20 @@ import { base64UrlDecode } from "./base64url";
 
 const APP_NAMESPACE = 'vibes-apps';
 
+// Reserved subdomain names that cannot be used as app names.
+// These have dedicated Workers Routes that take precedence over the wildcard
+// dispatcher, so deploying an app with these names would silently fail.
+const RESERVED_NAMES = new Set([
+  'share',      // vibes-deploy-api
+  'install',    // install-vibesos
+  'ai',         // vibes-ai-proxy
+  'www',        // potential future use
+  'api',        // potential future use
+  'app',        // potential future use
+  'admin',      // potential future use
+  'connect',    // used as prefix for dashboard workers (connect-*)
+]);
+
 // ---------------------------------------------------------------------------
 // JWT Verification — Dynamic JWKS
 // ---------------------------------------------------------------------------
@@ -489,6 +503,14 @@ app.post("/deploy", async (c) => {
     );
   }
 
+  // Block reserved subdomain names (infrastructure routes that would shadow the app)
+  if (RESERVED_NAMES.has(name)) {
+    return c.json(
+      { ok: false, error: `The name "${name}" is reserved. Please choose a different name for your app.` },
+      409
+    );
+  }
+
   // Build files map — accept `files` (new) or `html` (legacy)
   let files: Record<string, string>;
   if (body.files && typeof body.files === "object") {
@@ -508,7 +530,7 @@ app.post("/deploy", async (c) => {
   // Check registry ownership
   const existing = await getSubdomain(c.env.REGISTRY_KV, name);
   if (!userOwnsOrCanCreate(existing, userId)) {
-    return c.json({ ok: false, error: "Subdomain is owned by another user" }, 403);
+    return c.json({ ok: false, error: `The name "${name}" is already in use. Please choose a different name for your app.` }, 409);
   }
 
   // Per-app Pocket ID registration (on first deploy only)
