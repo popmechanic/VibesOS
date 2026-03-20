@@ -105,31 +105,25 @@
           "react/jsx-dev-runtime": "https://esm.sh/stable/react@19.2.4/jsx-dev-runtime",
           "react-dom": "https://esm.sh/stable/react-dom@19.2.4",
           "react-dom/client": "https://esm.sh/stable/react-dom@19.2.4/client",
-          "multiformats": "https://esm.sh/stable/multiformats@13.3.1",
-          "multiformats/": "https://esm.sh/stable/multiformats@13.3.1/",
-          "@ipld/dag-cbor": "https://esm.sh/stable/@ipld/dag-cbor@9.2.2?external=multiformats",
-          "@ipld/dag-json": "https://esm.sh/stable/@ipld/dag-json@10.2.3?external=multiformats",
-          "oauth4webapi": "https://esm.sh/stable/oauth4webapi@3.3.0",
-          "@fireproof/core": "https://esm.sh/stable/use-fireproof@0.24.12?external=react,react-dom&target=es2022&deps=@adviser/cement@0.5.27",
-          "use-fireproof": "/fireproof-oidc-bridge.js"
+          "tinybase": "https://esm.sh/tinybase@8?external=react,react-dom",
+          "tinybase/mergeable-store": "https://esm.sh/tinybase@8/mergeable-store?external=react,react-dom",
+          "tinybase/ui-react": "https://esm.sh/tinybase@8/ui-react?external=react,react-dom",
+          "tinybase/persisters/persister-browser": "https://esm.sh/tinybase@8/persisters/persister-browser?external=react,react-dom",
+          "tinybase/synchronizers/synchronizer-ws-client": "https://esm.sh/tinybase@8/synchronizers/synchronizer-ws-client?external=react,react-dom",
+          "oauth4webapi": "https://esm.sh/stable/oauth4webapi@3.3.0"
         }
       }
     </script>
-    <!-- Connect configuration - populated by assemble.js from .env -->
     <script>
-      window.__VIBES_CONFIG__ = {
-        tokenApiUri: "__VITE_API_URL__",
-        cloudBackendUrl: "__VITE_CLOUD_URL__",
-        oidcAuthority: "__VITE_OIDC_AUTHORITY__",
-        oidcClientId: "__VITE_OIDC_CLIENT_ID__",
-        deployApiUrl: "__VITE_DEPLOY_API_URL__",
-        aiProxyUrl: "__VITE_AI_PROXY_URL__"
+      window.__APP_CONFIG__ = {
+        appName: "__APP_NAME__",
+        wsUrl: "__WS_URL__",
+        public: __APP_PUBLIC__,
+        oidcAuthority: "__OIDC_AUTHORITY__",
+        oidcClientId: "__OIDC_CLIENT_ID__",
+        deployApiUrl: "__DEPLOY_API_URL__",
+        aiProxyUrl: "__AI_PROXY_URL__"
       };
-      // Detect ?joined=true param (set by public link join redirect)
-      window.__VIBES_JOINED__ = new URLSearchParams(window.location.search).get('joined') === 'true';
-      // Shared ledger ID — injected at deploy time when the app's ledger is known.
-      // When set, all users share this single ledger (no per-user auto-provisioning).
-      window.__VIBES_SHARED_LEDGER__ = null;
       // Default: single theme hides the Design button in VibesPanel.
       // Apps with multiple themes override this before menu loads.
       window.__VIBES_THEMES__ = [{ id: "default", name: "Default" }];
@@ -212,7 +206,7 @@
       // === SyncStatusDot ===
       // Renders a fixed-position sync status indicator in the top-right corner.
       // Reads status from window.__VIBES_SYNC_STATUS__ via a custom event bridge.
-      // Activates automatically when the app calls useFireproofClerk().
+      // Activates automatically when the app connects to the sync server.
       var SYNC_STATUS_COLORS = {
         idle: '#94a3b8',
         connecting: '#eab308',
@@ -336,227 +330,9 @@
       window.SyncStatusDot = SyncStatusDot;
 
       // === SharingBridge ===
-      // Must be rendered inside OIDCProvider > SignedIn.
-      // Bridges vibes-share-request DOM events to the dashApi.
+      // Stub — sharing will be redesigned for TinyBase.
+      // Kept as a no-op so existing code referencing window.SharingBridge doesn't break.
       function SharingBridge() {
-        var ctx = window.useOIDCContext ? window.useOIDCContext() : {};
-        var dashApi = ctx.dashApi;
-        var dashApiRef = React.useRef(null);
-        var ledgerCacheRef = React.useRef(null);
-        dashApiRef.current = dashApi;
-
-        React.useEffect(function() {
-          function handleShareRequest(e) {
-            var detail = e.detail;
-            var email = detail.email;
-            var api = dashApiRef.current;
-
-            if (!api) {
-              document.dispatchEvent(new CustomEvent('vibes-share-error', {
-                detail: { error: { message: 'Sharing not ready. Please try again.' } }
-              }));
-              return;
-            }
-
-            (async function() {
-              try {
-                // --- Per-app invite via Deploy API ---
-                var deployApiUrl = window.__VIBES_CONFIG__ && window.__VIBES_CONFIG__.deployApiUrl;
-                var oidcToken = window.__VIBES_OIDC_TOKEN__;
-                var appHost = window.location.hostname;
-                var appName = appHost.split('.')[0]; // e.g. "my-app" from "my-app.marcus-e.workers.dev"
-
-                if (deployApiUrl && oidcToken && appName) {
-                  try {
-                    var inviteRes = await fetch(deployApiUrl.replace(/\/$/, '') + '/apps/' + encodeURIComponent(appName) + '/invite', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + oidcToken
-                      },
-                      body: JSON.stringify({ email: email })
-                    });
-                    var inviteData = await inviteRes.json();
-                    if (inviteRes.ok && inviteData.ok) {
-                      console.debug('[vibes-sharing] Deploy API invite succeeded:', inviteData.inviteUrl);
-                    } else {
-                      console.warn('[vibes-sharing] Deploy API invite failed:', inviteData.error || inviteRes.status);
-                    }
-                  } catch (deployErr) {
-                    console.warn('[vibes-sharing] Deploy API invite error:', deployErr);
-                  }
-                }
-
-                // --- Existing Fireproof Connect invite flow ---
-                // Discover ledger for this app — check cached sources first
-                var qpSub = new URLSearchParams(window.location.search).get('subdomain');
-                var cachedLedgerId = null;
-                var ledgerMap = window.__VIBES_LEDGER_MAP__ || {};
-                if (qpSub) {
-                  // Sell template: find map entry matching '-' + subdomain
-                  var mapKeys = Object.keys(ledgerMap);
-                  for (var mk = 0; mk < mapKeys.length; mk++) {
-                    if (mapKeys[mk].endsWith('-' + qpSub)) {
-                      cachedLedgerId = ledgerMap[mapKeys[mk]];
-                      break;
-                    }
-                  }
-                }
-                // Fallback: single entry in map (vibes apps with ?subdomain= param)
-                if (!cachedLedgerId) {
-                  var mapVals = Object.values(ledgerMap);
-                  if (mapVals.length === 1) cachedLedgerId = mapVals[0];
-                }
-                if (!cachedLedgerId) cachedLedgerId = window.__VIBES_SHARED_LEDGER__ || null;
-
-                var matchedLedger;
-                if (cachedLedgerId) {
-                  matchedLedger = { ledgerId: cachedLedgerId };
-                } else {
-                  // Fall back to listLedgersByUser
-                  if (!ledgerCacheRef.current) {
-                    var rLedgers = await api.listLedgersByUser({});
-                    if (rLedgers.isErr()) throw new Error('Could not load ledger list');
-                    ledgerCacheRef.current = rLedgers.Ok().ledgers;
-                  }
-                  var ledgers = ledgerCacheRef.current;
-                  matchedLedger = ledgers.find(function(l) {
-                    if (!l.name) return false;
-                    if (l.name.includes(appHost)) return true;
-                    // Workers.dev fallback: match by worker-name + subdomain
-                    if (qpSub) {
-                      var workerName = appHost.split('.')[0];
-                      if (l.name.includes(workerName + '-' + qpSub)) return true;
-                    }
-                    return false;
-                  });
-                  // NO || ledgers[0] fallback — error out instead of guessing
-                }
-
-                if (!matchedLedger) {
-                  throw new Error('No synced database found. Please wait for sync to complete.');
-                }
-
-                var rInvite = await api.inviteUser({
-                  ticket: {
-                    query: { byEmail: email },
-                    invitedParams: {
-                      ledger: {
-                        id: matchedLedger.ledgerId,
-                        role: 'member',
-                        right: detail.right || 'write'
-                      }
-                    }
-                  }
-                });
-                if (rInvite.isErr()) throw rInvite.Err();
-
-                var inviteData = rInvite.Ok();
-                console.debug('[vibes-sharing] inviteUser response:', inviteData);
-
-                // Extract invite ticket ID for auto-redemption
-                // inviteUser returns { type: "resInviteUser", invite: InviteTicket }
-                // InviteTicket has .inviteId field
-                var inviteId = (inviteData.invite && inviteData.invite.inviteId) || inviteData.inviteId || (inviteData.ticket && inviteData.ticket.id) || '';
-
-                // Construct invite URL pointing to this subdomain, including ledger ID for sync
-                var ledgerId = matchedLedger.ledgerId;
-                var inviteParam = inviteId ? '&invite=' + encodeURIComponent(inviteId) : '';
-                var inviteUrl = qpSub
-                  ? window.location.origin + '?subdomain=' + encodeURIComponent(qpSub) + '&ledger=' + encodeURIComponent(ledgerId) + inviteParam
-                  : window.location.origin + '?ledger=' + encodeURIComponent(ledgerId) + inviteParam;
-
-                // Dual-write to KV registry (awaited, non-fatal)
-                try {
-                  var kvRegistryUrl = window.__VIBES_REGISTRY_URL__;
-                  if (kvRegistryUrl && !kvRegistryUrl.startsWith('__')) {
-                    var token = window.__VIBES_OIDC_TOKEN__;
-                    if (token) {
-                      var hostname = window.location.hostname;
-                      var parts = hostname.split('.');
-                      var kvSubdomain = qpSub || (parts.length > 2 ? parts[0] : hostname);
-                      var kvRes = await fetch(kvRegistryUrl.replace(/\/$/, '') + '/invite', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                        body: JSON.stringify({ subdomain: kvSubdomain, email: email, right: detail.right || 'write', ledgerId: matchedLedger.ledgerId, inviteId: inviteId || '' })
-                      });
-                      if (!kvRes.ok) {
-                        var kvBody = await kvRes.text();
-                        console.error('[vibes-sharing] KV invite failed:', kvRes.status, kvRes.statusText, '| body:', kvBody, '| subdomain:', kvSubdomain, '| email:', email);
-                      } else {
-                        console.log('[vibes-sharing] KV invite written successfully for', email, 'on', kvSubdomain);
-                      }
-                    } else {
-                      console.warn('[vibes-sharing] KV invite skipped: no OIDC token available');
-                    }
-                  }
-                } catch (kvErr) {
-                  console.error('[vibes-sharing] KV dual-write error:', kvErr, '| email:', email);
-                }
-
-                document.dispatchEvent(new CustomEvent('vibes-share-success', {
-                  detail: {
-                    email: email,
-                    message: 'Invited ' + email + '!',
-                    link: inviteUrl
-                  }
-                }));
-              } catch (err) {
-                document.dispatchEvent(new CustomEvent('vibes-share-error', {
-                  detail: { error: { message: err.message || 'Failed to send invitation.' } }
-                }));
-              }
-            })();
-          }
-
-          function handlePublicLinkRequest(e) {
-            var detail = e.detail || {};
-            var appName = window.location.hostname.split('.')[0];
-            var deployApiUrl = window.__VIBES_CONFIG__ && window.__VIBES_CONFIG__.deployApiUrl;
-            var token = window.__VIBES_OIDC_TOKEN__;
-
-            if (!deployApiUrl || !token) {
-              document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
-                detail: { error: 'Not authenticated or deploy API not configured' }
-              }));
-              return;
-            }
-
-            fetch(deployApiUrl.replace(/\/$/, '') + '/apps/' + appName + '/public-link', {
-              method: 'POST',
-              headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ right: detail.right || 'write' })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-              if (data.ok) {
-                document.dispatchEvent(new CustomEvent('vibes-public-link-success', {
-                  detail: { link: data.joinUrl }
-                }));
-              } else {
-                document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
-                  detail: { error: data.error || 'Failed to generate link' }
-                }));
-              }
-            })
-            .catch(function(err) {
-              document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
-                detail: { error: err.message }
-              }));
-            });
-          }
-
-          document.addEventListener('vibes-share-request', handleShareRequest);
-          document.addEventListener('vibes-public-link-request', handlePublicLinkRequest);
-          return function() {
-            document.removeEventListener('vibes-share-request', handleShareRequest);
-            document.removeEventListener('vibes-public-link-request', handlePublicLinkRequest);
-          };
-        }, []);
-
         return null;
       }
       window.SharingBridge = SharingBridge;

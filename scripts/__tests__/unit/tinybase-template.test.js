@@ -1,0 +1,43 @@
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PLUGIN_ROOT = join(__dirname, '..', '..', '..');
+
+describe('TinyBase template', () => {
+  it('base template has TinyBase import map entries', () => {
+    const base = readFileSync(join(PLUGIN_ROOT, 'source-templates/base/template.html'), 'utf8');
+    expect(base).toContain('"tinybase"');
+    expect(base).toContain('"tinybase/mergeable-store"');
+    expect(base).toContain('"tinybase/ui-react"');
+    expect(base).not.toContain('"use-fireproof"');
+    expect(base).not.toContain('"@fireproof/core"');
+  });
+
+  it('base template has __APP_CONFIG__ instead of __VIBES_CONFIG__', () => {
+    const base = readFileSync(join(PLUGIN_ROOT, 'source-templates/base/template.html'), 'utf8');
+    expect(base).toContain('__APP_CONFIG__');
+    expect(base).not.toContain('__VIBES_CONFIG__');
+  });
+
+  it('vibes delta uses TinyBase hooks not Fireproof', () => {
+    const delta = readFileSync(join(PLUGIN_ROOT, 'skills/vibes/template.delta.html'), 'utf8');
+    expect(delta).toContain('createMergeableStore');
+    expect(delta).toContain('createWsSynchronizer');
+    expect(delta).toContain('useApp');
+    expect(delta).not.toContain('useFireproof');
+    expect(delta).not.toContain('useFireproofClerk');
+  });
+
+  it('vibes delta exposes TinyBase hooks as globals', () => {
+    const delta = readFileSync(join(PLUGIN_ROOT, 'skills/vibes/template.delta.html'), 'utf8');
+    expect(delta).toContain('window.useTable');
+    expect(delta).toContain('window.useRow');
+    expect(delta).toContain('window.useCell');
+    expect(delta).toContain('window.useRowIds');
+    expect(delta).toContain('window.useSortedRowIds');
+    expect(delta).toContain('window.useAddRowCallback');
+  });
+});
