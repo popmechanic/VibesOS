@@ -217,3 +217,10 @@ If the wildcard routing has issues:
 ## Naming Convention Invariant
 
 All dashboard workers follow the naming pattern `fireproof-dashboard-{appname}`, reachable at `connect-{appname}.vibesos.com`. The connect dispatcher relies on this: it strips the `connect-` prefix from the hostname and prepends `fireproof-dashboard-`. Any dashboard worker that doesn't follow this convention will be unreachable after migration. The migration script must verify this invariant for all existing dashboard workers before proceeding.
+
+## Implementation Notes
+
+**Cloudflare skills available**: The `cloudflare` plugin provides documentation-backed skills for Workers development. When implementing this plan, use these skills for guidance:
+- `cloudflare:wrangler` — for wrangler configuration, dispatch namespace setup, Workers Routes
+- `cloudflare:cloudflare` — for general CF platform questions (DNS, Workers Domains API, dispatch namespaces)
+- `cloudflare:workers-best-practices` — for reviewing dispatch worker code and wrangler config
