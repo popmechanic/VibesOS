@@ -17,7 +17,7 @@
    * Register a context.
    * @param {string} name - 'edit' or 'generate'
    * @param {object} els - { refFileInput, refBadgeRow, refBtn? }
-   * @param {object} cbs - { onHtmlRef?(dataUrl), onClear?(), onFocusInput?() }
+   * @param {object} cbs - { onRefAttached?(dataUrl), onClear?(), onFocusInput?() }
    * @param {object} opts - { showContextIntent: boolean, clearBtnColor: string }
    */
   function init(name, els, cbs, opts) {
@@ -75,8 +75,8 @@
       if (isHtml) {
         // HTML files always use 'match' intent, skip intent picker
         _showBadge(contextName, file.name, ' (HTML Design)');
-        if (ctx.callbacks.onHtmlRef) {
-          ctx.callbacks.onHtmlRef(reader.result);
+        if (ctx.callbacks.onRefAttached) {
+          ctx.callbacks.onRefAttached(reader.result);
         }
       } else if (file.type.startsWith('image/')) {
         showIntentPicker(contextName, file);
@@ -150,8 +150,8 @@
     const intentLabels = { none: '', mood: ' (Mood)', match: ' (Match)' };
     _showBadge(contextName, ctx.file.name, intentLabels[intent] || '');
 
-    if (ctx.callbacks.onHtmlRef) {
-      ctx.callbacks.onHtmlRef(ctx.file.dataUrl);
+    if (ctx.callbacks.onRefAttached) {
+      ctx.callbacks.onRefAttached(ctx.file.dataUrl);
     }
     if (ctx.callbacks.onFocusInput) {
       ctx.callbacks.onFocusInput();

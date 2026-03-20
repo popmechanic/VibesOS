@@ -1,15 +1,15 @@
 /**
  * editor-themes.js — Theme modal, palette editor, save/delete flows.
  * Depends on: window.EditorColorUtils (editor-color-utils.js)
- * State: themes[], currentThemeId, pendingThemeId, saveMode, paletteState, savedPaletteState
+ * State: themes[], currentThemeId, saveMode, paletteState, savedPaletteState
  * Init receives: elements{themeModal, themeGrid, themeSearch, currentThemeBadge,
  *   saveThemeSection, saveThemeToggle, saveThemeBtn, saveThemeName, saveThemeStatus,
  *   themeSelect, paletteSidebar, paletteSlots, paletteContrast, harmonyMode, previewFrame}
- * Callbacks: { onSendWs(msg), isWsOpen(), onReloadPreview(), onAddMessage(role, text),
+ * Callbacks: { onSendWs(msg), isWsOpen(), onAddMessage(role, text),
  *   getModel(), getCurrentAppName(), isThinking(), setThinking(enabled, progress, stage),
  *   buildThemeCarousel(), selectThemeCarousel(id), confetti, themeThumbHtml(id, ctx) }
  * Interface: window.EditorThemes = { init, setThemes, getThemes, getCurrentId, setCurrentId,
- *   setPendingId, load: reload, reload, open, close, select, confirmDelete,
+ *   load: reload, reload, open, close, select, confirmDelete,
  *   delete: deleteTheme, onDeleted, toggleSaveMode, saveCurrent, updateSaveProgress,
  *   onCreated, filterThemes, openPalette, closePalette, cancelPalette, savePalette, applyHarmony }
  */
@@ -17,7 +17,6 @@
   // Private state
   let themes = [];
   let currentThemeId = null;
-  let pendingThemeId = null;
   let saveMode = false;
 
   let paletteState = {
@@ -103,7 +102,6 @@
   function getThemes() { return themes; }
   function getCurrentId() { return currentThemeId; }
   function setCurrentId(id) { currentThemeId = id; }
-  function setPendingId(id) { pendingThemeId = id; }
 
   // ===========================
   // Theme Grid
@@ -179,7 +177,6 @@
     if (!callbacks.isWsOpen || !callbacks.isWsOpen()) return;
     const theme = themes.find(t => t.id === themeId);
     if (callbacks.onAddMessage) callbacks.onAddMessage('user', `Switch to theme: ${theme ? theme.name : themeId}`);
-    pendingThemeId = themeId;
     currentThemeId = themeId;
     if (callbacks.setThinking) callbacks.setThinking(true, 0, 'Switching theme...');
     if (callbacks.onSendWs) {
@@ -718,7 +715,6 @@
     getThemes,
     getCurrentId,
     setCurrentId,
-    setPendingId,
     load: reload,
     reload,
     open,

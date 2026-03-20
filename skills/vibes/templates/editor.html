@@ -4969,7 +4969,7 @@ window.escapeHtml = function(str) {
     refBadgeRow: document.getElementById('genRefBadgeRow'),
     refBtn: null,
   }, {
-    onHtmlRef() { setThemeCarouselOverridden(true); },
+    onRefAttached() { setThemeCarouselOverridden(true); },
     onClear() { setThemeCarouselOverridden(false); },
     onFocusInput() { document.getElementById('generatePrompt').focus(); }
   }, { showContextIntent: false, clearBtnColor: 'var(--vibes-cream)' });
@@ -5037,7 +5037,6 @@ window.escapeHtml = function(str) {
   }, {
     onSendWs(msg) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); },
     isWsOpen() { return ws && ws.readyState === WebSocket.OPEN; },
-    onReloadPreview() { reloadPreview(); },
     onAddMessage(role, text) { addMessage(role, text); },
     getModel() { return getModel(); },
     getCurrentAppName() { return currentAppName; },
