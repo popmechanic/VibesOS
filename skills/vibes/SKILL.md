@@ -471,41 +471,56 @@ Store the key for use with the `--ai-key` flag during deployment.
 
 ### Using the useAI Hook
 
-The `useAI` hook is automatically included in the template when AI features are detected:
+The `useAI` hook is automatically included in the template when AI features are detected.
+
+**IMPORTANT:** Never put `useAI()` in the same component as Fireproof hooks (`useFireproofClerk`, `useDocument`, `useLiveQuery`). AI loading/error state changes cause re-renders that conflict with Fireproof's write queue. Use a child component for AI interactions:
 
 ```jsx
 import React from "react";
 import { useFireproofClerk } from "use-fireproof";
 
-export default function App() {
-  const { database, useLiveQuery, syncStatus } = useFireproofClerk("ai-chat-db");
+// AI interactions in a child component — isolated from Fireproof re-renders
+function AIChatInput({ onSend }) {
   const { callAI, loading, error } = useAI();
+  const [input, setInput] = React.useState("");
 
-  const handleSend = async (message) => {
-    // Save user message
-    await database.put({ role: "user", content: message, type: "message" });
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    const message = input;
+    setInput("");
+    onSend({ role: "user", content: message }); // save user message via parent
 
-    // Call AI — returns text directly, or null on error
     const aiText = await callAI({
       model: "anthropic/claude-sonnet-4",
       messages: [{ role: "user", content: message }]
     });
-    if (!aiText) return; // error state is set automatically
-
-    // Save AI response
-    await database.put({ role: "assistant", content: aiText, type: "message" });
+    if (aiText) onSend({ role: "assistant", content: aiText }); // save AI response via parent
   };
 
-  // Handle errors
-  if (error) {
-    return (
-      <div className="p-4 bg-amber-100 text-amber-800 rounded">
-        {error.message}
-      </div>
-    );
-  }
+  return (
+    <div>
+      <input value={input} onChange={e => setInput(e.target.value)} placeholder="Type a message..." />
+      <button onClick={handleSend} disabled={loading}>{loading ? "Thinking..." : "Send"}</button>
+      {error && <p style={{ color: "red" }}>{error.message}</p>}
+    </div>
+  );
+}
 
-  // ... rest of UI
+// Main app owns Fireproof — AI state changes don't re-render this
+export default function App() {
+  const { database, useLiveQuery } = useFireproofClerk("ai-chat-db");
+  const { docs: messages } = useLiveQuery("type", { key: "message" });
+
+  const handleNewMessage = async (msg) => {
+    await database.put({ ...msg, type: "message", timestamp: Date.now() });
+  };
+
+  return (
+    <div>
+      {messages.map(m => <p key={m._id}><b>{m.role}:</b> {m.content}</p>)}
+      <AIChatInput onSend={handleNewMessage} />
+    </div>
+  );
 }
 ```
 
