@@ -866,68 +866,9 @@ app.post("/admin/reprovision-connect/:name", async (c) => {
   }
 });
 
-// Admin: batch reprovision all apps (for namespace migration)
-app.post("/admin/reprovision-all", async (c) => {
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) return c.json({ error: "auth required" }, 401);
-  const payload = await verifyJWT(authHeader.slice(7), c.env.OIDC_ISSUER, c.env.POCKET_ID);
-  if (!payload) return c.json({ error: "invalid token" }, 401);
-
-  // List all subdomain keys
-  const keys: string[] = [];
-  let cursor: string | undefined;
-  do {
-    const list = await c.env.REGISTRY_KV.list({ prefix: "subdomain:", cursor, limit: 100 });
-    keys.push(...list.keys.map((k: any) => k.name));
-    cursor = list.list_complete ? undefined : list.cursor;
-  } while (cursor);
-
-  const results: Array<{ app: string; status: string }> = [];
-
-  for (const key of keys) {
-    const appName = key.replace("subdomain:", "");
-    const raw = await c.env.REGISTRY_KV.get(key);
-    if (!raw) continue;
-
-    const record = JSON.parse(raw) as SubdomainRecord;
-
-    // Only reprovision apps owned by the caller that already have Connect
-    if (record.owner !== payload.sub || !record.connectProvisioned) {
-      results.push({ app: appName, status: record.owner !== payload.sub ? "SKIP (not owner)" : "SKIP (no connect)" });
-      continue;
-    }
-
-    try {
-      const connectInfo = await provisionConnect({
-        accountId: c.env.CF_ACCOUNT_ID,
-        apiToken: c.env.CF_API_TOKEN,
-        stage: appName,
-        oidcAuthority: c.env.OIDC_ISSUER,
-        oidcServiceWorkerName: "pocket-id",
-        cloudBackendBundle: CLOUD_BACKEND_BUNDLE,
-        dashboardBundle: DASHBOARD_BUNDLE,
-        r2AccessKeyId: c.env.R2_ACCESS_KEY_ID,
-        r2SecretAccessKey: c.env.R2_SECRET_ACCESS_KEY,
-        serviceApiKey: c.env.SERVICE_API_KEY,
-      });
-
-      record.connectProvisioned = true;
-      record.connect = connectInfo;
-      record.updatedAt = new Date().toISOString();
-      await c.env.REGISTRY_KV.put(key, JSON.stringify(record));
-
-      results.push({ app: appName, status: "OK" });
-    } catch (err) {
-      results.push({ app: appName, status: `FAIL: ${err instanceof Error ? err.message : String(err)}` });
-    }
-  }
-
-  const ok = results.filter(r => r.status === "OK").length;
-  const failed = results.filter(r => r.status.startsWith("FAIL")).length;
-  const skipped = results.filter(r => r.status.startsWith("SKIP")).length;
-
-  return c.json({ ok: true, total: results.length, migrated: ok, failed, skipped, results });
-});
+// NOTE: /admin/reprovision-all was removed — it indiscriminately re-keyed all apps,
+// breaking sync for freshly-deployed apps. Use /admin/reprovision-connect/:name for
+// targeted per-app reprovisioning instead.
 
 // Invite endpoint — add user to app's Pocket ID group
 app.post("/apps/:name/invite", async (c) => {
