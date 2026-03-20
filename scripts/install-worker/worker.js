@@ -48,7 +48,11 @@ export default {
     }
 
     const latestObj = await env.DMG_BUCKET.get("latest.txt");
-    const filename = latestObj ? await latestObj.text() : "VibesOS.dmg";
+    let filename = latestObj ? await latestObj.text() : "VibesOS.dmg";
+    // Safety: if latest.txt was corrupted (e.g. points to a non-DMG file), fall back
+    if (!filename.endsWith(".dmg")) {
+      filename = "VibesOS.dmg";
+    }
     const dmg = await env.DMG_BUCKET.get(filename);
 
     if (!dmg) {
