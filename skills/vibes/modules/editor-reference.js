@@ -118,7 +118,7 @@
     }
 
     // Event delegation for intent buttons and clear button
-    row.addEventListener('click', _intentPickerClickHandler.bind(null, contextName), { once: true });
+    row.addEventListener('click', _intentPickerClickHandler.bind(null, contextName));
   }
 
   /** Internal: handle clicks within the intent picker via delegation. */

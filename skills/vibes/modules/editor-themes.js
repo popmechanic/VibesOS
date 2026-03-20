@@ -183,12 +183,12 @@
     currentThemeId = themeId;
     if (callbacks.setThinking) callbacks.setThinking(true, 0, 'Switching theme...');
     if (callbacks.onSendWs) {
-      callbacks.onSendWs(JSON.stringify({
+      callbacks.onSendWs({
         type: 'theme',
         themeId,
         model: callbacks.getModel ? callbacks.getModel() : undefined,
         app: callbacks.getCurrentAppName ? callbacks.getCurrentAppName() : undefined
-      }));
+      });
     }
     close();
   }
@@ -232,7 +232,7 @@
   function deleteTheme(themeId) {
     if (!callbacks.isWsOpen || !callbacks.isWsOpen()) return;
     if (callbacks.onSendWs) {
-      callbacks.onSendWs(JSON.stringify({ type: 'delete_theme', themeId }));
+      callbacks.onSendWs({ type: 'delete_theme', themeId });
     }
   }
 
@@ -313,7 +313,7 @@
     }
 
     if (callbacks.onSendWs) {
-      callbacks.onSendWs(JSON.stringify({
+      callbacks.onSendWs({
         type: 'save_theme',
         name,
         model: callbacks.getModel ? callbacks.getModel() : undefined,
@@ -697,12 +697,12 @@
     const colors = {};
     PALETTE_SLOTS.forEach(s => { colors[s.cssVar] = paletteState[s.key]; });
     if (callbacks.onSendWs) {
-      callbacks.onSendWs(JSON.stringify({
+      callbacks.onSendWs({
         type: 'palette_theme',
         colors,
         model: callbacks.getModel ? callbacks.getModel() : undefined,
         app: callbacks.getCurrentAppName ? callbacks.getCurrentAppName() : undefined
-      }));
+      });
     }
     if (callbacks.onAddMessage) callbacks.onAddMessage('user', 'Apply custom color palette');
     closePalette();
