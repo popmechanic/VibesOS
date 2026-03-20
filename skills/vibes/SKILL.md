@@ -485,22 +485,22 @@ export default function App() {
     // Save user message
     await database.put({ role: "user", content: message, type: "message" });
 
-    // Call AI
-    const response = await callAI({
+    // Call AI — returns text directly, or null on error
+    const aiText = await callAI({
       model: "anthropic/claude-sonnet-4",
       messages: [{ role: "user", content: message }]
     });
+    if (!aiText) return; // error state is set automatically
 
     // Save AI response
-    const aiMessage = response.choices[0].message.content;
-    await database.put({ role: "assistant", content: aiMessage, type: "message" });
+    await database.put({ role: "assistant", content: aiText, type: "message" });
   };
 
-  // Handle limit exceeded
-  if (error?.code === 'LIMIT_EXCEEDED') {
+  // Handle errors
+  if (error) {
     return (
       <div className="p-4 bg-amber-100 text-amber-800 rounded">
-        AI usage limit reached. Please wait for monthly reset or upgrade your plan.
+        {error.message}
       </div>
     );
   }
@@ -512,22 +512,66 @@ export default function App() {
 ### useAI API
 
 ```jsx
-const { callAI, loading, error, clearError } = useAI();
+const { callAI, streamAI, loading, error, clearError } = useAI();
+```
 
-// callAI options
-await callAI({
-  model: "anthropic/claude-sonnet-4",  // or other OpenRouter models
+**`callAI` — non-streaming (one-shot requests):**
+
+```jsx
+const text = await callAI({
+  model: "anthropic/claude-sonnet-4",
   messages: [
     { role: "system", content: "You are a helpful assistant." },
     { role: "user", content: "Hello!" }
   ],
-  temperature: 0.7,  // optional
-  max_tokens: 1000   // optional
 });
+if (!text) return; // error state set automatically
+```
 
-// error structure
+Returns `string` on success, `null` on error (never throws).
+
+**`streamAI` — streaming (chat UIs):**
+
+```jsx
+const stream = streamAI({
+  model: "anthropic/claude-sonnet-4",
+  messages: [{ role: "user", content: userMessage }],
+});
+if (!stream) return; // error state set
+
+let accumulated = "";
+for await (const chunk of stream) {
+  accumulated += chunk;
+  setResponse(accumulated);
+}
+```
+
+Returns an async iterator on success, `null` on error. App controls its own state.
+
+**OpenRouter parameters** — pass any [OpenRouter API param](https://openrouter.ai/docs/api/reference/overview) directly:
+
+```jsx
+const text = await callAI({
+  messages: [...],
+  temperature: 0.7,
+  max_tokens: 1000,
+  response_format: { type: "json_object" },
+  tools: [...],
+});
+```
+
+**`raw: true`** — for tool calls or usage stats, get the full OpenRouter response object:
+
+```jsx
+const response = await callAI({ messages: [...], raw: true });
+const toolCalls = response.choices[0].message.tool_calls;
+```
+
+**Error codes:**
+
+```
 error = {
-  code: "LIMIT_EXCEEDED" | "API_ERROR" | "NETWORK_ERROR",
+  code: "NOT_CONFIGURED" | "AUTH_REQUIRED" | "UNAUTHORIZED" | "RATE_LIMITED" | "API_ERROR" | "NETWORK_ERROR",
   message: "Human-readable error message"
 }
 ```
@@ -571,7 +615,7 @@ The hook is available on `window.useSharing` after the auth provider loads. Chec
 - **DON'T** use `Fireproof.fireproof()` - use `useFireproofClerk()` hook
 - **DON'T** use the old `useFireproof` with `toCloud()` - use `useFireproofClerk` instead
 - **DON'T** use white text on light backgrounds
-- **DON'T** use `call-ai` directly - use `useAI` hook instead (it handles proxying and limits)
+- **DON'T** use `fetch()` to call AI APIs directly — use `useAI` hook instead (it handles auth and proxying)
 - **DON'T** use Fireproof's `_files` API for images — it has a sync bug where blobs arrive after metadata, causing 404s on other devices.
   Store image data as Uint8Array directly on documents:
   ```jsx
