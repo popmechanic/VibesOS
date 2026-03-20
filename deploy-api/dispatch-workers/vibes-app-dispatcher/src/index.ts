@@ -28,8 +28,8 @@ export default {
         if (msg.startsWith('Worker not found')) {
           return new Response('Not found', { status: 404 });
         }
-        console.error(`[dispatcher] Error dispatching connect ${workerName}:`, msg);
-        return new Response('Internal error', { status: 500 });
+        console.error(`[dispatcher] Error dispatching connect ${workerName}:`, msg, e instanceof Error ? e.stack : '');
+        return new Response(JSON.stringify({ error: msg, worker: workerName }), { status: 500, headers: { 'Content-Type': 'application/json' } });
       }
     }
 
