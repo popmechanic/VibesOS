@@ -61,3 +61,19 @@ export function validateAssembly(html, code) {
 
   return errors;
 }
+
+const FORBIDDEN_PATTERNS = [
+  { pattern: /\bimport\s+.+from\s+['"]/, message: 'Generated code contains import statements — all modules are globals provided by the template' },
+  { pattern: /\bcreateStore\b|\bcreateMergeableStore\b/, message: 'Generated code creates its own store — the template manages the store' },
+  { pattern: /\bstore\.set[A-Z]|\bstore\.add[A-Z]|\bstore\.del[A-Z]/, message: 'Generated code calls store methods directly — use callback hooks instead' },
+];
+
+export function checkForbiddenPatterns(code) {
+  const warnings = [];
+  for (const { pattern, message } of FORBIDDEN_PATTERNS) {
+    if (pattern.test(code)) {
+      warnings.push(message);
+    }
+  }
+  return warnings;
+}

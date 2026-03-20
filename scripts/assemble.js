@@ -16,7 +16,7 @@ import { resolve } from 'path';
 import { TEMPLATES } from './lib/paths.js';
 import { createBackup } from './lib/backup.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID, DEPLOY_API_URL, AI_PROXY_URL } from './lib/auth-constants.js';
-import { APP_PLACEHOLDER, validateAssembly, loadAndValidateTemplate } from './lib/assembly-utils.js';
+import { APP_PLACEHOLDER, validateAssembly, loadAndValidateTemplate, checkForbiddenPatterns } from './lib/assembly-utils.js';
 import { stripForTemplate } from './lib/strip-code.js';
 
 
@@ -49,6 +49,13 @@ async function main() {
   // The vibes delta imports React hooks via ES import (added in 0e59bd2),
   // so React destructuring in app code causes duplicate declarations.
   const cleanedAppCode = stripForTemplate(appCode, { stripReactHooks: true });
+
+  // Check for common builder mistakes
+  const assemblyWarnings = checkForbiddenPatterns(cleanedAppCode);
+  if (assemblyWarnings.length > 0) {
+    console.warn('Assembly warnings:');
+    assemblyWarnings.forEach(w => console.warn(`  - ${w}`));
+  }
 
   // Assemble: insert app code at placeholder
   let output = template.replace(APP_PLACEHOLDER, cleanedAppCode);
