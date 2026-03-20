@@ -690,6 +690,23 @@ export function createRouter(ctx: ServerContext) {
       case 'GET /editor/deployments':       return editorListDeployments(ctx);
     }
 
+    // Editor module files (extracted JS from editor.html)
+    if (url.pathname.startsWith('/editor/modules/')) {
+      const modName = url.pathname.slice('/editor/modules/'.length);
+      if (!/^[a-z0-9-]+\.js$/.test(modName)) {
+        return new Response('Forbidden', { status: 403, headers: corsHeaders() });
+      }
+      const modDir = resolve(ctx.projectRoot, 'skills', 'vibes', 'modules');
+      const modPath = resolve(modDir, modName);
+      if (!modPath.startsWith(modDir + '/')) {
+        return new Response('Forbidden', { status: 403, headers: corsHeaders() });
+      }
+      const file = Bun.file(modPath);
+      if (await file.exists()) {
+        return new Response(file, { headers: { 'Content-Type': 'text/javascript', ...corsHeaders() } });
+      }
+    }
+
     // Vendored libraries (served from assets/vendor/)
     if (key === 'GET /vendor/dom-to-image-more.min.js') {
       const vendorPath = join(ctx.projectRoot, 'assets', 'vendor', 'dom-to-image-more.min.js');
