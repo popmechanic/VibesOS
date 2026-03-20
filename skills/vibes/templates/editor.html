@@ -2689,36 +2689,36 @@
             <textarea class="generate-textarea" id="generatePrompt" placeholder="Describe your vibe to make it an app. Tip: starting with a reference image gives better results!"
               onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();startGenerate();}"></textarea>
             <div class="gen-toolbar">
-              <button class="gen-toolbar-btn" onclick="genPickReference()" title="Add image reference">
+              <button class="gen-toolbar-btn" onclick="EditorReference.pick('generate')" title="Add image reference">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
               <div class="gen-imggen-wrap">
-                <button class="gen-toolbar-btn" id="genImggenBtn" onclick="genToggleImgGen()" title="Generate UI image">
+                <button class="gen-toolbar-btn" id="genImggenBtn" onclick="EditorImgGen.toggle('generate')" title="Generate UI image">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                 </button>
                 <div class="imggen-popover" id="genImggenPopover">
                   <div class="imggen-drag-handle" data-drag="genImggenPopover">
                     <span>Image Generator</span>
-                    <button class="imggen-drag-close" onclick="genCloseImgGen()">&times;</button>
+                    <button class="imggen-drag-close" onclick="EditorImgGen.close('generate')">&times;</button>
                   </div>
                   <div class="imggen-key-form" id="genImggenKeyForm">
                     <label>OpenRouter API Key required</label>
                     <a class="imggen-key-link" href="https://openrouter.ai/keys" target="_blank" rel="noopener">Get a key at openrouter.ai/keys</a>
                     <input type="password" class="imggen-input" id="genImggenKeyInput" placeholder="sk-or-..."
-                      onkeydown="if(event.key==='Enter'){saveImgGenKey('genImggenKeyInput','genImggenKeyHint');}" />
+                      onkeydown="if(event.key==='Enter'){EditorImgGen.saveKey('generate');}" />
                     <span class="imggen-key-hint" id="genImggenKeyHint"></span>
-                    <button class="imggen-go-btn" onclick="saveImgGenKey('genImggenKeyInput','genImggenKeyHint')">Save Key</button>
+                    <button class="imggen-go-btn" onclick="EditorImgGen.saveKey('generate')">Save Key</button>
                   </div>
                   <div class="imggen-input-row" id="genImggenPromptRow">
                     <input type="text" class="imggen-input" id="genImggenPrompt" placeholder="Generate a UI for... (e.g. task manager with dark sidebar)"
-                      onkeydown="if(event.key==='Enter'){genGenerateImage();}" />
-                    <button class="imggen-go-btn" id="genImggenGoBtn" onclick="genGenerateImage()">Go</button>
+                      onkeydown="if(event.key==='Enter'){EditorImgGen.generate('generate');}" />
+                    <button class="imggen-go-btn" id="genImggenGoBtn" onclick="EditorImgGen.generate('generate')">Go</button>
                   </div>
                   <div class="imggen-preview" id="genImggenPreview" style="display:none;"></div>
                   <div class="imggen-counter" id="genImggenCounter" style="display:none;"></div>
                   <div class="imggen-actions" id="genImggenActions" style="display:none;">
-                    <button class="imggen-action-btn retry" onclick="genGenerateImage()">Retry</button>
-                    <button class="imggen-action-btn accept" onclick="genAcceptImage()">Use Image</button>
+                    <button class="imggen-action-btn retry" onclick="EditorImgGen.generate('generate')">Retry</button>
+                    <button class="imggen-action-btn accept" onclick="EditorImgGen.accept('generate')">Use Image</button>
                   </div>
                 </div>
               </div>
@@ -2916,11 +2916,11 @@
         </div>
         <span class="animation-active-badge" id="animBadge">
           <span id="animBadgeName"></span>
-          <button class="clear-btn" onclick="clearAnimation()" title="Clear animation">&times;</button>
+          <button class="clear-btn" onclick="EditorAnimations.clear()" title="Clear animation">&times;</button>
         </span>
         <span class="skill-active-badge animation-active-badge" id="skillBadge">
           <span id="skillBadgeName"></span>
-          <button class="clear-btn" onclick="clearSkill()" title="Clear skill">&times;</button>
+          <button class="clear-btn" onclick="EditorSkills.clear()" title="Clear skill">&times;</button>
         </span>
       </div>
       <div class="chat-composer">
@@ -2929,11 +2929,11 @@
             <span class="ref-badge">
               <span class="ref-badge-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
               <span id="refBadgeName"></span>
-              <button class="clear-btn" onclick="clearReference()" title="Remove reference">&times;</button>
+              <button class="clear-btn" onclick="EditorReference.clear('edit')" title="Remove reference">&times;</button>
             </span>
           </div>
           <div class="chat-composer-inner">
-            <button class="composer-btn" id="refBtn" onclick="pickReference()" title="Add image or HTML reference">
+            <button class="composer-btn" id="refBtn" onclick="EditorReference.pick('edit')" title="Add image or HTML reference">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
             <div class="model-picker-wrap">
@@ -2947,36 +2947,36 @@
               </div>
             </div>
             <div class="imggen-wrap">
-              <button class="composer-btn" id="imggenBtn" onclick="toggleImgGen()" title="Generate image">
+              <button class="composer-btn" id="imggenBtn" onclick="EditorImgGen.toggle('edit')" title="Generate image">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
               </button>
               <div class="imggen-popover" id="imggenPopover">
                 <div class="imggen-drag-handle" data-drag="imggenPopover">
                   <span>Image Generator</span>
-                  <button class="imggen-drag-close" onclick="closeImgGen()">&times;</button>
+                  <button class="imggen-drag-close" onclick="EditorImgGen.close('edit')">&times;</button>
                 </div>
                 <div class="imggen-key-form" id="imggenKeyForm">
                   <label>OpenRouter API Key required</label>
                   <a class="imggen-key-link" href="https://openrouter.ai/keys" target="_blank" rel="noopener">Get a key at openrouter.ai/keys</a>
                   <input type="password" class="imggen-input" id="imggenKeyInput" placeholder="sk-or-..."
-                    onkeydown="if(event.key==='Enter'){saveImgGenKey('imggenKeyInput','imggenKeyHint');}" />
+                    onkeydown="if(event.key==='Enter'){EditorImgGen.saveKey('edit');}" />
                   <span class="imggen-key-hint" id="imggenKeyHint"></span>
-                  <button class="imggen-go-btn" onclick="saveImgGenKey('imggenKeyInput','imggenKeyHint')">Save Key</button>
+                  <button class="imggen-go-btn" onclick="EditorImgGen.saveKey('edit')">Save Key</button>
                 </div>
                 <div class="imggen-input-row" id="imggenPromptRow">
                   <input type="text" class="imggen-input" id="imggenPrompt" placeholder="Generate a UI for... (e.g. task manager with dark sidebar)"
-                    onkeydown="if(event.key==='Enter'){generateImage();}" />
-                  <button class="imggen-go-btn" id="imggenGoBtn" onclick="generateImage()">Go</button>
+                    onkeydown="if(event.key==='Enter'){EditorImgGen.generate('edit');}" />
+                  <button class="imggen-go-btn" id="imggenGoBtn" onclick="EditorImgGen.generate('edit')">Go</button>
                 </div>
                 <div class="imggen-preview" id="imggenPreview" style="display:none;"></div>
                 <div class="imggen-counter" id="imggenCounter" style="display:none;"></div>
                 <div class="imggen-actions" id="imggenActions" style="display:none;">
-                  <button class="imggen-action-btn retry" onclick="generateImage()">Retry</button>
-                  <button class="imggen-action-btn accept" onclick="acceptGenImage()">Use Image</button>
+                  <button class="imggen-action-btn retry" onclick="EditorImgGen.generate('edit')">Retry</button>
+                  <button class="imggen-action-btn accept" onclick="EditorImgGen.accept('edit')">Use Image</button>
                 </div>
               </div>
             </div>
-            <button class="composer-btn" id="skillsBtn" onclick="toggleSkillsModal()" title="Add skill context" style="display:none">
+            <button class="composer-btn" id="skillsBtn" onclick="EditorSkills.toggle()" title="Add skill context" style="display:none">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
@@ -2990,18 +2990,18 @@
           </div>
         </div>
       </div>
-      <input type="file" id="refFileInput" accept="image/*,.html,.htm" style="display:none" onchange="handleRefFile(event)" />
-      <input type="file" id="genRefFileInput" accept="image/*,.html,.htm" style="display:none" onchange="genHandleRefFile(event)" />
+      <input type="file" id="refFileInput" accept="image/*,.html,.htm" style="display:none" onchange="EditorReference.handleFile('edit', event)" />
+      <input type="file" id="genRefFileInput" accept="image/*,.html,.htm" style="display:none" onchange="EditorReference.handleFile('generate', event)" />
       <!-- Palette Sidebar (replaces chat content when active) -->
       <div id="paletteSidebar" class="palette-sidebar" style="display:none;">
         <div class="palette-sidebar-header">
           <h3>Color Palette</h3>
-          <button class="modal-close" onclick="closePalette()">&times;</button>
+          <button class="modal-close" onclick="EditorThemes.closePalette()">&times;</button>
         </div>
         <div class="palette-sidebar-body">
           <div class="palette-harmony-bar">
             <label>Harmony:</label>
-            <select id="harmonyMode" onchange="applyHarmony()">
+            <select id="harmonyMode" onchange="EditorThemes.applyHarmony()">
               <option value="custom">Custom</option>
               <option value="complementary">Complementary</option>
               <option value="analogous">Analogous</option>
@@ -3012,8 +3012,8 @@
           <div class="palette-slots" id="paletteSlots"></div>
           <div class="palette-contrast" id="paletteContrast"></div>
           <div class="palette-actions">
-            <button class="palette-cancel-btn" onclick="cancelPalette()">Cancel</button>
-            <button class="palette-save-btn" onclick="savePalette()">Save</button>
+            <button class="palette-cancel-btn" onclick="EditorThemes.cancelPalette()">Cancel</button>
+            <button class="palette-save-btn" onclick="EditorThemes.savePalette()">Save</button>
           </div>
         </div>
       </div>
@@ -3053,9 +3053,9 @@
           <span id="currentThemeBadge" style="font-size:0.6875rem;background:var(--vibes-blue);color:var(--vibes-cream);padding:0.15rem 0.5rem;border-radius:4px;font-weight:700;text-transform:uppercase;display:none;"></span>
         </div>
         <div style="display:flex;gap:0.5rem;align-items:center;">
-          <button class="modal-create-btn" onclick="closeThemeModal();openPalette()">Color Palette</button>
-          <button class="modal-create-btn" id="saveThemeToggle" onclick="toggleSaveMode()">Save Theme</button>
-          <button class="modal-close" onclick="closeThemeModal()">&times;</button>
+          <button class="modal-create-btn" onclick="EditorThemes.close();EditorThemes.openPalette()">Color Palette</button>
+          <button class="modal-create-btn" id="saveThemeToggle" onclick="EditorThemes.toggleSaveMode()">Save Theme</button>
+          <button class="modal-close" onclick="EditorThemes.close()">&times;</button>
         </div>
       </div>
       <div class="modal-body">
@@ -3063,12 +3063,12 @@
           <div class="create-theme-bar">
             <input type="text" class="create-theme-input" id="saveThemeName"
               placeholder="Name your theme (e.g. Cyberpunk Neon)"
-              onkeydown="if(event.key==='Enter'){saveCurrentTheme();}" />
-            <button class="modal-create-btn" id="saveThemeBtn" onclick="saveCurrentTheme()">Save</button>
+              onkeydown="if(event.key==='Enter'){EditorThemes.saveCurrent();}" />
+            <button class="modal-create-btn" id="saveThemeBtn" onclick="EditorThemes.saveCurrent()">Save</button>
           </div>
           <div id="saveThemeStatus"></div>
         </div>
-        <input type="text" class="theme-search" id="themeSearch" placeholder="Search themes..." oninput="filterThemes(this.value)" />
+        <input type="text" class="theme-search" id="themeSearch" placeholder="Search themes..." oninput="EditorThemes.filterThemes(this.value)" />
         <div id="themeGrid"></div>
       </div>
     </div>
@@ -3079,7 +3079,7 @@
     <div class="anim-modal">
       <div class="anim-modal-header">
         <h2>Choose an Animation</h2>
-        <button class="modal-close" onclick="closeAnimationModal()">&times;</button>
+        <button class="modal-close" onclick="EditorAnimations.close()">&times;</button>
       </div>
       <div class="anim-category-tabs" id="animCategoryTabs"></div>
       <div class="anim-modal-body">
@@ -3093,7 +3093,7 @@
     <div class="anim-modal">
       <div class="anim-modal-header">
         <h2>Choose a Skill</h2>
-        <button class="modal-close" onclick="closeSkillsModal()">&times;</button>
+        <button class="modal-close" onclick="EditorSkills.close()">&times;</button>
       </div>
       <div class="anim-category-tabs" id="skillPluginTabs"></div>
       <div class="anim-modal-body">
@@ -3106,13 +3106,26 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+<!-- Shared utility registered globally for modules -->
 <script>
-  // === Helpers ===
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
+window.escapeHtml = function(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+};
+</script>
+
+<!-- Extracted editor modules -->
+<script src="/editor/modules/editor-color-utils.js"></script>
+<script src="/editor/modules/editor-animations.js"></script>
+<script src="/editor/modules/editor-skills.js"></script>
+<script src="/editor/modules/editor-reference.js"></script>
+<script src="/editor/modules/editor-imggen.js"></script>
+<script src="/editor/modules/editor-themes.js"></script>
+
+<script>
+  // === Helpers === (escapeHtml is now global via window.escapeHtml)
 
   // === State ===
   // Desktop mode: detect ElectroBun webview
@@ -3610,7 +3623,7 @@
     } else if (phase === 'edit') {
       headerRight.innerHTML = settingsButtonHtml + `
         <div class="navbar-button-wrapper">
-          <button style="background:#5398c9" onclick="openThemeModal()">
+          <button style="background:#5398c9" onclick="EditorThemes.open()">
             <div class="navbar-button-icon">
               <svg width="35" height="35" viewBox="0 0 35 35" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="17.5" cy="17.5" r="17.5" fill="#231F20"/>
@@ -3706,7 +3719,7 @@
 
       if (msg.type === 'status') {
         if (msg.status === 'saving_theme') {
-          updateSaveThemeProgress(msg.progress, msg.stage, msg.elapsed);
+          EditorThemes.updateSaveProgress(msg.progress, msg.stage, msg.elapsed);
         } else if (isGenerating) {
           setThinking(true, msg.progress, msg.stage, msg.elapsed);
           updatePreviewOverlay(msg.progress, msg.stage);
@@ -3766,6 +3779,7 @@
       } else if (msg.type === 'theme_selected') {
         // Server tells us which theme was selected (including auto-selection)
         currentThemeId = msg.themeId;
+        EditorThemes.setCurrentId(msg.themeId);
         // Store theme background for preview overlay placeholder
         if (msg.themeBackground) {
           window.__selectedThemeBg = msg.themeBackground;
@@ -3815,14 +3829,14 @@
         captureScreenshot(true);
       } else if (msg.type === 'theme_created') {
         setThinking(false);
-        onThemeCreated(msg.themeId, msg.themeName);
+        EditorThemes.onCreated(msg.themeId, msg.themeName);
       } else if (msg.type === 'theme_deleted') {
-        onThemeDeleted(msg.themeId);
+        EditorThemes.onDeleted(msg.themeId);
       } else if (msg.type === 'imggen_result') {
         if (window._imggenContext === 'gen') {
-          genOnImgGenResult(msg.imageUrl, msg.prompt);
+          EditorImgGen.onResult('generate', msg.imageUrl, msg.prompt);
         } else {
-          onImgGenResult(msg.imageUrl, msg.prompt);
+          EditorImgGen.onResult('edit', msg.imageUrl, msg.prompt);
         }
       } else if (msg.type === 'imggen_status') {
         // generating state handled by UI spinner already
@@ -3924,6 +3938,7 @@
       const appParam = currentAppName ? '?app=' + encodeURIComponent(currentAppName) : '';
       const res = await fetch('/themes' + appParam);
       themes = await res.json();
+      EditorThemes.setThemes(themes);
       // Populate hidden select for JS compat
       const select = document.getElementById('themeSelect');
       for (const t of themes) {
@@ -4339,20 +4354,21 @@
     document.getElementById('generateActions').style.display = 'none';
     document.getElementById('generateError').style.display = 'none';
 
-    const hasReference = !!genReferenceFile;
+    const genRefFile = EditorReference.getFile('generate');
+    const hasReference = !!genRefFile;
     // Skip theme in custom mode (user toggle or reference attached)
     const skipTheme = customThemeMode || hasReference;
     const payload = { type: 'generate', prompt, themeId: skipTheme ? null : (themeId || null), model: getModel(), useAI: genAIEnabled, previousApp: currentAppName };
     if (hasReference) {
       payload.reference = {
-        name: genReferenceFile.name,
-        type: genReferenceFile.type,
-        dataUrl: genReferenceFile.dataUrl,
-        intent: genReferenceFile.intent || 'match'
+        name: genRefFile.name,
+        type: genRefFile.type,
+        dataUrl: genRefFile.dataUrl,
+        intent: genRefFile.intent || 'match'
       };
     }
     ws.send(JSON.stringify(payload));
-    genClearReference();
+    EditorReference.clear('generate');
 
     // Immediately transition to edit view
     isGenerating = true;
@@ -4610,237 +4626,9 @@
     if (e.key === 'Escape') closeDeployMenu();
   });
 
-  // === Animations ===
-  let allAnimations = [];
-  let activeAnimationId = null;
-  let activeAnimCategory = 'All';
+  // === Animations === (extracted to editor-animations.js)
 
-  async function loadAnimations() {
-    try {
-      const res = await fetch('/animations');
-      allAnimations = await res.json();
-      console.log(`Loaded ${allAnimations.length} animations`);
-    } catch (err) {
-      console.error('Failed to load animations:', err);
-    }
-  }
-
-  // Load animations on startup
-  loadAnimations();
-
-  // Icon click → open modal filtered to that category
-  document.getElementById('animationIcons').addEventListener('click', (e) => {
-    const btn = e.target.closest('.animation-icon-btn');
-    if (!btn) return;
-    openAnimationModal(btn.dataset.category);
-  });
-
-  function openAnimationModal(category) {
-    activeAnimCategory = category || 'All';
-    document.getElementById('animModal').classList.add('open');
-    renderAnimCategoryTabs();
-    renderAnimGrid();
-  }
-
-  function closeAnimationModal() {
-    document.getElementById('animModal').classList.remove('open');
-  }
-
-  function renderAnimCategoryTabs() {
-    const tabs = document.getElementById('animCategoryTabs');
-    const categories = ['All', ...new Set(allAnimations.map(a => a.category))];
-    tabs.innerHTML = categories.map(c =>
-      `<button class="anim-category-tab${c === activeAnimCategory ? ' active' : ''}" onclick="filterAnimations('${c}')">${c}</button>`
-    ).join('');
-  }
-
-  function filterAnimations(category) {
-    activeAnimCategory = category;
-    renderAnimCategoryTabs();
-    renderAnimGrid();
-  }
-
-  // Map animation IDs to CSS preview HTML
-  const ANIM_PREVIEWS = {
-    '3d-layers':          '<div class="ap-3d-layers"><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    '3d-flip-cards':      '<div class="ap-3d-flip" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"><div class="ap"></div><div class="ap"></div></div>',
-    '3d-perspective-grid':'<div class="ap-3d-grid"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    '3d-carousel':        '<div class="ap-3d-carousel"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    '3d-parallax':        '<div class="ap-3d-parallax" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    '3d-ampersand':       '<div class="ap-ampersand"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    '3d-cuboid-gallery':  '<div class="ap-cuboid-gallery"><div class="ap-cuboid"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div><div class="ap-cuboid"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div><div class="ap-cuboid"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div><div class="ap-cuboid"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div></div>',
-    'anim-scroll-reveal': '<div class="ap-scroll-reveal" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    'anim-staggered':     '<div class="ap-staggered" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    'anim-gradient-morph':'<div class="ap-gradient"></div>',
-    'anim-clip-path':     '<div class="ap-clip-path"></div>',
-    'anim-typewriter':    '<div class="ap-typewriter">vibes_</div>',
-    'int-mouse-glow':     '<div class="ap-glow" style="position:absolute"></div>',
-    'int-tilt-cards':     '<div class="ap-tilt"></div>',
-    'int-magnetic-buttons':'<div class="ap-magnetic">CLICK</div>',
-    'int-drag-sort':      '<div class="ap-drag" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div></div>',
-    'int-cursor-trail':   '<div class="ap-trail" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    'part-floating-dots': '<div class="ap-dots" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    'part-confetti':      '<div class="ap-confetti" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    'part-snow':          '<div class="ap-snow" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    'part-bubbles':       '<div class="ap-bubble" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    'part-fireflies':     '<div class="ap-firefly" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    'shd-aurora':         '<div class="ap-aurora"></div>',
-    'shd-plasma':         '<div class="ap-plasma"></div>',
-    'shd-noise-gradient': '<div class="ap-noise"></div>',
-    'shd-water-ripple':   '<div class="ap-ripple" style="width:100%;height:100%"><div class="ap"></div><div class="ap"></div><div class="ap"></div></div>',
-    'shd-voronoi':        '<div class="ap-voronoi"></div>',
-  };
-
-  function renderAnimGrid() {
-    const grid = document.getElementById('animGrid');
-    const filtered = activeAnimCategory === 'All'
-      ? allAnimations
-      : allAnimations.filter(a => a.category === activeAnimCategory);
-
-    if (filtered.length === 0) {
-      grid.innerHTML = '<div style="text-align:center;color:#555;padding:2rem;grid-column:1/-1;">No animations in this category</div>';
-      return;
-    }
-
-    grid.innerHTML = filtered.map(a => {
-      const preview = ANIM_PREVIEWS[a.id] || '';
-      return `<div class="anim-card" onclick="selectAnimation('${a.id}')">
-        <div class="anim-card-preview">${preview}</div>
-        <div class="anim-card-info">
-          <div class="anim-card-name">${a.name}</div>
-          <div class="anim-card-desc">${a.description}</div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  function selectAnimation(id) {
-    activeAnimationId = id;
-    const anim = allAnimations.find(a => a.id === id);
-    const badge = document.getElementById('animBadge');
-    const badgeName = document.getElementById('animBadgeName');
-    if (anim) {
-      badgeName.textContent = anim.name;
-      badge.classList.add('visible');
-      document.getElementById('chatInput').placeholder = `Describe what you want the "${anim.name}" animation applied to...`;
-    }
-    closeAnimationModal();
-  }
-
-  function clearAnimation() {
-    activeAnimationId = null;
-    const badge = document.getElementById('animBadge');
-    badge.classList.remove('visible');
-    document.getElementById('chatInput').placeholder = 'Describe changes to your app...';
-  }
-
-  // === Skills ===
-  let allSkills = [];
-  let activeSkillId = null;
-  let activeSkillPlugin = 'All';
-
-  async function loadSkills() {
-    try {
-      const res = await fetch('/skills');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      allSkills = await res.json();
-      console.log(`Loaded ${allSkills.length} skills`);
-      document.getElementById('skillsBtn').style.display = allSkills.length > 0 ? '' : 'none';
-    } catch (err) {
-      console.error('Failed to load skills:', err);
-      document.getElementById('skillsBtn').style.display = 'none';
-    }
-  }
-
-  loadSkills();
-
-  function toggleSkillsModal() {
-    const modal = document.getElementById('skillsModal');
-    if (modal.classList.contains('open')) {
-      closeSkillsModal();
-    } else {
-      openSkillsModal();
-    }
-  }
-
-  function openSkillsModal() {
-    activeSkillPlugin = 'All';
-    document.getElementById('skillsModal').classList.add('open');
-    renderSkillPluginTabs();
-    renderSkillGrid();
-  }
-
-  function closeSkillsModal() {
-    document.getElementById('skillsModal').classList.remove('open');
-  }
-
-  function renderSkillPluginTabs() {
-    const tabs = document.getElementById('skillPluginTabs');
-    const plugins = ['All', ...new Set(allSkills.map(s => s.pluginName))];
-    tabs.innerHTML = plugins.map(p =>
-      `<button class="anim-category-tab${p === activeSkillPlugin ? ' active' : ''}" data-plugin="${escapeHtml(p)}">${escapeHtml(p)}</button>`
-    ).join('');
-    tabs.querySelectorAll('[data-plugin]').forEach(btn => {
-      btn.addEventListener('click', () => filterSkillsByPlugin(btn.dataset.plugin));
-    });
-  }
-
-  function filterSkillsByPlugin(plugin) {
-    activeSkillPlugin = plugin;
-    renderSkillPluginTabs();
-    renderSkillGrid();
-  }
-
-  function renderSkillGrid() {
-    const grid = document.getElementById('skillGrid');
-    const filtered = activeSkillPlugin === 'All'
-      ? allSkills
-      : allSkills.filter(s => s.pluginName === activeSkillPlugin);
-
-    if (filtered.length === 0) {
-      grid.innerHTML = '<div style="text-align:center;color:#555;padding:2rem;grid-column:1/-1;">No skills available</div>';
-      return;
-    }
-
-    grid.innerHTML = filtered.map(s => {
-      const isActive = activeSkillId === s.id;
-      const activeStyle = isActive ? 'border-color:var(--vibes-blue);box-shadow:4px 4px 0px 0px var(--vibes-blue), 4px 4px 0px 2px var(--vibes-near-black);' : '';
-      return `<div class="anim-card" style="${activeStyle}" data-skill-id="${escapeHtml(s.id)}">
-        <div class="anim-card-info" style="padding:0.75rem;">
-          <div class="anim-card-name">${escapeHtml(s.name)}</div>
-          <div class="anim-card-desc">${escapeHtml(s.description || '')}</div>
-          <div style="font-size:0.6rem;color:#888;margin-top:0.25rem;">${escapeHtml(s.pluginName)}</div>
-        </div>
-      </div>`;
-    }).join('');
-
-    grid.querySelectorAll('[data-skill-id]').forEach(card => {
-      card.addEventListener('click', () => selectSkill(card.dataset.skillId));
-    });
-  }
-
-  function selectSkill(id) {
-    activeSkillId = id;
-    const skill = allSkills.find(s => s.id === id);
-    const badge = document.getElementById('skillBadge');
-    const badgeName = document.getElementById('skillBadgeName');
-    if (skill) {
-      badgeName.textContent = skill.name;
-      badge.classList.add('visible');
-      document.getElementById('skillsBtn').classList.add('active');
-    }
-    closeSkillsModal();
-  }
-
-  function clearSkill() {
-    activeSkillId = null;
-    document.getElementById('skillBadge').classList.remove('visible');
-    document.getElementById('skillsBtn').classList.remove('active');
-  }
-
-  document.getElementById('skillsModal').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('skillsModal')) closeSkillsModal();
-  });
+  // === Skills === (extracted to editor-skills.js)
 
   // === Model picker ===
   let selectedModel = '';
@@ -4869,354 +4657,11 @@
     return selectedModel || undefined;
   }
 
-  // === Reference file (image or HTML) ===
-  let referenceFile = null; // { name, type, dataUrl }
+  // === Reference file === (extracted to editor-reference.js)
 
-  function pickReference() {
-    document.getElementById('refFileInput').click();
-  }
+  // === Image Generation === (extracted to editor-imggen.js)
 
-  function handleRefFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    attachRefFromFile(file);
-    event.target.value = '';
-  }
-
-  function clearReference() {
-    referenceFile = null;
-    document.getElementById('refBadgeRow').classList.remove('visible');
-    document.getElementById('refBtn').classList.remove('active');
-  }
-
-  // Allow pasting images directly into the textarea
-  function attachRefFromFile(file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      referenceFile = { name: file.name, type: file.type, dataUrl: reader.result, intent: 'match' };
-      const isImage = file.type.startsWith('image/');
-      if (isImage) {
-        showRefIntentPicker(file);
-      } else {
-        // HTML files go straight to badge with match intent
-        showRefBadge(file.name, null);
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function showRefIntentPicker(file) {
-    const display = file.name.length > 20
-      ? file.name.slice(0, 8) + '...' + file.name.slice(-8)
-      : file.name;
-    const row = document.getElementById('refBadgeRow');
-    row.innerHTML = `<div class="ref-intent-picker">
-      <span class="ref-intent-label">${display}</span>
-      <button class="ref-intent-btn" onclick="pickRefIntent('none')">Context</button>
-      <button class="ref-intent-btn" onclick="pickRefIntent('mood')">Mood</button>
-      <button class="ref-intent-btn" onclick="pickRefIntent('match')">Match Layout</button>
-      <button class="clear-btn" onclick="clearReference()" title="Remove reference" style="background:none;border:none;cursor:pointer;font-size:0.875rem;font-weight:800;opacity:0.6;padding:0 0 0 0.2rem;color:var(--vibes-near-black)">&times;</button>
-    </div>`;
-    row.classList.add('visible');
-    document.getElementById('refBtn').classList.add('active');
-  }
-
-  function pickRefIntent(intent) {
-    if (!referenceFile) return;
-    referenceFile.intent = intent;
-    const intentLabels = { none: '', mood: ' (Mood)', match: ' (Match)' };
-    showRefBadge(referenceFile.name, intentLabels[intent] || '');
-    document.getElementById('chatInput').focus();
-  }
-
-  function showRefBadge(name, intentSuffix) {
-    const display = name.length > 20
-      ? name.slice(0, 8) + '...' + name.slice(-8)
-      : name;
-    const label = display + (intentSuffix || '');
-    const row = document.getElementById('refBadgeRow');
-    row.innerHTML = `<span class="ref-badge">
-      <span class="ref-badge-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
-      <span id="refBadgeName">${label}</span>
-      <button class="clear-btn" onclick="clearReference()" title="Remove reference">&times;</button>
-    </span>`;
-    row.classList.add('visible');
-    document.getElementById('refBtn').classList.add('active');
-  }
-
-  document.getElementById('chatInput').addEventListener('paste', (e) => {
-    const items = e.clipboardData && e.clipboardData.items;
-    if (!items) return;
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (file) {
-          const named = new File([file], file.name || 'pasted-image.png', { type: file.type });
-          attachRefFromFile(named);
-        }
-        return;
-      }
-    }
-  });
-
-  // Also support drag & drop onto the composer
-  const composerBox = document.querySelector('.chat-composer-box');
-  composerBox.addEventListener('dragover', (e) => { e.preventDefault(); composerBox.style.outline = '2px solid var(--vibes-blue)'; });
-  composerBox.addEventListener('dragleave', () => { composerBox.style.outline = ''; });
-  composerBox.addEventListener('drop', (e) => {
-    e.preventDefault();
-    composerBox.style.outline = '';
-    const file = e.dataTransfer.files[0];
-    if (file && (file.type.startsWith('image/') || /\.html?$/i.test(file.name))) {
-      attachRefFromFile(file);
-    }
-  });
-
-  // === Draggable popover helpers ===
-  function positionPopover(pop, btn) {
-    const r = btn.getBoundingClientRect();
-    let left = r.left + r.width / 2 - 160; // 320/2
-    let top = r.top - 8;
-    // Clamp to viewport
-    left = Math.max(8, Math.min(left, window.innerWidth - 328));
-    top = Math.max(8, top);
-    // If not enough room above, place below
-    if (top < 100) top = r.bottom + 8;
-    else top = top - pop.offsetHeight || top - 200;
-    pop.style.left = left + 'px';
-    pop.style.top = Math.max(8, top) + 'px';
-  }
-
-  (function initDrag() {
-    let dragging = null, startX, startY, origX, origY;
-    document.addEventListener('mousedown', (e) => {
-      const handle = e.target.closest('.imggen-drag-handle');
-      if (!handle || e.target.closest('.imggen-drag-close')) return;
-      const popId = handle.dataset.drag;
-      if (!popId) return;
-      dragging = document.getElementById(popId);
-      const rect = dragging.getBoundingClientRect();
-      startX = e.clientX; startY = e.clientY;
-      origX = rect.left; origY = rect.top;
-      e.preventDefault();
-    });
-    document.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-      const dx = e.clientX - startX, dy = e.clientY - startY;
-      dragging.style.left = Math.max(0, Math.min(origX + dx, window.innerWidth - dragging.offsetWidth)) + 'px';
-      dragging.style.top = Math.max(0, Math.min(origY + dy, window.innerHeight - dragging.offsetHeight)) + 'px';
-    });
-    document.addEventListener('mouseup', () => { dragging = null; });
-    document.addEventListener('mousedown', (e) => {
-      const chatPop = document.getElementById('imggenPopover');
-      const genPop = document.getElementById('genImggenPopover');
-      if (chatPop.classList.contains('open') && !chatPop.contains(e.target) && !e.target.closest('#imggenBtn')) closeImgGen();
-      if (genPop.classList.contains('open') && !genPop.contains(e.target) && !e.target.closest('#genImggenBtn')) genCloseImgGen();
-    });
-  })();
-
-  // === Image Generation ===
-  let hasOpenRouterKey = false;
-  let imggenImages = []; // array of { url, prompt }
-  let imggenIndex = 0;
-
-  function updateImgGenKeyUI() {
-    document.getElementById('imggenKeyForm').style.display = hasOpenRouterKey ? 'none' : 'flex';
-    document.getElementById('imggenPromptRow').style.display = hasOpenRouterKey ? 'flex' : 'none';
-    document.getElementById('genImggenKeyForm').style.display = hasOpenRouterKey ? 'none' : 'flex';
-    document.getElementById('genImggenPromptRow').style.display = hasOpenRouterKey ? 'flex' : 'none';
-  }
-
-  function saveImgGenKey(inputId, hintId) {
-    const input = document.getElementById(inputId);
-    const hint = document.getElementById(hintId);
-    const key = input.value.trim();
-    if (!key.startsWith('sk-or-') || key.length < 10) {
-      hint.textContent = 'Key must start with sk-or- and be at least 10 characters';
-      hint.style.display = 'block';
-      return;
-    }
-    hint.style.display = 'none';
-    fetch('/editor/credentials', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ OPENROUTER_API_KEY: key })
-    }).then(r => r.json()).then(data => {
-      if (data.error) {
-        hint.textContent = data.error;
-        hint.style.display = 'block';
-      } else {
-        hasOpenRouterKey = true;
-        updateImgGenKeyUI();
-      }
-    }).catch(() => {
-      hint.textContent = 'Failed to save key';
-      hint.style.display = 'block';
-    });
-  }
-
-  function toggleImgGen() {
-    const pop = document.getElementById('imggenPopover');
-    const isOpen = pop.classList.contains('open');
-    if (isOpen) { closeImgGen(); return; }
-    updateImgGenKeyUI();
-    positionPopover(pop, document.getElementById('imggenBtn'));
-    pop.classList.add('open');
-    if (hasOpenRouterKey) document.getElementById('imggenPrompt').focus();
-    else document.getElementById('imggenKeyInput').focus();
-  }
-
-  function closeImgGen() {
-    const pop = document.getElementById('imggenPopover');
-    pop.classList.remove('open');
-    pop.style.left = ''; pop.style.top = '';
-    document.getElementById('imggenBtn').classList.remove('active');
-  }
-
-  function generateImage() {
-    const prompt = document.getElementById('imggenPrompt').value.trim();
-    if (!prompt || !ws || ws.readyState !== WebSocket.OPEN) return;
-
-    document.getElementById('imggenGoBtn').disabled = true;
-    document.getElementById('imggenPreview').style.display = 'flex';
-    document.getElementById('imggenPreview').innerHTML = '<div class="spinner"></div>';
-    document.getElementById('imggenActions').style.display = 'none';
-    document.getElementById('imggenCounter').style.display = 'none';
-
-    window._imggenContext = 'chat';
-    ws.send(JSON.stringify({ type: 'generate_image', prompt, model: getModel() }));
-  }
-
-  function onImgGenResult(imageUrl, prompt) {
-    imggenImages.push({ url: imageUrl, prompt });
-    imggenIndex = imggenImages.length - 1;
-    renderImgGenPreview();
-    document.getElementById('imggenGoBtn').disabled = false;
-  }
-
-  function renderImgGenPreview() {
-    if (imggenImages.length === 0) return;
-    const img = imggenImages[imggenIndex];
-    const preview = document.getElementById('imggenPreview');
-    preview.style.display = 'flex';
-    preview.innerHTML = `<img src="${img.url}" alt="Generated image" />`;
-    if (imggenImages.length > 1) {
-      preview.innerHTML += `<button class="imggen-nav prev" onclick="event.stopPropagation();imggenPrev()">&#8249;</button>`;
-      preview.innerHTML += `<button class="imggen-nav next" onclick="event.stopPropagation();imggenNext()">&#8250;</button>`;
-    }
-    document.getElementById('imggenCounter').style.display = '';
-    document.getElementById('imggenCounter').textContent = (imggenIndex + 1) + ' / ' + imggenImages.length;
-    document.getElementById('imggenActions').style.display = 'flex';
-  }
-
-  function imggenPrev() {
-    if (imggenImages.length === 0) return;
-    imggenIndex = (imggenIndex - 1 + imggenImages.length) % imggenImages.length;
-    renderImgGenPreview();
-  }
-
-  function imggenNext() {
-    if (imggenImages.length === 0) return;
-    imggenIndex = (imggenIndex + 1) % imggenImages.length;
-    renderImgGenPreview();
-  }
-
-  function acceptGenImage() {
-    if (imggenImages.length === 0) return;
-    const img = imggenImages[imggenIndex];
-    // Convert data URL to a File-like reference and attach it
-    referenceFile = {
-      name: 'generated-' + Date.now() + '.png',
-      type: 'image/png',
-      dataUrl: img.url,
-      intent: 'match'
-    };
-    showRefIntentPicker({ name: referenceFile.name, type: 'image/png' });
-    closeImgGen();
-    imggenImages = [];
-    imggenIndex = 0;
-    document.getElementById('imggenPreview').style.display = 'none';
-    document.getElementById('imggenActions').style.display = 'none';
-    document.getElementById('imggenCounter').style.display = 'none';
-  }
-
-  // === Generate-phase reference & image gen ===
-  let genReferenceFile = null;
-  let genImggenImages = [];
-  let genImggenIndex = 0;
-
-  function genPickReference() {
-    document.getElementById('genRefFileInput').click();
-  }
-
-  function genHandleRefFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    genAttachRefFromFile(file);
-    event.target.value = '';
-  }
-
-  function genClearReference() {
-    genReferenceFile = null;
-    document.getElementById('genRefBadgeRow').classList.remove('visible');
-    setThemeCarouselOverridden(false);
-  }
-
-  function genAttachRefFromFile(file) {
-    const isHtml = /\.html?$/i.test(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      genReferenceFile = { name: file.name, type: file.type, dataUrl: reader.result, intent: 'match' };
-      if (isHtml) {
-        // HTML files always use "match" intent, skip intent picker
-        genShowRefBadge(file.name, ' (HTML Design)');
-        setThemeCarouselOverridden(true);
-      } else if (file.type.startsWith('image/')) {
-        genShowRefIntentPicker(file);
-      } else {
-        genShowRefBadge(file.name, null);
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function genShowRefIntentPicker(file) {
-    const display = file.name.length > 20
-      ? file.name.slice(0, 8) + '...' + file.name.slice(-8)
-      : file.name;
-    const row = document.getElementById('genRefBadgeRow');
-    row.innerHTML = `<div class="ref-intent-picker">
-      <span class="ref-intent-label">${display}</span>
-      <button class="ref-intent-btn" onclick="genPickRefIntent('mood')">Mood</button>
-      <button class="ref-intent-btn" onclick="genPickRefIntent('match')">Match Layout</button>
-      <button class="clear-btn" onclick="genClearReference()" title="Remove reference" style="background:none;border:none;cursor:pointer;font-size:0.875rem;font-weight:800;opacity:0.6;padding:0 0 0 0.2rem;color:var(--vibes-cream)">&times;</button>
-    </div>`;
-    row.classList.add('visible');
-  }
-
-  function genPickRefIntent(intent) {
-    if (!genReferenceFile) return;
-    genReferenceFile.intent = intent;
-    const intentLabels = { mood: ' (Mood)', match: ' (Match)' };
-    genShowRefBadge(genReferenceFile.name, intentLabels[intent] || '');
-    setThemeCarouselOverridden(true);
-    document.getElementById('generatePrompt').focus();
-  }
-
-  function genShowRefBadge(name, intentSuffix) {
-    const display = name.length > 20
-      ? name.slice(0, 8) + '...' + name.slice(-8)
-      : name;
-    const label = display + (intentSuffix || '');
-    const row = document.getElementById('genRefBadgeRow');
-    row.innerHTML = `<span class="ref-badge">
-      <span class="ref-badge-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
-      <span>${label}</span>
-      <button class="clear-btn" onclick="genClearReference()" title="Remove reference">&times;</button>
-    </span>`;
-    row.classList.add('visible');
-  }
+  // === Generate-phase reference & image gen === (extracted to editor-reference.js and editor-imggen.js)
 
   let customThemeMode = false;
   let genAIEnabled = false;
@@ -5247,115 +4692,16 @@
     setThemeMode(overridden);
   }
 
-  function genToggleImgGen() {
-    const pop = document.getElementById('genImggenPopover');
-    const isOpen = pop.classList.contains('open');
-    if (isOpen) { genCloseImgGen(); return; }
-    updateImgGenKeyUI();
-    positionPopover(pop, document.getElementById('genImggenBtn'));
-    pop.classList.add('open');
-    if (hasOpenRouterKey) document.getElementById('genImggenPrompt').focus();
-    else document.getElementById('genImggenKeyInput').focus();
-  }
-
-  function genCloseImgGen() {
-    const pop = document.getElementById('genImggenPopover');
-    pop.classList.remove('open');
-    pop.style.left = ''; pop.style.top = '';
-    document.getElementById('genImggenBtn').classList.remove('active');
-  }
-
-  function genGenerateImage() {
-    const prompt = document.getElementById('genImggenPrompt').value.trim();
-    if (!prompt || !ws || ws.readyState !== WebSocket.OPEN) return;
-
-    document.getElementById('genImggenGoBtn').disabled = true;
-    document.getElementById('genImggenPreview').style.display = 'flex';
-    document.getElementById('genImggenPreview').innerHTML = '<div class="spinner"></div>';
-    document.getElementById('genImggenActions').style.display = 'none';
-    document.getElementById('genImggenCounter').style.display = 'none';
-
-    // Tag as gen context so onImgGenResult routes correctly
-    window._imggenContext = 'gen';
-    ws.send(JSON.stringify({ type: 'generate_image', prompt, model: getModel() }));
-  }
-
-  function genOnImgGenResult(imageUrl, prompt) {
-    genImggenImages.push({ url: imageUrl, prompt });
-    genImggenIndex = genImggenImages.length - 1;
-    genRenderImgGenPreview();
-    document.getElementById('genImggenGoBtn').disabled = false;
-  }
-
-  function genRenderImgGenPreview() {
-    if (genImggenImages.length === 0) return;
-    const img = genImggenImages[genImggenIndex];
-    const preview = document.getElementById('genImggenPreview');
-    preview.style.display = 'flex';
-    preview.innerHTML = `<img src="${img.url}" alt="Generated image" />`;
-    if (genImggenImages.length > 1) {
-      preview.innerHTML += `<button class="imggen-nav prev" onclick="event.stopPropagation();genImggenPrev()">&#8249;</button>`;
-      preview.innerHTML += `<button class="imggen-nav next" onclick="event.stopPropagation();genImggenNext()">&#8250;</button>`;
-    }
-    document.getElementById('genImggenCounter').style.display = '';
-    document.getElementById('genImggenCounter').textContent = (genImggenIndex + 1) + ' / ' + genImggenImages.length;
-    document.getElementById('genImggenActions').style.display = 'flex';
-  }
-
-  function genImggenPrev() {
-    if (genImggenImages.length === 0) return;
-    genImggenIndex = (genImggenIndex - 1 + genImggenImages.length) % genImggenImages.length;
-    genRenderImgGenPreview();
-  }
-
-  function genImggenNext() {
-    if (genImggenImages.length === 0) return;
-    genImggenIndex = (genImggenIndex + 1) % genImggenImages.length;
-    genRenderImgGenPreview();
-  }
-
-  function genAcceptImage() {
-    if (genImggenImages.length === 0) return;
-    const img = genImggenImages[genImggenIndex];
-    genReferenceFile = {
-      name: 'generated-' + Date.now() + '.png',
-      type: 'image/png',
-      dataUrl: img.url,
-      intent: 'match'
-    };
-    genShowRefIntentPicker({ name: genReferenceFile.name, type: 'image/png' });
-    genCloseImgGen();
-    genImggenImages = [];
-    genImggenIndex = 0;
-    document.getElementById('genImggenPreview').style.display = 'none';
-    document.getElementById('genImggenActions').style.display = 'none';
-    document.getElementById('genImggenCounter').style.display = 'none';
-  }
-
-  // Paste support on generate textarea
-  document.getElementById('generatePrompt').addEventListener('paste', (e) => {
-    const items = e.clipboardData && e.clipboardData.items;
-    if (!items) return;
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (file) {
-          const named = new File([file], file.name || 'pasted-image.png', { type: file.type });
-          genAttachRefFromFile(named);
-        }
-        return;
-      }
-    }
-  });
-
   function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
+    const referenceFile = EditorReference.getFile('edit');
     if ((!text && !referenceFile) || isThinking || !ws || ws.readyState !== WebSocket.OPEN) return;
 
-    const animLabel = activeAnimationId ? allAnimations.find(a => a.id === activeAnimationId)?.name : null;
-    const skillLabel = activeSkillId ? allSkills.find(s => s.id === activeSkillId)?.name : null;
+    const activeAnimationId = EditorAnimations.getActiveId();
+    const activeSkillId = EditorSkills.getActiveId();
+    const animLabel = activeAnimationId ? EditorAnimations.getAll().find(a => a.id === activeAnimationId)?.name : null;
+    const skillLabel = activeSkillId ? EditorSkills.getAll().find(s => s.id === activeSkillId)?.name : null;
     const refLabel = referenceFile ? referenceFile.name : null;
     const intentLabels = { none: '', mood: ' (Mood)', match: ' (Match)' };
     const refIntent = referenceFile ? (referenceFile.intent || 'match') : null;
@@ -5382,9 +4728,9 @@
     ws.send(json);
     input.value = '';
     input.style.height = 'auto';
-    if (activeAnimationId) clearAnimation();
-    if (activeSkillId) clearSkill();
-    if (referenceFile) clearReference();
+    if (activeAnimationId) EditorAnimations.clear();
+    if (activeSkillId) EditorSkills.clear();
+    if (referenceFile) EditorReference.clear('edit');
   }
 
   function addMessage(role, content) {
@@ -5509,662 +4855,13 @@
     }
   }
 
-  // === Themes ===
-  function renderThemeGrid(filter) {
-    const grid = document.getElementById('themeGrid');
-    const q = (filter || '').toLowerCase().trim();
-
-    const filtered = q
-      ? themes.filter(t => `${t.name} ${t.mood} ${t.bestFor}`.toLowerCase().includes(q))
-      : themes;
-
-    const recommended = filtered.filter(t => t.recommended);
-    const rest = filtered.filter(t => !t.recommended);
-
-    function swatchHtml(colors) {
-      if (!colors) return '';
-      const bg = colors.bg || '#333';
-      const text = colors.text || '#fff';
-      const accent = colors.accent || '#888';
-      const muted = colors.muted || '#666';
-      return `<div class="theme-swatches">
-        <div class="theme-swatch-bar">
-          <div class="theme-swatch-segment" style="background:${bg};flex:3"></div>
-          <div class="theme-swatch-segment" style="background:${text};flex:1"></div>
-          <div class="theme-swatch-segment" style="background:${accent};flex:2"></div>
-          <div class="theme-swatch-segment" style="background:${muted};flex:1"></div>
-        </div>
-      </div>`;
-    }
-
-    function cardHtml(t) {
-      return `<div class="theme-card${t.recommended ? ' recommended' : ''}" onclick="selectTheme('${t.id}')">
-        <button class="theme-card-delete" onclick="event.stopPropagation();confirmDeleteTheme('${t.id}','${t.name.replace(/'/g, "\\'")}')" title="Delete theme">&times;</button>
-        ${themeThumbHtml(t.id, 'card')}
-        <div class="theme-card-body">
-          ${swatchHtml(t.colors)}
-          <div class="theme-card-name">${t.name}${t.recommended ? '<span class="theme-card-badge">recommended</span>' : ''}</div>
-          <div class="theme-card-mood">${t.mood}</div>
-          <div class="theme-card-for">${t.bestFor}</div>
-        </div>
-      </div>`;
-    }
-
-    let html = '';
-    if (recommended.length > 0) {
-      html += `<div class="theme-section-label">Recommended for your app</div>`;
-      html += `<div class="theme-grid">${recommended.map(cardHtml).join('')}</div>`;
-    }
-    if (rest.length > 0) {
-      html += `<div class="theme-section-label all">${recommended.length > 0 ? 'All themes' : 'Themes'}</div>`;
-      html += `<div class="theme-grid">${rest.map(cardHtml).join('')}</div>`;
-    }
-    if (filtered.length === 0) {
-      html = `<div style="text-align:center;color:#555;padding:2rem;">No themes match "${filter}"</div>`;
-    }
-    grid.innerHTML = html;
-  }
-
-  function filterThemes(value) {
-    renderThemeGrid(value);
-  }
-
-  function selectTheme(themeId) {
-    if (isThinking || !ws || ws.readyState !== WebSocket.OPEN) return;
-    const theme = themes.find(t => t.id === themeId);
-    addMessage('user', `Switch to theme: ${theme ? theme.name : themeId}`);
-    pendingThemeId = themeId;
-    currentThemeId = themeId;
-    setThinking(true, 0, 'Switching theme...');
-    ws.send(JSON.stringify({ type: 'theme', themeId, model: getModel(), app: currentAppName }));
-    closeThemeModal();
-  }
-
-  function confirmDeleteTheme(themeId, themeName) {
-    const card = event.target.closest('.theme-card');
-    if (card.querySelector('.delete-confirm')) return; // already showing
-
-    const confirm = document.createElement('div');
-    confirm.className = 'delete-confirm';
-    confirm.style.cssText = 'position:absolute;inset:0;background:rgba(26,26,26,0.92);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;z-index:2;';
-    confirm.innerHTML = `
-      <div style="color:var(--vibes-cream);font-size:0.75rem;font-weight:700;text-align:center;padding:0 0.5rem;">Delete "${themeName}"?</div>
-      <div style="display:flex;gap:0.4rem;">
-        <button onclick="event.stopPropagation();deleteTheme('${themeId}')" style="background:var(--vibes-red);color:white;border:1.5px solid var(--vibes-red);border-radius:6px;padding:0.25rem 0.6rem;font-size:0.65rem;font-weight:700;cursor:pointer;font-family:inherit;text-transform:uppercase;">Delete</button>
-        <button onclick="event.stopPropagation();this.closest('.delete-confirm').remove()" style="background:var(--vibes-cream);color:var(--vibes-near-black);border:1.5px solid var(--vibes-near-black);border-radius:6px;padding:0.25rem 0.6rem;font-size:0.65rem;font-weight:700;cursor:pointer;font-family:inherit;text-transform:uppercase;">Cancel</button>
-      </div>`;
-    confirm.onclick = (e) => e.stopPropagation();
-    card.appendChild(confirm);
-  }
-
-  function deleteTheme(themeId) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'delete_theme', themeId }));
-  }
-
-  function onThemeDeleted(themeId) {
-    themes = themes.filter(t => t.id !== themeId);
-    renderThemeGrid(document.getElementById('themeSearch')?.value || '');
-  }
-
-  function openThemeModal() {
-    document.getElementById('themeModal').classList.add('open');
-    const search = document.getElementById('themeSearch');
-    search.value = '';
-    renderThemeGrid();
-    // Show current theme badge
-    const badge = document.getElementById('currentThemeBadge');
-    if (currentThemeId && badge) {
-      const t = themes.find(th => th.id === currentThemeId);
-      badge.textContent = 'Current: ' + (t ? t.name : currentThemeId);
-      badge.style.display = '';
-    } else if (badge) {
-      badge.style.display = 'none';
-    }
-    setTimeout(() => { search.focus(); }, 100);
-  }
-
-  function closeThemeModal() {
-    document.getElementById('themeModal').classList.remove('open');
-  }
-
-  // === Save Current Theme ===
-  let saveMode = false;
-
-  function toggleSaveMode() {
-    saveMode = !saveMode;
-    document.getElementById('saveThemeSection').style.display = saveMode ? '' : 'none';
-    document.getElementById('themeSearch').style.display = saveMode ? 'none' : '';
-    document.getElementById('themeGrid').style.display = saveMode ? 'none' : '';
-    document.getElementById('saveThemeToggle').textContent = saveMode ? 'Browse' : 'Save Theme';
-    if (saveMode) {
-      document.getElementById('saveThemeBtn').disabled = false;
-      document.getElementById('saveThemeName').disabled = false;
-      document.getElementById('saveThemeName').focus();
-      document.getElementById('saveThemeStatus').innerHTML = '';
-    } else {
-      renderThemeGrid();
-    }
-  }
-
-  function saveCurrentTheme() {
-    const input = document.getElementById('saveThemeName');
-    const name = input.value.trim();
-    if (!name || !ws || ws.readyState !== WebSocket.OPEN) return;
-
-    document.getElementById('saveThemeBtn').disabled = true;
-    document.getElementById('saveThemeStatus').innerHTML = `
-      <div class="create-status">
-        <div class="spinner" style="display:inline-block;width:16px;height:16px;vertical-align:middle;margin-right:0.5rem;"></div>
-        <span id="saveThemeStage">Analyzing app styles...</span>
-        <div class="thinking-progress-bar" style="margin-top:0.5rem;">
-          <div class="thinking-progress-fill" id="saveThemeFill" style="width: 0%"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:0.7rem;opacity:0.7;margin-top:0.25rem;">
-          <span id="saveThemePct">0%</span>
-          <span id="saveThemeTime">0s</span>
-        </div>
-      </div>`;
-
-    ws.send(JSON.stringify({ type: 'save_theme', name, model: getModel(), app: currentAppName }));
-  }
-
-  function updateSaveThemeProgress(progress, stage, elapsed) {
-    const fill = document.getElementById('saveThemeFill');
-    const pct = document.getElementById('saveThemePct');
-    const time = document.getElementById('saveThemeTime');
-    const stageEl = document.getElementById('saveThemeStage');
-    if (fill) fill.style.width = (progress || 0) + '%';
-    if (pct) pct.textContent = (progress || 0) + '%';
-    if (time) time.textContent = (elapsed || 0) + 's';
-    if (stageEl && stage) stageEl.textContent = stage;
-  }
-
-  async function onThemeCreated(themeId, themeName) {
-    document.getElementById('saveThemeBtn').disabled = false;
-
-    // Set the new theme as the current active theme
-    currentThemeId = themeId;
-
-    // Floating toast in center of screen
-    const toast = document.createElement('div');
-    toast.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10001;background:var(--vibes-near-black);color:var(--vibes-cream);padding:1.25rem 2.5rem;border-radius:12px;font-size:1.2rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;border:2px solid var(--vibes-cream);box-shadow:0 8px 32px rgba(0,0,0,0.5);pointer-events:none;opacity:0;transition:opacity 0.3s;';
-    toast.textContent = '"' + themeName + '" saved!';
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.style.opacity = '1');
-
-    // Rainbow confetti burst
-    const rainbowColors = ['#ff0000', '#ffa500', '#fedd00', '#008000', '#009ace', '#4b0082', '#ee82ee'];
-    const duration = 2000;
-    const end = Date.now() + duration;
-    (function frame() {
-      confetti({ particleCount: 7, angle: 60, spread: 55, origin: { x: 0 }, colors: rainbowColors, zIndex: 10000 });
-      confetti({ particleCount: 7, angle: 120, spread: 55, origin: { x: 1 }, colors: rainbowColors, zIndex: 10000 });
-      if (Date.now() < end) requestAnimationFrame(frame);
-    })();
-
-    // Capture preview in background (don't block UI)
-    captureThemePreview(themeId);
-
-    // Reset save mode UI back to browse
-    saveMode = false;
-    document.getElementById('saveThemeSection').style.display = 'none';
-    document.getElementById('themeSearch').style.display = '';
-    document.getElementById('themeGrid').style.display = '';
-    document.getElementById('saveThemeToggle').textContent = 'Save Theme';
-    document.getElementById('saveThemeName').value = '';
-    document.getElementById('saveThemeStatus').innerHTML = '';
-
-    // Close modal, reload themes, carousel will update
-    closeThemeModal();
-
-    await reloadThemes();
-    selectThemeCarousel(themeId);
-
-    // Fade toast
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      setTimeout(() => toast.remove(), 300);
-    }, 1500);
-  }
-
-  async function captureThemePreview(themeId) {
-    try {
-      // Read current theme colors from the preview iframe
-      const pf = document.getElementById('previewFrame');
-      const pdoc = pf?.contentDocument;
-      if (!pdoc) return;
-      const cs = getComputedStyle(pdoc.documentElement);
-      const v = (name) => cs.getPropertyValue(name)?.trim() || '';
-      const bg = v('--comp-bg') || '#1a1a2e';
-      const text = v('--comp-text') || '#eee';
-      const border = v('--comp-border') || '#333';
-      const accent = v('--comp-accent') || '#e94560';
-      const accentText = v('--comp-accent-text') || '#fff';
-      const muted = v('--comp-muted') || '#888';
-      const pageBg = v('--color-background') || '#0f0f23';
-
-      // Draw showcase directly to canvas — no iframes or external libs needed
-      const W = 800, H = 500;
-      const canvas = document.createElement('canvas');
-      canvas.width = W; canvas.height = H;
-      const ctx = canvas.getContext('2d');
-
-      // Helper functions
-      const roundRect = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
-      const fillRect = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
-
-      // Page background
-      fillRect(0, 0, W, H, pageBg);
-
-      // Header
-      ctx.fillStyle = text; ctx.font = 'bold 22px system-ui'; ctx.fillText('Theme Preview', 24, 40);
-      ctx.fillStyle = muted; ctx.font = '10px system-ui'; ctx.fillText('SHOWCASE', 680, 38);
-      ctx.strokeStyle = border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(24, 52); ctx.lineTo(W - 24, 52); ctx.stroke();
-
-      // Card — table
-      const cardY = 66, cardH = 180;
-      roundRect(24, cardY, W - 48, cardH, 8); ctx.fillStyle = bg; ctx.fill();
-      roundRect(24, cardY, W - 48, cardH, 8); ctx.strokeStyle = border; ctx.stroke();
-
-      // Table header
-      ctx.fillStyle = muted; ctx.font = '9px system-ui';
-      const cols = ['ITEM', 'CATEGORY', 'VALUE', 'STATUS'];
-      const colX = [40, 250, 440, 580];
-      cols.forEach((c, i) => ctx.fillText(c, colX[i], cardY + 28));
-      ctx.strokeStyle = border; ctx.beginPath(); ctx.moveTo(40, cardY + 35); ctx.lineTo(W - 40, cardY + 35); ctx.stroke();
-
-      // Table rows
-      const rows = [
-        ['Alpha Module', 'Core', '92', 'Active'],
-        ['Beta System', 'Util', '85', 'Stable'],
-        ['Gamma Process', 'Data', '78', 'Pending'],
-      ];
-      rows.forEach((row, ri) => {
-        const ry = cardY + 56 + ri * 42;
-        ctx.fillStyle = text; ctx.font = '14px system-ui';
-        ctx.fillText(row[0], colX[0], ry); ctx.fillText(row[1], colX[1], ry);
-        ctx.font = 'bold 20px system-ui'; ctx.fillText(row[2], colX[2], ry + 2);
-        if (row[3] === 'Active') {
-          roundRect(colX[3], ry - 12, 60, 20, 3); ctx.fillStyle = accent; ctx.fill();
-          ctx.fillStyle = accentText; ctx.font = 'bold 11px system-ui'; ctx.fillText(row[3], colX[3] + 8, ry + 2);
-        } else {
-          ctx.fillStyle = text; ctx.font = '14px system-ui'; ctx.fillText(row[3], colX[3], ry);
-        }
-        if (ri < rows.length - 1) {
-          ctx.strokeStyle = border + '33'; ctx.beginPath(); ctx.moveTo(40, ry + 16); ctx.lineTo(W - 40, ry + 16); ctx.stroke();
-        }
-      });
-
-      // Bottom row — two cards side by side
-      const row2Y = cardY + cardH + 16, row2H = 190, gap = 16, cw = (W - 48 - gap) / 2;
-
-      // Left card — form
-      roundRect(24, row2Y, cw, row2H, 8); ctx.fillStyle = bg; ctx.fill();
-      roundRect(24, row2Y, cw, row2H, 8); ctx.strokeStyle = border; ctx.stroke();
-      ctx.fillStyle = muted; ctx.font = '9px system-ui'; ctx.fillText('SEARCH', 40, row2Y + 28);
-      roundRect(40, row2Y + 34, cw - 32, 28, 4); ctx.fillStyle = pageBg; ctx.fill();
-      roundRect(40, row2Y + 34, cw - 32, 28, 4); ctx.strokeStyle = border; ctx.stroke();
-      ctx.fillStyle = muted; ctx.font = '13px system-ui'; ctx.fillText('Filter items...', 50, row2Y + 53);
-      ctx.fillStyle = muted; ctx.font = '9px system-ui'; ctx.fillText('CATEGORY', 40, row2Y + 82);
-      roundRect(40, row2Y + 88, cw - 32, 28, 4); ctx.fillStyle = pageBg; ctx.fill();
-      roundRect(40, row2Y + 88, cw - 32, 28, 4); ctx.strokeStyle = border; ctx.stroke();
-      ctx.fillStyle = text; ctx.font = '13px system-ui'; ctx.fillText('All', 50, row2Y + 107);
-      // Buttons
-      roundRect(40, row2Y + 132, 80, 32, 4); ctx.fillStyle = accent; ctx.fill();
-      ctx.fillStyle = accentText; ctx.font = 'bold 11px system-ui'; ctx.fillText('APPLY', 56, row2Y + 152);
-      roundRect(130, row2Y + 132, 80, 32, 4); ctx.strokeStyle = border; ctx.stroke();
-      ctx.fillStyle = text; ctx.font = 'bold 11px system-ui'; ctx.fillText('RESET', 146, row2Y + 152);
-
-      // Right card — controls
-      const rcX = 24 + cw + gap;
-      roundRect(rcX, row2Y, cw, row2H, 8); ctx.fillStyle = bg; ctx.fill();
-      roundRect(rcX, row2Y, cw, row2H, 8); ctx.strokeStyle = border; ctx.stroke();
-      const ctrlItems = [
-        { label: 'Show details', checked: true },
-        { label: 'Include archived', checked: false },
-      ];
-      ctrlItems.forEach((item, i) => {
-        const cy = row2Y + 28 + i * 32;
-        roundRect(rcX + 16, cy, 16, 16, 3);
-        if (item.checked) { ctx.fillStyle = accent; ctx.fill(); ctx.fillStyle = accentText; ctx.font = 'bold 12px system-ui'; ctx.fillText('✓', rcX + 19, cy + 13); }
-        else { ctx.strokeStyle = border; ctx.stroke(); }
-        ctx.fillStyle = text; ctx.font = '13px system-ui'; ctx.fillText(item.label, rcX + 40, cy + 13);
-      });
-      // Toggles
-      const toggleItems = [{ label: 'Live updates', on: true }, { label: 'Compact view', on: false }];
-      toggleItems.forEach((item, i) => {
-        const ty = row2Y + 100 + i * 32;
-        roundRect(rcX + 16, ty, 36, 18, 9);
-        ctx.fillStyle = item.on ? accent : border; ctx.fill();
-        ctx.beginPath(); ctx.arc(item.on ? rcX + 40 : rcX + 28, ty + 9, 6, 0, Math.PI * 2);
-        ctx.fillStyle = item.on ? accentText : text; ctx.fill();
-        ctx.fillStyle = text; ctx.font = '13px system-ui'; ctx.fillText(item.label, rcX + 60, ty + 14);
-      });
-
-      // Convert to blob and upload
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-      if (!blob || blob.size < 100) return;
-      await fetch('/themes/preview?id=' + encodeURIComponent(themeId), { method: 'POST', body: blob });
-      console.log('[ThemePreview] Saved preview for', themeId);
-    } catch (err) {
-      console.warn('[ThemePreview] Failed:', err);
-    }
-  }
-
-  async function reloadThemes() {
-    try {
-      const appParam = currentAppName ? '?app=' + encodeURIComponent(currentAppName) : '';
-      const res = await fetch('/themes' + appParam);
-      themes = await res.json();
-      // Refresh the generate-phase select dropdown
-      const select = document.getElementById('themeSelect');
-      if (select) {
-        const prev = select.value;
-        select.innerHTML = '<option value="">Auto (let AI choose)</option>';
-        for (const t of themes) {
-          const opt = document.createElement('option');
-          opt.value = t.id;
-          opt.textContent = t.name + (t.mood ? ` — ${t.mood}` : '');
-          select.appendChild(opt);
-        }
-        if (prev) select.value = prev;
-      }
-      // Rebuild carousel with updated theme list
-      if (typeof buildThemeCarousel === 'function') buildThemeCarousel();
-    } catch (err) {
-      console.error('Failed to reload themes:', err);
-    }
-  }
+  // === Themes === (extracted to editor-themes.js)
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closeThemeModal(); closeAnimationModal(); }
+    if (e.key === 'Escape') { EditorThemes.close(); EditorAnimations.close(); }
   });
 
-  document.getElementById('themeModal').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeThemeModal();
-  });
-
-  document.getElementById('animModal').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeAnimationModal();
-  });
-
-  // === Color Palette ===
-
-  // --- OKLCH <-> sRGB math ---
-  function hexToRgb(hex) {
-    hex = hex.replace('#', '');
-    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-    const n = parseInt(hex, 16);
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  }
-  function rgbToHex(r, g, b) {
-    return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
-  }
-  function linearize(v) { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
-  function delinearize(v) { return v <= 0.0031308 ? v * 12.92 * 255 : (1.055 * Math.pow(v, 1 / 2.4) - 0.055) * 255; }
-
-  function rgbToOklab(r, g, b) {
-    const lr = linearize(r), lg = linearize(g), lb = linearize(b);
-    const l_ = 0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb;
-    const m_ = 0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb;
-    const s_ = 0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb;
-    const l = Math.cbrt(l_), m = Math.cbrt(m_), s = Math.cbrt(s_);
-    return [
-      0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
-      1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
-      0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
-    ];
-  }
-  function oklabToRgb(L, a, b) {
-    const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
-    const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
-    const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
-    const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
-    return [
-      delinearize(+4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-      delinearize(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-      delinearize(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
-    ];
-  }
-
-  function hexToOklch(hex) {
-    const [r, g, b] = hexToRgb(hex);
-    const [L, a, bv] = rgbToOklab(r, g, b);
-    const C = Math.sqrt(a * a + bv * bv);
-    let h = Math.atan2(bv, a) * 180 / Math.PI;
-    if (h < 0) h += 360;
-    return { l: L, c: C, h };
-  }
-  function oklchToHex(l, c, h) {
-    const hRad = h * Math.PI / 180;
-    const a = c * Math.cos(hRad), b = c * Math.sin(hRad);
-    const [r, g, bv] = oklabToRgb(l, a, b);
-    return rgbToHex(r, g, bv);
-  }
-
-  // Clamp oklch to gamut by reducing chroma
-  function oklchClamp(l, c, h) {
-    l = Math.max(0, Math.min(1, l));
-    for (let i = 0; i < 20; i++) {
-      const hex = oklchToHex(l, c, h);
-      const [r, g, b] = hexToRgb(hex);
-      if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) return hex;
-      c *= 0.9;
-    }
-    return oklchToHex(l, 0, h);
-  }
-
-  // --- WCAG contrast ---
-  function relativeLuminance(hex) {
-    const [r, g, b] = hexToRgb(hex);
-    return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
-  }
-  function contrastRatio(hex1, hex2) {
-    const l1 = relativeLuminance(hex1), l2 = relativeLuminance(hex2);
-    const lighter = Math.max(l1, l2), darker = Math.min(l1, l2);
-    return (lighter + 0.05) / (darker + 0.05);
-  }
-
-  // --- Harmony generators ---
-  function generateHarmony(baseHex, mode) {
-    const base = hexToOklch(baseHex);
-    const { l, c, h } = base;
-    let bg, text, accent, muted, accentText;
-
-    // Pick high-contrast text: light bg → dark text, dark bg → light text
-    const textL = l > 0.6 ? 0.15 : 0.95;
-    text = oklchClamp(textL, 0.01, h);
-
-    switch (mode) {
-      case 'complementary':
-        bg = baseHex;
-        accent = oklchClamp(Math.min(l + 0.15, 0.85), Math.min(c + 0.05, 0.15), (h + 180) % 360);
-        muted = oklchClamp(l, Math.max(c - 0.06, 0.01), h);
-        accentText = contrastRatio(accent, '#ffffff') >= 4.5 ? '#ffffff' : '#1a1a1a';
-        break;
-      case 'analogous':
-        bg = baseHex;
-        accent = oklchClamp(Math.min(l + 0.1, 0.85), Math.min(c + 0.04, 0.15), (h + 30) % 360);
-        muted = oklchClamp(l, Math.max(c - 0.04, 0.01), (h + 330) % 360);
-        accentText = contrastRatio(accent, '#ffffff') >= 4.5 ? '#ffffff' : '#1a1a1a';
-        break;
-      case 'triadic':
-        bg = baseHex;
-        accent = oklchClamp(Math.min(l + 0.1, 0.85), Math.min(c + 0.04, 0.15), (h + 120) % 360);
-        muted = oklchClamp(l, Math.max(c - 0.04, 0.01), (h + 240) % 360);
-        accentText = contrastRatio(accent, '#ffffff') >= 4.5 ? '#ffffff' : '#1a1a1a';
-        break;
-      case 'monochromatic':
-        bg = baseHex;
-        accent = oklchClamp(Math.min(l + 0.2, 0.9), Math.min(c + 0.08, 0.15), h);
-        muted = oklchClamp(Math.max(l - 0.15, 0.1), Math.max(c - 0.06, 0.01), h);
-        accentText = contrastRatio(accent, '#ffffff') >= 4.5 ? '#ffffff' : '#1a1a1a';
-        break;
-      default:
-        return null;
-    }
-    return { bg, text, accent, muted, accentText };
-  }
-
-  // --- Palette state ---
-  let paletteState = { bg:'#1a1a2e', text:'#eaeaea', border:'#334455', accent:'#e94560', accentText:'#ffffff', muted:'#555555', colorBg:'#111122', gridColor:'#33445522' };
-  let savedPaletteState = null;
-
-  const PALETTE_SLOTS = [
-    { key:'bg', label:'Background', cssVar:'--comp-bg' },
-    { key:'text', label:'Text', cssVar:'--comp-text' },
-    { key:'border', label:'Border', cssVar:'--comp-border' },
-    { key:'accent', label:'Accent', cssVar:'--comp-accent' },
-    { key:'accentText', label:'Accent Text', cssVar:'--comp-accent-text' },
-    { key:'muted', label:'Muted', cssVar:'--comp-muted' },
-    { key:'colorBg', label:'Page BG', cssVar:'--color-background' },
-    { key:'gridColor', label:'Grid', cssVar:'--grid-color' },
-  ];
-
-  function renderPaletteSlots() {
-    const container = document.getElementById('paletteSlots');
-    container.innerHTML = PALETTE_SLOTS.map(s => {
-      const val = paletteState[s.key];
-      return `<div class="palette-slot">
-        <div class="palette-slot-label">${s.label}</div>
-        <div class="palette-slot-preview" style="background:${val}">
-          <input type="color" value="${val}" onchange="onSlotColorChange('${s.key}', this.value)" oninput="onSlotColorChange('${s.key}', this.value)" />
-        </div>
-        <input class="palette-slot-value" type="text" value="${val}" data-slot="${s.key}"
-          onchange="onSlotHexInput('${s.key}', this.value)" />
-      </div>`;
-    }).join('');
-    updateContrastDisplay();
-  }
-
-  function onSlotColorChange(key, hex) {
-    paletteState[key] = hex;
-    // Update text input
-    const textInput = document.querySelector(`.palette-slot-value[data-slot="${key}"]`);
-    if (textInput) textInput.value = hex;
-    // Update preview swatch
-    const slot = textInput?.closest('.palette-slot');
-    if (slot) slot.querySelector('.palette-slot-preview').style.background = hex;
-    // Reset harmony to custom since user manually edited
-    document.getElementById('harmonyMode').value = 'custom';
-    applyPaletteLive();
-  }
-
-  function onSlotHexInput(key, value) {
-    const hex = value.trim();
-    if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-      paletteState[key] = hex;
-      const slot = document.querySelector(`.palette-slot-value[data-slot="${key}"]`)?.closest('.palette-slot');
-      if (slot) {
-        slot.querySelector('.palette-slot-preview').style.background = hex;
-        slot.querySelector('input[type=color]').value = hex;
-      }
-      applyPaletteLive();
-    }
-  }
-
-  function applyHarmony() {
-    const mode = document.getElementById('harmonyMode').value;
-    if (mode === 'custom') return;
-    const result = generateHarmony(paletteState.bg, mode);
-    if (!result) return;
-    paletteState = { ...result };
-    renderPaletteSlots();
-    applyPaletteLive();
-  }
-
-  function updateContrastDisplay() {
-    const el = document.getElementById('paletteContrast');
-    const textBg = contrastRatio(paletteState.text, paletteState.bg);
-    const accentAt = contrastRatio(paletteState.accentText, paletteState.accent);
-    function badge(ratio) {
-      const pass = ratio >= 4.5;
-      return `<span class="palette-contrast-badge ${pass ? 'pass' : 'fail'}">${ratio.toFixed(1)}:1 ${pass ? 'AA' : 'Fail'}</span>`;
-    }
-    el.innerHTML = `
-      <div class="palette-contrast-item">Text / Bg: ${badge(textBg)}</div>
-      <div class="palette-contrast-item">Accent Text / Accent: ${badge(accentAt)}</div>
-    `;
-  }
-
-  // --- Live preview injection ---
-  function applyPaletteLive() {
-    const frame = document.getElementById('previewFrame');
-    const doc = frame?.contentDocument;
-    if (!doc) return;
-    const root = doc.documentElement;
-    PALETTE_SLOTS.forEach(s => {
-      root.style.setProperty(s.cssVar, paletteState[s.key]);
-    });
-    updateContrastDisplay();
-  }
-
-  // --- Init palette from current preview ---
-  function cssColorToHex(val) {
-    // Already hex
-    if (/^#[0-9a-fA-F]{6}$/.test(val)) return val;
-    if (/^#[0-9a-fA-F]{3}$/.test(val)) {
-      return '#' + val[1]+val[1]+val[2]+val[2]+val[3]+val[3];
-    }
-    // Use browser to resolve oklch/rgb/hsl etc to rgb
-    const temp = document.createElement('div');
-    temp.style.color = val;
-    document.body.appendChild(temp);
-    const computed = getComputedStyle(temp).color;
-    document.body.removeChild(temp);
-    const m = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-    return m ? rgbToHex(+m[1], +m[2], +m[3]) : null;
-  }
-
-  function initPaletteFromPreview() {
-    const frame = document.getElementById('previewFrame');
-    const doc = frame?.contentDocument;
-    if (!doc) return;
-    const cs = getComputedStyle(doc.documentElement);
-    PALETTE_SLOTS.forEach(s => {
-      const val = cs.getPropertyValue(s.cssVar)?.trim();
-      if (val) {
-        const hex = cssColorToHex(val);
-        if (hex) paletteState[s.key] = hex;
-      }
-    });
-  }
-
-  // --- Palette sidebar open / close ---
-  function openPalette() {
-    // Read current app colors from iframe FIRST, then snapshot
-    initPaletteFromPreview();
-    savedPaletteState = { ...paletteState };
-    renderPaletteSlots();
-    document.getElementById('paletteSidebar').style.display = 'flex';
-  }
-
-  function closePalette() {
-    document.getElementById('paletteSidebar').style.display = 'none';
-  }
-
-  function cancelPalette() {
-    // Remove all inline style overrides so iframe reverts to its original CSS
-    const frame = document.getElementById('previewFrame');
-    const root = frame?.contentDocument?.documentElement;
-    if (root) {
-      PALETTE_SLOTS.forEach(s => root.style.removeProperty(s.cssVar));
-    }
-    // Restore palette state to what we read on open
-    if (savedPaletteState) paletteState = { ...savedPaletteState };
-    closePalette();
-  }
-
-  function savePalette() {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    // Send all palette slots dynamically
-    const colors = {};
-    PALETTE_SLOTS.forEach(s => { colors[s.cssVar] = paletteState[s.key]; });
-    ws.send(JSON.stringify({ type: 'palette_theme', colors, model: getModel(), app: currentAppName }));
-    addMessage('user', 'Apply custom color palette');
-    closePalette();
-  }
+  // === Color Palette === (extracted to editor-themes.js)
 
   // === Resizable Splitter ===
   (function() {
@@ -6227,6 +4924,132 @@
     });
   }
 
+  // --- Initialize extracted modules ---
+
+  // Animations
+  EditorAnimations.init({
+    animModal: document.getElementById('animModal'),
+    animGrid: document.getElementById('animGrid'),
+    animCategoryTabs: document.getElementById('animCategoryTabs'),
+    animBadge: document.getElementById('animBadge'),
+    animBadgeName: document.getElementById('animBadgeName'),
+    animationIcons: document.getElementById('animationIcons'),
+  }, {
+    onSelect(id, name) {
+      document.getElementById('chatInput').placeholder = `Describe what you want the "${name}" animation applied to...`;
+    },
+    onClear() {
+      document.getElementById('chatInput').placeholder = 'Describe changes to your app...';
+    }
+  }, window.escapeHtml);
+  EditorAnimations.load();
+
+  // Skills
+  EditorSkills.init({
+    skillsModal: document.getElementById('skillsModal'),
+    skillGrid: document.getElementById('skillGrid'),
+    skillPluginTabs: document.getElementById('skillPluginTabs'),
+    skillBadge: document.getElementById('skillBadge'),
+    skillBadgeName: document.getElementById('skillBadgeName'),
+    skillsBtn: document.getElementById('skillsBtn'),
+  }, {}, window.escapeHtml);
+  EditorSkills.load();
+
+  // Reference (edit phase)
+  EditorReference.setEscapeHtml(window.escapeHtml);
+  EditorReference.init('edit', {
+    refFileInput: document.getElementById('refFileInput'),
+    refBadgeRow: document.getElementById('refBadgeRow'),
+    refBtn: document.getElementById('refBtn'),
+  }, {}, { showContextIntent: true, clearBtnColor: 'var(--vibes-near-black)' });
+
+  // Reference (generate phase)
+  EditorReference.init('generate', {
+    refFileInput: document.getElementById('genRefFileInput'),
+    refBadgeRow: document.getElementById('genRefBadgeRow'),
+    refBtn: null,
+  }, {
+    onHtmlRef() { setThemeCarouselOverridden(true); },
+    onClear() { setThemeCarouselOverridden(false); },
+    onFocusInput() { document.getElementById('generatePrompt').focus(); }
+  }, { showContextIntent: false, clearBtnColor: 'var(--vibes-cream)' });
+
+  // Paste and drag-drop handlers
+  EditorReference.initPasteHandler('edit', document.getElementById('chatInput'));
+  EditorReference.initPasteHandler('generate', document.getElementById('generatePrompt'));
+  EditorReference.initDragDrop('edit', document.querySelector('.chat-composer-box'));
+
+  // Image generation
+  EditorImgGen.init({
+    onSendWs(msg) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); },
+    getModel() { return getModel(); },
+    isWsOpen() { return ws && ws.readyState === WebSocket.OPEN; },
+    onAcceptImage(file, contextName) {
+      const refContext = contextName === 'generate' ? 'generate' : 'edit';
+      EditorReference.setFile(refContext, file);
+      EditorReference.showIntentPicker(refContext, { name: file.name, type: file.type });
+    }
+  });
+  EditorImgGen.initContext('edit', {
+    popover: document.getElementById('imggenPopover'),
+    toggleBtn: document.getElementById('imggenBtn'),
+    keyForm: document.getElementById('imggenKeyForm'),
+    promptRow: document.getElementById('imggenPromptRow'),
+    promptInput: document.getElementById('imggenPrompt'),
+    goBtn: document.getElementById('imggenGoBtn'),
+    preview: document.getElementById('imggenPreview'),
+    actions: document.getElementById('imggenActions'),
+    counter: document.getElementById('imggenCounter'),
+    keyInput: document.getElementById('imggenKeyInput'),
+    keyHint: document.getElementById('imggenKeyHint'),
+  });
+  EditorImgGen.initContext('generate', {
+    popover: document.getElementById('genImggenPopover'),
+    toggleBtn: document.getElementById('genImggenBtn'),
+    keyForm: document.getElementById('genImggenKeyForm'),
+    promptRow: document.getElementById('genImggenPromptRow'),
+    promptInput: document.getElementById('genImggenPrompt'),
+    goBtn: document.getElementById('genImggenGoBtn'),
+    preview: document.getElementById('genImggenPreview'),
+    actions: document.getElementById('genImggenActions'),
+    counter: document.getElementById('genImggenCounter'),
+    keyInput: document.getElementById('genImggenKeyInput'),
+    keyHint: document.getElementById('genImggenKeyHint'),
+  });
+
+  // Themes
+  EditorThemes.init({
+    themeModal: document.getElementById('themeModal'),
+    themeGrid: document.getElementById('themeGrid'),
+    themeSearch: document.getElementById('themeSearch'),
+    currentThemeBadge: document.getElementById('currentThemeBadge'),
+    saveThemeSection: document.getElementById('saveThemeSection'),
+    saveThemeToggle: document.getElementById('saveThemeToggle'),
+    saveThemeBtn: document.getElementById('saveThemeBtn'),
+    saveThemeName: document.getElementById('saveThemeName'),
+    saveThemeStatus: document.getElementById('saveThemeStatus'),
+    themeSelect: document.getElementById('themeSelect'),
+    paletteSidebar: document.getElementById('paletteSidebar'),
+    paletteSlots: document.getElementById('paletteSlots'),
+    paletteContrast: document.getElementById('paletteContrast'),
+    harmonyMode: document.getElementById('harmonyMode'),
+    previewFrame: document.getElementById('previewFrame'),
+  }, {
+    onSendWs(msg) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); },
+    isWsOpen() { return ws && ws.readyState === WebSocket.OPEN; },
+    onReloadPreview() { reloadPreview(); },
+    onAddMessage(role, text) { addMessage(role, text); },
+    getModel() { return getModel(); },
+    getCurrentAppName() { return currentAppName; },
+    isThinking() { return isThinking; },
+    setThinking(enabled, progress, stage) { setThinking(enabled, progress, stage); },
+    buildThemeCarousel() { if (typeof buildThemeCarousel === 'function') buildThemeCarousel(); },
+    selectThemeCarousel(id) { if (typeof selectThemeCarousel === 'function') selectThemeCarousel(id); },
+    confetti: typeof confetti !== 'undefined' ? confetti : null,
+    themeThumbHtml(id, context) { return typeof themeThumbHtml === 'function' ? themeThumbHtml(id, context) : ''; },
+  });
+  EditorThemes.setThemes(themes);
+
   connectWs();
   checkExistingApps();
 
@@ -6255,7 +5078,7 @@
   });
 
   populateThemeSelect();
-  fetch('/themes/has-key').then(r => r.json()).then(d => { hasOpenRouterKey = !!d.hasKey; }).catch(() => {});
+  fetch('/themes/has-key').then(r => r.json()).then(d => { EditorImgGen.setHasKey(!!d.hasKey); }).catch(() => {});
 </script>
 </div>
 </div>
