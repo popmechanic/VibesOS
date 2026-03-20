@@ -40,4 +40,27 @@ describe('TinyBase template', () => {
     expect(delta).toContain('window.useSortedRowIds');
     expect(delta).toContain('window.useAddRowCallback');
   });
+
+  it('vibes delta has AppErrorBoundary class', () => {
+    const delta = readFileSync(join(PLUGIN_ROOT, 'skills/vibes/template.delta.html'), 'utf8');
+    expect(delta).toContain('class AppErrorBoundary');
+    expect(delta).toContain('getDerivedStateFromError');
+    expect(delta).toContain('componentDidCatch');
+  });
+
+  it('vibes delta wraps App in AppErrorBoundary', () => {
+    const delta = readFileSync(join(PLUGIN_ROOT, 'skills/vibes/template.delta.html'), 'utf8');
+    expect(delta).toContain('<AppErrorBoundary>');
+    expect(delta).toContain('</AppErrorBoundary>');
+  });
+
+  it('vibes delta has template-level isReady gate', () => {
+    const delta = readFileSync(join(PLUGIN_ROOT, 'skills/vibes/template.delta.html'), 'utf8');
+    expect(delta).toMatch(/if\s*\(\s*!isReady\s*\)/);
+  });
+
+  it('vibes delta has useTable warning wrapper assigned to window', () => {
+    const delta = readFileSync(join(PLUGIN_ROOT, 'skills/vibes/template.delta.html'), 'utf8');
+    expect(delta).toMatch(/window\.useTable\s*=\s*function useTableWithWarning/);
+  });
 });
