@@ -31,7 +31,8 @@ function __base64ToArrayBuffer__(b64) {
 // Mock ASSETS fetcher that serves from embedded file map
 const __assetsFetcher__ = {
   fetch(request) {
-    const url = new URL(typeof request === 'string' ? request : request.url);
+    const raw = typeof request === 'string' ? request : request.url;
+    const url = new URL(raw, 'https://localhost');
     let path = url.pathname;
     if (path.endsWith('/')) path += 'index.html';
     if (path.startsWith('/')) path = path.slice(1);
