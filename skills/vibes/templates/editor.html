@@ -5564,12 +5564,8 @@ window.escapeHtml = function(str) {
 
       let indicator = container.querySelector('.thinking-indicator');
       if (indicator) {
-        const fill = indicator.querySelector('.thinking-progress-fill');
-        const pct = indicator.querySelector('.thinking-pct');
         const stageEl = indicator.querySelector('.thinking-stage');
         const timerEl = indicator.querySelector('.thinking-timer');
-        if (fill) fill.style.width = (progress || 0) + '%';
-        if (pct) pct.textContent = (progress || 0) + '%';
         if (stageEl && stage) stageEl.textContent = stage;
         if (timerEl && elapsed != null) timerEl.textContent = formatElapsed(elapsed);
       } else {
@@ -5580,13 +5576,9 @@ window.escapeHtml = function(str) {
             <div class="thinking-dots">
               <div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div>
             </div>
-            <span class="thinking-stage">${stage || 'Starting...'}</span>
-          </div>
-          <div class="thinking-progress-bar">
-            <div class="thinking-progress-fill" style="width: ${progress || 0}%"></div>
+            <span class="thinking-stage">${stage || 'Working...'}</span>
           </div>
           <div class="thinking-footer">
-            <span class="thinking-pct">${progress || 0}%</span>
             <span class="thinking-timer">${formatElapsed(elapsed || 0)}</span>
             <div class="thinking-actions">
               <button class="thinking-reset" onclick="resetSession()">Reset</button>
