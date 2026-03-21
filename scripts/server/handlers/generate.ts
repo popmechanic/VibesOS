@@ -199,8 +199,6 @@ Write the complete app to app.jsx. Rules:
 - THEN: <style> tag with reference-derived CSS organized into marked sections (see below), plus component styles
 - Add rich visual effects: Canvas 2D backgrounds, animated SVG illustrations, CSS @property animations, hover effects
 - JSX with React hooks (useState, useEffect, useRef, useCallback, useMemo)
-- useFireproofClerk("db-name") for database — returns { database, useLiveQuery, useDocument }
-  useFireproofClerk is a PRE-EXISTING GLOBAL — call it directly. Do NOT declare, redefine, wrap, or alias it. Do NOT create useFireproof or any fallback — just call useFireproofClerk().
 - NO import statements — runs in Babel script block with globals
 - NO TypeScript. End with: export default App
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
@@ -208,12 +206,18 @@ Write the complete app to app.jsx. Rules:
 
 ${THEME_SECTION_MARKERS}
 
-DATABASE:
-- useDocument({text:"",type:"item"}) returns { doc, merge, submit, reset, save }
-  merge({text:"new"}) to update fields, submit() to save as new doc, save() to upsert by _id
-  For forms: merge() on each keystroke, submit() when done. NEVER use setDoc — it doesn't exist.
-- useLiveQuery("type",{key:"item"}) returns { docs, isLoading }
-- database.put({...doc, field:"val"}) for direct writes, database.del(doc) to delete${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
+DATABASE (TinyBase — all hooks are pre-existing globals, NO imports needed):
+- useRowIds('tableName') returns array of row IDs
+- useCell('tableName', rowId, 'cellName') returns a single cell value
+- useSortedRowIds('tableName', 'sortCell', descending, offset, limit) for paginated lists
+- useRowCount('tableName') returns total row count
+- useAddRowCallback('tableName', (param) => ({ cell1: val, createdAt: Date.now() }), [deps])
+- useSetCellCallback('tableName', rowId, 'cellName', (_e) => (current) => newValue) for toggles/updates
+- useSetPartialRowCallback('tableName', rowId, (param) => ({ cell: newVal })) for partial updates
+- useDelRowCallback('tableName', rowId) for deletion
+- useValue('key') / useSetValueCallback('key', () => value) for app-level settings
+- useApp() returns { isReady, isSyncing, user }
+- NO import statements. NO createStore. NO direct store.* calls. Use callback hooks only.${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
 
     onEvent({ type: 'theme_selected', themeId: 'custom-ref', themeName: 'Custom Reference' });
 
@@ -312,8 +316,6 @@ Write the complete app to app.jsx. Rules:
 - THEN: <style> tag with theme-sensitive CSS organized into marked sections (see below), plus component styles
 - Add rich visual effects: Canvas 2D backgrounds, animated SVG illustrations, CSS @property animations, hover effects
 - JSX with React hooks (useState, useEffect, useRef, useCallback, useMemo)
-- useFireproofClerk("db-name") for database — returns { database, useLiveQuery, useDocument }
-  useFireproofClerk is a PRE-EXISTING GLOBAL — call it directly. Do NOT declare, redefine, wrap, or alias it. Do NOT create useFireproof or any fallback — just call useFireproofClerk().
 - NO import statements — runs in Babel script block with globals
 - NO TypeScript. End with: export default App
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
@@ -321,12 +323,18 @@ Write the complete app to app.jsx. Rules:
 
 ${THEME_SECTION_MARKERS}
 
-DATABASE:
-- useDocument({text:"",type:"item"}) returns { doc, merge, submit, reset, save }
-  merge({text:"new"}) to update fields, submit() to save as new doc, save() to upsert by _id
-  For forms: merge() on each keystroke, submit() when done. NEVER use setDoc — it doesn't exist.
-- useLiveQuery("type",{key:"item"}) returns { docs, isLoading }
-- database.put({...doc, field:"val"}) for direct writes, database.del(doc) to delete${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
+DATABASE (TinyBase — all hooks are pre-existing globals, NO imports needed):
+- useRowIds('tableName') returns array of row IDs
+- useCell('tableName', rowId, 'cellName') returns a single cell value
+- useSortedRowIds('tableName', 'sortCell', descending, offset, limit) for paginated lists
+- useRowCount('tableName') returns total row count
+- useAddRowCallback('tableName', (param) => ({ cell1: val, createdAt: Date.now() }), [deps])
+- useSetCellCallback('tableName', rowId, 'cellName', (_e) => (current) => newValue) for toggles/updates
+- useSetPartialRowCallback('tableName', rowId, (param) => ({ cell: newVal })) for partial updates
+- useDelRowCallback('tableName', rowId) for deletion
+- useValue('key') / useSetValueCallback('key', () => value) for app-level settings
+- useApp() returns { isReady, isSyncing, user }
+- NO import statements. NO createStore. NO direct store.* calls. Use callback hooks only.${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
 
   const themeColors = ctx.themeColors[themeId] || null;
   onEvent({ type: 'theme_selected', themeId, themeName, themeBackground: themeColors?.bg || null });
@@ -338,7 +346,7 @@ DATABASE:
 }
 
 /**
- * Assemble app.jsx into the vibes template with Fireproof bundle + OIDC auth.
+ * Assemble app.jsx into the vibes template with TinyBase boilerplate.
  * Used by the /app-frame route.
  */
 export function assembleAppFrame(ctx, appName?: string) {

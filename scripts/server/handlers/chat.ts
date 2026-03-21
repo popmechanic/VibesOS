@@ -163,7 +163,7 @@ LAYOUT REBUILD:
 - Typography hierarchy, font sizes, weights, letter-spacing — match what you see.
 - All visual details: rounded corners, padding, margins, gaps, border-radius values.
 
-PRESERVE: all Fireproof hooks (useDocument, useLiveQuery), database.put/del calls, data models, all functional logic, and the user's actual data. Every piece of data and functionality must still work.
+PRESERVE: all TinyBase hooks (useRowIds, useCell, useAddRowCallback, useSetCellCallback, useSortedRowIds, useDelRowCallback), data tables/cells, all functional logic, and the user's actual data. Every piece of data and functionality must still work.
 The goal is: if you put the app and the image side by side, they should look like the same UI.
 
 `;
@@ -213,9 +213,10 @@ RULES:
 - ADD to the existing app — never rewrite from scratch
 - Preserve all components, hooks, state, data models, __VIBES_THEMES__, useVibesTheme()
 - Do NOT add imports, do NOT use TypeScript, keep export default App
-- The database hook is useFireproofClerk("db-name") — it is a PRE-EXISTING GLOBAL. NEVER rename, redeclare, wrap, or alias it. Do NOT create useFireproof or any fallback. Just call useFireproofClerk() directly. It returns { database, useLiveQuery, useDocument, syncStatus }.
+- TinyBase hooks (useRowIds, useCell, useAddRowCallback, etc.) are PRE-EXISTING GLOBALS. NEVER import, redeclare, or alias them.
+- useApp() returns { isReady, isSyncing, user }.
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
-- Never change Fireproof document types or query filters${useAI ? AI_INSTRUCTIONS_CHAT : ''}`;
+- Never rename table names or cell names — users would lose data${useAI ? AI_INSTRUCTIONS_CHAT : ''}`;
 
   await runOneShot(prompt, { lockType: 'chat', model, cwd: currentAppDir(ctx, appName) || ctx.projectRoot, tools: 'Read,Edit,Write,Glob,Grep' }, onEvent, ctx.projectRoot);
 
