@@ -539,7 +539,8 @@ app.post("/deploy", async (c) => {
     files["index.html"] = files["index.html"]
       .replaceAll('__APP_NAME__', name)
       .replaceAll('__WS_URL__', wsUrl)
-      .replaceAll('__APP_PUBLIC__', String(isPublic));
+      .replaceAll('__APP_PUBLIC__', String(isPublic))
+      .replaceAll('__OIDC_AUTHORITY__', c.env.OIDC_ISSUER || '');
   }
 
   // Write app metadata to KV for the dispatch worker's auth gate
