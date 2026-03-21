@@ -52,7 +52,7 @@ First, reason about the design in <reasoning> tags:
 Then output your complete code in <code> tags.
 
 CRITICAL: Use plain JavaScript only. NEVER use TypeScript syntax:
-- NO generics: useState<T>, useDocument<T>, Array<T>
+- NO generics: useState<T>, Array<T>
 - NO type annotations: const x: string, function(x: number)
 - NO interfaces or type aliases
 - NO "as" assertions: (x as any)
@@ -65,10 +65,10 @@ customer: [Target user persona]
 revenue: [Pricing/monetization model]
 */
 import React, { useState } from "react";
-import { useFireproofClerk } from "use-fireproof";
 
 export default function App() {
-  const { useLiveQuery, useDocument } = useFireproofClerk("riff-db");
+  const store = window.__TINYBASE_STORE__;
+  const { useTable, useRow, useRowIds, useAddRowCallback, useSetRowCallback, useDelRowCallback } = window;
   // Your implementation
   return (
     <div className="min-h-screen [background from visual direction] p-4">
@@ -83,12 +83,12 @@ Requirements:
 - Use OKLCH colors for vibrant results: bg-[oklch(L_C_H)]
 - Use OKLCH gradients: bg-[linear-gradient(in_oklch,oklch(...),oklch(...))]
 - Use Tailwind CSS for styling
-- Use useFireproofClerk for all data persistence (provides sync when Clerk is configured)
-- Use useLiveQuery for real-time data
-- Use useDocument for form state (NOT useState for form data)
+- Use TinyBase hooks from window globals for all data persistence
+- Use useTable/useRowIds for listing data, useRow for single records
+- Use useAddRowCallback to insert, useSetRowCallback to update, useDelRowCallback to delete
 - Include meaningful CRUD operations
 - Make it visually distinctive and immersive
-- Include a seedDemo function that populates 3-5 realistic sample documents with database.put() and a "Load Demo Data" button that only renders when the primary useLiveQuery returns zero docs`;
+- Include a seedDemo function that populates 3-5 realistic sample rows using useAddRowCallback and a "Load Demo Data" button that only renders when useRowCount returns zero`;
 
 try {
   const args = buildClaudeArgs(TASK_PROFILES.riffGenerate);

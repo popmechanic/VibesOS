@@ -12,6 +12,7 @@ import type { ServerContext } from '../config.ts';
 import { stripForTemplate } from '../../lib/strip-code.js';
 import { APP_PLACEHOLDER } from '../../lib/assembly-utils.js';
 import { populateConnectConfig } from '../../lib/env-utils.js';
+import { OIDC_AUTHORITY, OIDC_CLIENT_ID, DEPLOY_API_URL, AI_PROXY_URL } from '../../lib/auth-constants.js';
 import { TEMPLATES } from '../../lib/paths.js';
 import { currentAppDir, slugifyPrompt, resolveAppName } from '../app-context.js';
 import { AI_INSTRUCTIONS_GENERATE, THEME_SECTION_MARKERS } from '../ai-instructions.ts';
@@ -198,8 +199,6 @@ Write the complete app to app.jsx. Rules:
 - THEN: <style> tag with reference-derived CSS organized into marked sections (see below), plus component styles
 - Add rich visual effects: Canvas 2D backgrounds, animated SVG illustrations, CSS @property animations, hover effects
 - JSX with React hooks (useState, useEffect, useRef, useCallback, useMemo)
-- useFireproofClerk("db-name") for database — returns { database, useLiveQuery, useDocument }
-  useFireproofClerk is a PRE-EXISTING GLOBAL — call it directly. Do NOT declare, redefine, wrap, or alias it. Do NOT create useFireproof or any fallback — just call useFireproofClerk().
 - NO import statements — runs in Babel script block with globals
 - NO TypeScript. End with: export default App
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
@@ -207,12 +206,30 @@ Write the complete app to app.jsx. Rules:
 
 ${THEME_SECTION_MARKERS}
 
-DATABASE:
-- useDocument({text:"",type:"item"}) returns { doc, merge, submit, reset, save }
-  merge({text:"new"}) to update fields, submit() to save as new doc, save() to upsert by _id
-  For forms: merge() on each keystroke, submit() when done. NEVER use setDoc — it doesn't exist.
-- useLiveQuery("type",{key:"item"}) returns { docs, isLoading }
-- database.put({...doc, field:"val"}) for direct writes, database.del(doc) to delete${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
+DATABASE (TinyBase — all hooks are pre-existing globals, NO imports needed):
+- useRowIds('tableName') returns array of row IDs
+- useCell('tableName', rowId, 'cellName') returns a single cell value
+- useSortedRowIds('tableName', 'sortCell', descending, offset, limit) for paginated lists
+- useRowCount('tableName') returns total row count
+- useAddRowCallback('tableName', (param) => ({ cell1: val, createdAt: Date.now() }), [deps])
+- useSetCellCallback('tableName', rowId, 'cellName', (_e) => (current) => newValue) for toggles/updates
+- useSetPartialRowCallback('tableName', rowId, (param) => ({ cell: newVal })) for partial updates
+- useDelRowCallback('tableName', rowId) for deletion
+- useValue('key') / useSetValueCallback('key', () => value) for app-level settings
+- useApp() returns { isReady, isSyncing, user }
+- NO import statements. NO createStore. NO direct store.* calls. Use callback hooks only.
+
+EXAMPLE — a todo list (copy this pattern):
+  const ids = useRowIds('todos');
+  const addTodo = useAddRowCallback('todos', (text) => ({ text, done: false, createdAt: Date.now() }), []);
+  // In child: const text = useCell('todos', id, 'text');
+  // Toggle: useSetCellCallback('todos', id, 'done', (_e) => (curr) => !curr);
+  // Delete: useDelRowCallback('todos', id);
+
+CRITICAL: Table names MUST be simple string literals ('todos', 'items', 'notes').
+NEVER use variables, constants, or template literals for table names.
+WRONG: useRowIds(tableName)  useRowIds('\${tableId}')  useRowIds(TABLE_NAME)
+RIGHT: useRowIds('todos')    useCell('todos', id, 'text')${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
 
     onEvent({ type: 'theme_selected', themeId: 'custom-ref', themeName: 'Custom Reference' });
 
@@ -311,8 +328,6 @@ Write the complete app to app.jsx. Rules:
 - THEN: <style> tag with theme-sensitive CSS organized into marked sections (see below), plus component styles
 - Add rich visual effects: Canvas 2D backgrounds, animated SVG illustrations, CSS @property animations, hover effects
 - JSX with React hooks (useState, useEffect, useRef, useCallback, useMemo)
-- useFireproofClerk("db-name") for database — returns { database, useLiveQuery, useDocument }
-  useFireproofClerk is a PRE-EXISTING GLOBAL — call it directly. Do NOT declare, redefine, wrap, or alias it. Do NOT create useFireproof or any fallback — just call useFireproofClerk().
 - NO import statements — runs in Babel script block with globals
 - NO TypeScript. End with: export default App
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
@@ -320,12 +335,30 @@ Write the complete app to app.jsx. Rules:
 
 ${THEME_SECTION_MARKERS}
 
-DATABASE:
-- useDocument({text:"",type:"item"}) returns { doc, merge, submit, reset, save }
-  merge({text:"new"}) to update fields, submit() to save as new doc, save() to upsert by _id
-  For forms: merge() on each keystroke, submit() when done. NEVER use setDoc — it doesn't exist.
-- useLiveQuery("type",{key:"item"}) returns { docs, isLoading }
-- database.put({...doc, field:"val"}) for direct writes, database.del(doc) to delete${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
+DATABASE (TinyBase — all hooks are pre-existing globals, NO imports needed):
+- useRowIds('tableName') returns array of row IDs
+- useCell('tableName', rowId, 'cellName') returns a single cell value
+- useSortedRowIds('tableName', 'sortCell', descending, offset, limit) for paginated lists
+- useRowCount('tableName') returns total row count
+- useAddRowCallback('tableName', (param) => ({ cell1: val, createdAt: Date.now() }), [deps])
+- useSetCellCallback('tableName', rowId, 'cellName', (_e) => (current) => newValue) for toggles/updates
+- useSetPartialRowCallback('tableName', rowId, (param) => ({ cell: newVal })) for partial updates
+- useDelRowCallback('tableName', rowId) for deletion
+- useValue('key') / useSetValueCallback('key', () => value) for app-level settings
+- useApp() returns { isReady, isSyncing, user }
+- NO import statements. NO createStore. NO direct store.* calls. Use callback hooks only.
+
+EXAMPLE — a todo list (copy this pattern):
+  const ids = useRowIds('todos');
+  const addTodo = useAddRowCallback('todos', (text) => ({ text, done: false, createdAt: Date.now() }), []);
+  // In child: const text = useCell('todos', id, 'text');
+  // Toggle: useSetCellCallback('todos', id, 'done', (_e) => (curr) => !curr);
+  // Delete: useDelRowCallback('todos', id);
+
+CRITICAL: Table names MUST be simple string literals ('todos', 'items', 'notes').
+NEVER use variables, constants, or template literals for table names.
+WRONG: useRowIds(tableName)  useRowIds('\${tableId}')  useRowIds(TABLE_NAME)
+RIGHT: useRowIds('todos')    useCell('todos', id, 'text')${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
 
   const themeColors = ctx.themeColors[themeId] || null;
   onEvent({ type: 'theme_selected', themeId, themeName, themeBackground: themeColors?.bg || null });
@@ -337,7 +370,7 @@ DATABASE:
 }
 
 /**
- * Assemble app.jsx into the vibes template with Fireproof bundle + OIDC auth.
+ * Assemble app.jsx into the vibes template with TinyBase boilerplate.
  * Used by the /app-frame route.
  */
 export function assembleAppFrame(ctx, appName?: string) {
@@ -366,9 +399,16 @@ export function assembleAppFrame(ctx, appName?: string) {
   }
   template = template.replace(APP_PLACEHOLDER, strippedCode);
 
-  // Preview mode: don't populate Connect URLs — run local-only (no auth, no sync).
-  // Sync + auth are added on deploy via assemble scripts.
-  template = populateConnectConfig(template, {});
+  // Preview mode: inject safe defaults for TinyBase config (local-only, no sync, no auth).
+  // Full config (wsUrl, oidcClientId) is injected at deploy time by the Deploy API.
+  const resolvedName = appName || 'preview-app';
+  template = populateConnectConfig(template, { '__APP_NAME__': resolvedName });
+
+  // Inject OIDC constants (same as assemble.js does for CLI assembly)
+  template = template.replaceAll('__OIDC_AUTHORITY__', OIDC_AUTHORITY);
+  template = template.replaceAll('__OIDC_CLIENT_ID__', OIDC_CLIENT_ID);
+  template = template.replaceAll('__DEPLOY_API_URL__', DEPLOY_API_URL);
+  template = template.replaceAll('__AI_PROXY_URL__', AI_PROXY_URL);
 
   return template;
 }

@@ -1,7 +1,7 @@
 ---
 name: vibes
 argument-hint: "[prompt]"
-description: Self-contained app generator — invoke this skill directly, do not decompose into sub-steps. Generates React web apps with Fireproof database. Use when creating new web applications, adding components, or working with local-first databases. Ideal for quick prototypes and single-page apps that need real-time data sync.
+description: Self-contained app generator — invoke this skill directly, do not decompose into sub-steps. Generates React web apps with TinyBase reactive data store. Use when creating new web applications, adding components, or working with real-time data. Ideal for quick prototypes and single-page apps that need real-time data sync.
 license: MIT
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 metadata:
@@ -30,7 +30,7 @@ metadata:
 - [Generation Process](#generation-process) - Design reasoning and code output
 - [Assembly Workflow](#assembly-workflow) - Build the final app
 - [UI Style & Theming](#ui-style--theming) - OKLCH colors and design patterns
-- [Fireproof API](#fireproof-api) - Database operations and hooks
+- [TinyBase Data API](#tinybase-data-api) - Data store operations and hooks
 - [AI Features](#ai-features-optional) - Optional AI integration
 - [Common Mistakes](#common-mistakes-to-avoid) - Avoid these pitfalls
 - [Deployment Options](#deployment-options) - Where to deploy
@@ -39,7 +39,7 @@ metadata:
 
 # Vibes DIY App Generator
 
-Generate React web applications using Fireproof for local-first data persistence.
+Generate React web applications using TinyBase for reactive data with real-time sync.
 
 ## Auth Check (silent — only prompt if needed)
 
@@ -119,7 +119,7 @@ Present Editor as the first/recommended option.
 
 - Auth is automatic — on first deploy, a browser window opens for Pocket ID login
 - Tokens are cached at `~/.vibes/auth.json` for subsequent deploys
-- Connect deploys automatically on first app deploy — no manual setup needed
+- Sync infrastructure deploys automatically on first app deploy — no manual setup needed
 
 **Platform Name vs User Intent**: "Vibes" is the name of this app platform (Vibes DIY). When users say "vibe" or "vibes" in their prompt, interpret it as:
 - Their project/brand name ("my vibes tracker")
@@ -128,19 +128,19 @@ Present Editor as the first/recommended option.
 
 Do not default to ambient mood generators, floating orbs, or meditation apps unless explicitly requested.
 
-**Import Map Note**: The import map points `use-fireproof` to `/fireproof-oidc-bridge.js`, a bridge module that wraps the raw Fireproof bundle with sync status forwarding and an onTock kick effect. Your code uses `import { useFireproofClerk } from "use-fireproof"` (backward-compat alias) and the browser resolves this through the bridge. This is intentional — the bridge ensures `useLiveQuery` subscribers see synced data and that `SyncStatusDot` gets live sync status via a window global.
+**Import Map Note**: The import map points TinyBase modules to esm.sh CDN URLs with `?external=react,react-dom` to prevent the React singleton problem. All TinyBase hooks are exposed as globals by the template — generated code uses them directly without imports.
 
 ## Core Rules
 
 - **Use JSX** - Standard React syntax with Babel transpilation
 - **Single HTML file** - App code assembled into template
-- **Fireproof for data** - Use `useFireproofClerk` for database + sync
-- **Auto-detect Connect** - Template handles auth (via Pocket ID) automatically
+- **TinyBase for data** - Use callback hooks (`useAddRowCallback`, `useSetCellCallback`, etc.) for all writes, query hooks (`useRowIds`, `useCell`, `useRow`) for reads
+- **Auto-detect sync** - Template handles store setup, persistence, and WebSocket sync automatically
 - **Tailwind for styling** - Mobile-first, responsive design
 - **Minimize external dependencies** - Implement dynamic components (autocomplete, drag-and-drop, modals) yourself instead of pulling in libraries. Every esm.sh dependency risks the React singleton problem and adds load time. Only use external packages when the functionality is truly essential.
-- **Stable database name** - Never change the database name passed to `useFireproofClerk()` between iterations. Renaming it means the user loses all their data.
 - **Data must be visible** - Every document type the app saves must be browseable in the UI. Lists should be on the main page, not hidden behind navigation. List items should be clickable for details. Never build a form that saves data the user can't find.
 - **Keep code concise** - Shorter files mean faster iteration in the editor. Don't pad with comments or verbose abstractions.
+- **Simple string table names** - Always use string literals for table names: `useRowIds('todos')`, `useCell('items', id, 'name')`. NEVER abstract table names into variables, constants, or template literals. Each table name should be a plain string that appears directly in the hook call.
 
 ## Generation Process
 
@@ -165,6 +165,21 @@ Before writing code, reason about the design in `<design>` tags:
 - What visual style matches the purpose? (minimal, bold, playful, professional)
 </design>
 ```
+
+### Step 1.1: Table Design
+
+Before writing code, plan your TinyBase tables in the `<design>` block:
+
+```
+Tables:
+- 'items' — main data (cells: name, description, createdAt, done)
+- 'categories' — grouping (cells: name, color)
+
+Values:
+- 'sortOrder' — current sort preference
+```
+
+Use descriptive, lowercase, plural names. These exact strings appear in every hook call — `useRowIds('items')`, `useCell('items', id, 'name')`.
 
 ### Step 1.5: Read Design Tokens (MANDATORY)
 
@@ -214,7 +229,7 @@ Generate one layout using the selected theme's design principles. Do NOT add `us
 - "Yes" → Generate `theme.html` (see below), open in browser, iterate until the user is happy, then proceed to Step 2
 - "No" → Skip directly to Step 2
 
-**If the user says yes**, generate a standalone `theme.html` — a self-contained static page that demonstrates the visual design without React, Fireproof, or auth:
+**If the user says yes**, generate a standalone `theme.html` — a self-contained static page that demonstrates the visual design without React, TinyBase, or auth:
 
 - **Single HTML file** with inline `<style>` and `<script>`. No external dependencies except Google Fonts via `@import`.
 - **CSS custom properties** using `--comp-*` token overrides from the selected theme.
@@ -236,9 +251,9 @@ Generate one layout using the selected theme's design principles. Do NOT add `us
 
 Write to `./theme.html`. The user can open it in a browser, request changes, and iterate. When they're satisfied, proceed to Step 2 — use the design decisions from the preview to guide app.jsx generation.
 
-> **Assembly: generate (preserve)** — `assemble.js` injects your code as-is. Import and export statements work because the import map intercepts bare specifiers at runtime. Code examples below include imports.
+> **Assembly: generate (preserve)** — `assemble.js` injects your code as-is. All TinyBase hooks and React are globals — no import statements needed.
 >
-> **If you're a launch/builder agent:** Sell transforms vibes artifacts by *stripping* imports. When generating app.jsx for the launch pipeline, omit all imports — the sell template provides everything. Follow builder.md rules; use only the patterns from examples below, not the import lines.
+> **If you're a launch/builder agent:** All hooks are globals provided by the template. Do not write any import statements. Follow builder.md rules.
 
 ### Step 2: Output Code
 
@@ -248,9 +263,6 @@ After reasoning, output the complete JSX in `<code>` tags.
 
 ```
 <code>
-import React, { useState } from "react";
-import { useFireproofClerk } from "use-fireproof";
-
 const STYLE = `
 /* @theme:tokens */
 :root {
@@ -277,8 +289,9 @@ const STYLE = `
 `;
 
 export default function App() {
-  const { database, useLiveQuery, useDocument, syncStatus } = useFireproofClerk("app-name-db");
-  // ... component logic
+  const { isSyncing, user } = useApp();
+  // ... component logic using TinyBase hooks (useRowIds, useCell, useAddRowCallback, etc.)
+  // Note: isReady is always true here — the template gates rendering automatically
 
   return (
     <>
@@ -305,25 +318,31 @@ export default function App() {
 - `@theme:decoration` — SVG elements, atmospheric backgrounds (in JSX)
 - **Outside markers:** ONLY pure-layout classes (display, grid, gap, padding, margin, position, width/height, flex, overflow). If a class has ANY visual property, it goes in `@theme:surfaces`.
 
-**⚠️ CRITICAL: Fireproof Hook Pattern**
+**⚠️ CRITICAL: TinyBase Hook Pattern**
 
-The Fireproof auth package exports `useFireproofClerk` (backward-compat alias). Always use this pattern:
+All TinyBase hooks are globals — never import them. The template sets up the store, persister, and synchronizer. Your code only uses hooks:
 
 ```jsx
-// ✅ CORRECT - This is the ONLY pattern that works
-import { useFireproofClerk } from "use-fireproof";
-const { database, useDocument, useLiveQuery, syncStatus } = useFireproofClerk("my-db");
-const { doc, merge } = useDocument({ _id: "doc1" });
+// ✅ CORRECT — hooks are globals, no imports needed
+const { isReady, isSyncing, user } = useApp();
+const ids = useRowIds('todos');
+const text = useCell('todos', id, 'text');
+const addTodo = useAddRowCallback('todos', () => ({ text: '', done: false }));
 
-// ❌ WRONG - DO NOT USE (old use-vibes API)
-import { toCloud, useFireproof } from "use-fireproof";  // WRONG - old API
-import { useDocument } from "use-fireproof";  // WRONG - standalone import
-const { attach } = useFireproof("db", { attach: toCloud() });  // WRONG - old pattern
+// ❌ WRONG — DO NOT USE
+import { useRow } from "tinybase/ui-react";           // WRONG - no imports
+const store = createMergeableStore();                   // WRONG - template creates the store
+store.setCell('todos', id, 'done', true);               // WRONG - use callback hooks
 ```
 
-**Sync Status**: `syncStatus` provides the current sync state. Values: `"idle"`, `"connecting"`, `"synced"`, `"reconnecting"`, `"error"`. Display it for user feedback.
+**Sync Status**: `isSyncing` from `useApp()` indicates active sync. The template handles WebSocket connection and reconnection automatically.
 
-**Connect Configuration**: Auth is managed automatically via Pocket ID. On first deploy, a browser window opens for login; tokens are cached at `~/.vibes/auth.json`. No `.env` credential setup is needed.
+**What Generated Code Must Never Contain:**
+- `import` statements of any kind
+- `createStore`, `createMergeableStore`, `createPersister`, `createSynchronizer`
+- WebSocket URLs, auth logic, connection handling
+- Direct `store.*` method calls — use callback hooks exclusively
+- Schema definitions or store configuration
 
 ## Assembly Workflow
 
@@ -418,33 +437,119 @@ Lighten/darken using L value:
 
 ---
 
-## Fireproof API
+## TinyBase Data API
 
-Fireproof is a local-first database - no loading or error states required, just empty data states. Data persists across sessions and syncs in real-time when Connect is configured.
+TinyBase is a reactive data store with fine-grained hooks. Data persists across sessions and syncs in real-time via WebSocket when deployed. The template manages all store setup, persistence, and synchronization — your code only uses hooks.
 
-**For complete examples (Form + List, Demo Data patterns), read `${CLAUDE_SKILL_DIR}/fireproof-patterns.md`.**
+### Globals Available (provided by the template)
 
-### Setup
-```jsx
-import { useFireproofClerk } from "use-fireproof";
-const { database, useLiveQuery, useDocument, syncStatus } = useFireproofClerk("my-app-db");
+All of these are globally available — no imports needed:
+```
+React, useState, useEffect, useRef, useCallback, useMemo,
+createContext, useContext,
+useApp,
+useTable, useRow, useCell, useValue, useValues,
+useRowIds, useSortedRowIds, useRowCount,
+useAddRowCallback, useSetCellCallback, useSetRowCallback,
+useSetPartialRowCallback, useDelRowCallback, useDelCellCallback,
+useSetValueCallback
 ```
 
-The template wraps your App in an auth provider (Pocket ID), enabling authenticated cloud sync automatically.
+### Data Access Patterns
+
+**Status check with useApp():**
+```jsx
+const { isReady, isSyncing, user } = useApp();
+```
+The template gates rendering until the store is ready. `useApp().isReady` is always `true` inside your App component — the template shows a loading state automatically. You can still destructure it for explicitness, but forgetting it won't crash the app.
+
+**Fine-grained reactivity — each component calls its own hooks:**
+```jsx
+// GOOD — only re-renders when this row changes
+function TodoItem({ id }) {
+  const text = useCell('todos', id, 'text');
+  const done = useCell('todos', id, 'done');
+  return <div>{text}</div>;
+}
+
+// BAD — useTable re-renders on ANY cell change in the table
+function App() {
+  const todos = useTable('todos');
+  // ...
+}
+```
+
+**Adding rows with useAddRowCallback:**
+```jsx
+const addTodo = useAddRowCallback(
+  'todos',
+  (text) => ({
+    text: text ?? '',
+    done: false,
+    createdBy: user?.name ?? 'anonymous',
+    createdAt: Date.now(),
+  }),
+  [user],  // deps — include anything from closure that changes
+);
+```
+
+**Toggling/incrementing with MapCell pattern:**
+```jsx
+const toggleDone = useSetCellCallback(
+  'todos', id, 'done',
+  (_e) => (currentValue) => !currentValue,
+);
+```
+
+**Partial updates (prefer over full row replacement):**
+```jsx
+const updateName = useSetPartialRowCallback(
+  'todos', id,
+  (newName) => ({ name: newName }),
+);
+```
+
+**Listing rows — use useRowIds + child components:**
+```jsx
+function TodoList() {
+  const ids = useRowIds('todos');
+  return ids.map(id => <TodoItem key={id} id={id} />);
+}
+```
+
+**Pagination with useSortedRowIds:**
+```jsx
+const PAGE_SIZE = 25;
+const itemIds = useSortedRowIds('items', 'createdAt', true, page * PAGE_SIZE, PAGE_SIZE);
+```
+
+**Values for app-level state:**
+```jsx
+const theme = useValue('theme');
+const setTheme = useSetValueCallback('theme', (newTheme) => newTheme);
+```
+
+**Deleting rows:**
+```jsx
+const deleteTodo = useDelRowCallback('todos', id);
+```
 
 ### Choosing Your Pattern
 
-- **useDocument** = Form-like editing. `merge()` to accumulate, `submit()` to save + reset, `save()` to save in place. Best for: forms, text inputs.
-- **database.put()** = Immediate writes. Best for: counters, toggles, buttons, batch creation (demo data).
-- **useLiveQuery** = Real-time queries. `useLiveQuery("type", { key: "item" })` for filtered lists, `useLiveQuery("_id", { descending: true })` for recent-first.
-
-**WARNING — merge() + submit() timing trap:** Never `merge()` a computed value and call `submit()` in the same handler. React batches state, so `submit()` reads stale data. Use `database.put()` with explicit fields + `reset()` instead.
+- **useCell / useRow** = Read single cells or full rows. Prefer `useCell` for fine-grained reactivity.
+- **useAddRowCallback** = Create new rows with auto-generated IDs. Best for: forms, new items.
+- **useSetCellCallback** = Update a single cell. Best for: toggles, counters, inline edits.
+- **useSetPartialRowCallback** = Update multiple cells without replacing the whole row. Best for: form edits.
+- **useRowIds + child components** = List all rows. Each child reads its own data via `useCell`.
+- **useSortedRowIds** = Sorted/paginated lists. Best for: tables, feeds, leaderboards.
+- **useValue / useSetValueCallback** = App-level singleton state (theme, settings, counters).
 
 ### Key Rules
-- **Don't use `useState()` for form data** — use `useDocument` with `merge()`/`submit()`
-- **Custom index functions are SANDBOXED** — cannot access external variables. Query all, filter in render.
-- **Every app needs a "Load Demo Data" button** — visible only when database is empty, using `database.put()` directly (not `useEffect` on mount)
-- **Demo data must be realistic** for the app's domain, 3–5 documents with enough variety to populate all views
+- **Prefer `useCell` in child components** over `useTable` — avoids re-rendering the entire list on every change
+- **Every app needs a "Load Demo Data" button** — visible only when the table is empty (`useRowCount('tableName') === 0`), using `useAddRowCallback` (not `useEffect` on mount)
+- **Demo data must be realistic** for the app's domain, 3-5 rows with enough variety to populate all views
+- **Cells are scalars only** — strings, numbers, booleans. Do NOT put objects or arrays in cells (cell-level last-writer-wins loses concurrent edits to different fields inside a nested object)
+- **`isReady` check is now handled by the template** — your App component only renders after the store is hydrated. You can still use `const { isReady } = useApp()` for explicitness but it's always `true`.
 
 ---
 
@@ -473,13 +578,10 @@ Store the key for use with the `--ai-key` flag during deployment.
 
 The `useAI` hook is automatically included in the template when AI features are detected.
 
-**IMPORTANT:** Never put `useAI()` in the same component as Fireproof hooks (`useFireproofClerk`, `useDocument`, `useLiveQuery`). AI loading/error state changes cause re-renders that conflict with Fireproof's write queue. Use a child component for AI interactions:
+**IMPORTANT:** Isolate `useAI()` in a child component to prevent AI loading/error state changes from re-rendering your data components. Use a child component for AI interactions:
 
 ```jsx
-import React from "react";
-import { useFireproofClerk } from "use-fireproof";
-
-// AI interactions in a child component — isolated from Fireproof re-renders
+// AI interactions in a child component — isolated from data re-renders
 function AIChatInput({ onSend }) {
   const { callAI, loading, error } = useAI();
   const [input, setInput] = React.useState("");
@@ -488,13 +590,13 @@ function AIChatInput({ onSend }) {
     if (!input.trim()) return;
     const message = input;
     setInput("");
-    onSend({ role: "user", content: message }); // save user message via parent
+    onSend({ role: "user", content: message });
 
     const aiText = await callAI({
       model: "anthropic/claude-sonnet-4",
       messages: [{ role: "user", content: message }]
     });
-    if (aiText) onSend({ role: "assistant", content: aiText }); // save AI response via parent
+    if (aiText) onSend({ role: "assistant", content: aiText });
   };
 
   return (
@@ -506,21 +608,27 @@ function AIChatInput({ onSend }) {
   );
 }
 
-// Main app owns Fireproof — AI state changes don't re-render this
+// Main app — TinyBase hooks for data, AI in child component
 export default function App() {
-  const { database, useLiveQuery } = useFireproofClerk("ai-chat-db");
-  const { docs: messages } = useLiveQuery("type", { key: "message" });
+  const messageIds = useRowIds('messages');
 
-  const handleNewMessage = async (msg) => {
-    await database.put({ ...msg, type: "message", timestamp: Date.now() });
-  };
+  const addMessage = useAddRowCallback(
+    'messages',
+    (msg) => ({ role: msg.role, content: msg.content, timestamp: Date.now() }),
+  );
 
   return (
     <div>
-      {messages.map(m => <p key={m._id}><b>{m.role}:</b> {m.content}</p>)}
-      <AIChatInput onSend={handleNewMessage} />
+      {messageIds.map(id => <MessageRow key={id} id={id} />)}
+      <AIChatInput onSend={addMessage} />
     </div>
   );
+}
+
+function MessageRow({ id }) {
+  const role = useCell('messages', id, 'role');
+  const content = useCell('messages', id, 'content');
+  return <p><b>{role}:</b> {content}</p>;
 }
 ```
 
@@ -607,118 +715,187 @@ bun "$VIBES_ROOT/scripts/deploy-cloudflare.js" \
 
 ## Sharing / Inviting Users
 
-The template includes a built-in invite UI in VibesPanel (the slide-out menu). For custom sharing in user app code, use the `useSharing` hook:
+Sharing is handled at the deployment level — the WebSocket sync room is scoped per app. Users who have the app URL can collaborate in real-time. Access control is managed by the deploy infrastructure.
 
-```javascript
-const { inviteUser, listInvites, deleteInvite, findUser, ready } = window.useSharing();
+---
 
-// Invite by email
-async function handleInvite(email) {
-  if (!ready) return;
-  const result = await inviteUser(email, 'read'); // 'read' or 'write'
-  console.log('Invited:', result);
+## Reference App
+
+Complete working example — a shared grocery list. Study this pattern before generating code:
+
+```jsx
+export default function App() {
+  const { user } = useApp();
+  return (
+    <div className="max-w-md mx-auto p-4">
+      <h1 className="text-xl font-bold mb-4">Grocery List</h1>
+      <AddItem user={user} />
+      <ItemList />
+    </div>
+  );
+}
+
+function AddItem({ user }) {
+  const [input, setInput] = useState('');
+  const addItem = useAddRowCallback(
+    'items',
+    (text) => ({
+      name: text ?? '',
+      bought: false,
+      addedBy: user?.name ?? 'someone',
+      createdAt: Date.now(),
+    }),
+    [user],
+  );
+  const handleAdd = () => {
+    if (input.trim()) {
+      addItem(input.trim());
+      setInput('');
+    }
+  };
+  return (
+    <div className="flex gap-2 mb-4">
+      <input
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && handleAdd()}
+        className="flex-1 border rounded px-3 py-2"
+        placeholder="Add item..."
+      />
+      <button onClick={handleAdd} className="btn">Add</button>
+    </div>
+  );
+}
+
+function ItemList() {
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 25;
+  const totalItems = useRowCount('items');
+  const itemIds = useSortedRowIds('items', 'createdAt', true, page * PAGE_SIZE, PAGE_SIZE);
+  return (
+    <div>
+      {itemIds.map(id => <GroceryItem key={id} id={id} />)}
+      {totalItems > (page + 1) * PAGE_SIZE && (
+        <button onClick={() => setPage(p => p + 1)} className="w-full py-2 text-sm opacity-60">
+          Load more
+        </button>
+      )}
+    </div>
+  );
+}
+
+function GroceryItem({ id }) {
+  const name = useCell('items', id, 'name');
+  const bought = useCell('items', id, 'bought');
+  const addedBy = useCell('items', id, 'addedBy');
+  const toggleBought = useSetCellCallback(
+    'items', id, 'bought',
+    (_e) => (current) => !current,
+  );
+  const remove = useDelRowCallback('items', id);
+
+  return (
+    <div className="flex items-center gap-2 py-2 border-b">
+      <button onClick={toggleBought} className="w-6 h-6 flex items-center justify-center">
+        {bought ? '✓' : '○'}
+      </button>
+      <span className={bought ? 'line-through opacity-40 flex-1' : 'flex-1'}>
+        {name}
+      </span>
+      <span className="text-xs opacity-50">{addedBy}</span>
+      <button onClick={remove} className="text-red-400 text-sm">x</button>
+    </div>
+  );
 }
 ```
 
-The hook is available on `window.useSharing` after the auth provider loads. Check `ready` before calling methods.
+**Key patterns demonstrated:**
+- `useApp()` for user context (isReady is always true — template gates rendering)
+- `useAddRowCallback` with deps array including `user`
+- `useSortedRowIds` with pagination (PAGE_SIZE 25)
+- `useCell` in child components for fine-grained reactivity (not useTable)
+- `useSetCellCallback` with MapCell pattern for toggles
+- `useDelRowCallback` for deletion
+- No imports, no store access, no schema
 
 ---
 
 ## Common Mistakes to Avoid
 
-- **DON'T** use `useState` for form fields - use `useDocument`
-- **DON'T** use `Fireproof.fireproof()` - use `useFireproofClerk()` hook
-- **DON'T** use the old `useFireproof` with `toCloud()` - use `useFireproofClerk` instead
+- **DON'T** use `useTable` on large tables — it re-renders on ANY cell change. Use `useRowIds` to get IDs, then `useCell` in child components for fine-grained reactivity.
+  ```jsx
+  // BAD — re-renders entire list when any todo changes
+  function App() {
+    const todos = useTable('todos');
+    return Object.entries(todos).map(([id, row]) => <div key={id}>{row.text}</div>);
+  }
+
+  // GOOD — each child only re-renders when its own data changes
+  function TodoList() {
+    const ids = useRowIds('todos');
+    return ids.map(id => <TodoItem key={id} id={id} />);
+  }
+  function TodoItem({ id }) {
+    const text = useCell('todos', id, 'text');
+    return <div>{text}</div>;
+  }
+  ```
+- **DON'T** abstract table names into variables or use template literals:
+  ```jsx
+  // BAD — variable table name
+  const TABLE = 'todos';
+  const ids = useRowIds(TABLE);
+
+  // BAD — template literal inside wrong quotes
+  const ids = useRowIds('${tableId}');
+
+  // GOOD — simple string literal directly in hook call
+  const ids = useRowIds('todos');
+  ```
+- **DON'T** create wrapper functions around TinyBase hooks:
+  ```jsx
+  // BAD — unnecessary abstraction
+  function useItems() { return useRowIds('items'); }
+
+  // GOOD — direct hook call
+  const itemIds = useRowIds('items');
+  ```
+- **DON'T** forget deps in `useAddRowCallback` — stale closures will capture old values:
+  ```jsx
+  // BAD — user is stale after it changes
+  const addTodo = useAddRowCallback('todos', () => ({ createdBy: user?.name }));
+
+  // GOOD — user in deps array
+  const addTodo = useAddRowCallback('todos', () => ({ createdBy: user?.name }), [user]);
+  ```
+- **DON'T** use `useSetRowCallback` when you only need to update some cells — it replaces the entire row, deleting any cells you omit. Use `useSetPartialRowCallback` instead.
+- **DON'T** put objects or arrays in cells — TinyBase cells are scalars (string, number, boolean). Cell-level last-writer-wins means concurrent edits to different fields inside a nested object will lose data. Flatten your data model.
+- `isReady` check is now handled by the template — your App component only renders after the store is hydrated. You can still use `const { isReady } = useApp()` for explicitness but it's always `true`.
 - **DON'T** use white text on light backgrounds
 - **DON'T** use `fetch()` to call AI APIs directly — use `useAI` hook instead (it handles auth and proxying)
-- **DON'T** use Fireproof's `_files` API for images — it has a sync bug where blobs arrive after metadata, causing 404s on other devices.
-  Store image data as Uint8Array directly on documents:
-  ```jsx
-  // Convert file to Uint8Array (with resize)
-  async function fileToImageData(file, maxDim = 1200) {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
-    const canvas = new OffscreenCanvas(bitmap.width * scale, bitmap.height * scale);
-    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
-    return new Uint8Array(await blob.arrayBuffer());
-  }
-
-  // Display from Uint8Array
-  function StoredImage({ data, type = 'image/jpeg', alt, className }) {
-    const [url, setUrl] = useState(null);
-    useEffect(() => {
-      if (!data) return;
-      // Fireproof CBOR round-trips Uint8Array as plain objects with numeric keys
-      const bytes = data instanceof Uint8Array ? data : new Uint8Array(Object.values(data));
-      const objectUrl = URL.createObjectURL(new Blob([bytes], { type }));
-      setUrl(objectUrl);
-      return () => URL.revokeObjectURL(objectUrl);
-    }, [data, type]);
-    return url ? <img src={url} alt={alt} className={className} /> : null;
-  }
-  // Usage: <StoredImage data={doc.imageData} type={doc.imageType} alt="Photo" />
-  ```
-- **DON'T** call `merge()` and `submit()` in the same handler when adding computed fields
-  (timestamps, UUIDs, derived values). React batches the state update from `merge()`, so
-  `submit()` writes the old state. Use `database.put()` with explicit fields + `reset()` instead.
-- **DON'T** spread `useDocument` doc into `database.put()` — internal CRDT metadata
-  contaminates the write and can corrupt the database (`missing block` errors).
-  Build documents with explicit fields instead:
-  ```jsx
-  // BAD — spreads internal metadata
-  await database.put({ ...doc, completed: true });
-
-  // GOOD — explicit fields only
-  await database.put({ _id: doc._id, type: doc.type, todo: doc.todo, completed: true });
-  ```
-- **DON'T** wrap your app in `VibeContextProvider` or auth providers yourself - those are provided by the template. Standalone apps use `useFireproofClerk()` directly inside the template's auth provider.
+- **DON'T** write `import` statements — all hooks and React are globals provided by the template
+- **DON'T** call `createStore`, `createMergeableStore`, or any store constructor — the template creates and manages the store
+- **DON'T** call `store.setCell()` or other direct store methods — use callback hooks (`useSetCellCallback`, `useAddRowCallback`, etc.) which are properly bound to the store
 - **DON'T** panic if you see "Cannot read properties of null (reading 'useContext')" - the template already handles the React singleton via `?external=react,react-dom` in the import map. Check that the import map wasn't accidentally modified.
-- **NOTE:** Apps use `/fireproof-oidc-bridge.js` — this bridge module wraps the local Fireproof bundle with sync status forwarding + onTock kick. Auth is handled automatically via Pocket ID. Apps work correctly with it.
 - **DON'T** hand-write `app.jsx` and assemble it manually — always generate through
   `/vibes:vibes`, even for test or diagnostic apps. The skill generates code that's
   compatible with the template by construction. Hand-written code may include imports
   or patterns that conflict with the template's runtime setup.
-- **DON'T** call `database.put()` inside a `useEffect` that runs on mount (component initialization).
-  The database's internal stores may not be initialized yet, causing `Cannot read properties of undefined (reading 'stores')` errors in the Connect write queue. Use user-triggered actions (button clicks, form submissions) instead, or defer with a generous `setTimeout`. The "Load Demo Data" button pattern avoids this by design.
+- **DON'T** seed demo data in `useEffect` on mount — the store may not be ready. Use a "Load Demo Data" button with `useAddRowCallback`:
   ```jsx
-  // BAD — races against store initialization
+  // BAD — races against store hydration
   React.useEffect(() => {
-    if (docs.length === 0) {
-      DEFAULTS.forEach(item => database.put(item));
-    }
-  }, [docs.length]);
+    if (useRowCount('todos') === 0) { /* seed data */ }
+  }, []);
 
-  // GOOD — user-triggered, stores are ready by then
-  const seedDemo = async () => {
-    if (docs.length > 0) return;
-    for (const item of DEFAULTS) {
-      await database.put(item);
-    }
-  };
-  return <button onClick={seedDemo}>Load Demo Data</button>;
-  ```
-- **DON'T** call `useFireproofClerk()` in a component that renders before the user
-  passes a login/name-entry gate. Split into a gate component (no Fireproof) and
-  a content component (with Fireproof) so the database only initializes after the gate.
-  ```jsx
-  // BAD — Fireproof initializes even while showing login screen
+  // GOOD — user-triggered, store is ready by then
   function App() {
-    const { database } = useFireproofClerk("my-db");
-    const [user, setUser] = useState("");
-    if (!user) return <LoginScreen onLogin={setUser} />;
-    return <MainContent database={database} />;
-  }
-
-  // GOOD — Fireproof only mounts after login
-  function App() {
-    const [user, setUser] = useState("");
-    if (!user) return <LoginScreen onLogin={setUser} />;
-    return <AppContent user={user} />;
-  }
-  function AppContent({ user }) {
-    const { database } = useFireproofClerk("my-db");
-    // ...
+    const count = useRowCount('todos');
+    const addTodo = useAddRowCallback('todos', (item) => item, []);
+    const seedDemo = () => {
+      DEFAULTS.forEach(item => addTodo(item));
+    };
+    return count === 0 ? <button onClick={seedDemo}>Load Demo Data</button> : <TodoList />;
   }
   ```
 
@@ -730,11 +907,7 @@ The shipped default files contain detailed reference material. Read them when th
 
 | Need | Signal in Prompt | Read This |
 |------|------------------|-----------|
-| Fireproof code examples | form + list, demo data, useDocument/useLiveQuery details | `${CLAUDE_SKILL_DIR}/fireproof-patterns.md` |
 | Design tokens & theming | colors, theme, tokens, brand colors, styling | `${CLAUDE_PLUGIN_ROOT}/build/design-tokens.txt` |
-| File uploads | "upload", "images", "photos", "attachments" | `${CLAUDE_PLUGIN_ROOT}/docs/fireproof.txt` → "Working with Images" |
-| Auth / sync config | "Pocket ID", "Connect", "cloud sync", "login" | `${CLAUDE_PLUGIN_ROOT}/docs/fireproof.txt` → "Auth Config" |
-| Sync status display | "online/offline", "connection status" | `${CLAUDE_PLUGIN_ROOT}/docs/fireproof.txt` → "Sync Status Display" |
 | Full Neobrute design details | detailed design system, spacing, typography | `${CLAUDE_SKILL_DIR}/defaults/style-prompt.txt` |
 | Advanced visual effects | "interactive", "animated", "3D", "particles", "shader", "canvas" | `${CLAUDE_SKILL_DIR}/defaults/advanced-effects-prompt.txt` |
 
@@ -760,7 +933,7 @@ Options:
   Description: "Continue iterating on what you've built. Add new features, refine the styling, or adjust functionality. Great when you have a clear vision and want to polish it further."
 
 - Label: "Apply a design reference (/design)"
-  Description: "Have a design.html or mockup file? This skill mechanically transforms your app to match it exactly - pixel-perfect fidelity with your Fireproof data binding preserved."
+  Description: "Have a design.html or mockup file? This skill mechanically transforms your app to match it exactly - pixel-perfect fidelity with your TinyBase data binding preserved."
 
 - Label: "Explore variations (/riff)"
   Description: "Not sure if this is the best approach? Riff generates 3-10 completely different interpretations of your idea in parallel. You'll get ranked variations with business model analysis to help you pick the winner."

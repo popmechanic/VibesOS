@@ -8,7 +8,7 @@ Instantly make your own small multi-user apps, without a backend. With Vibes, Th
 
 Vibes is a vibe coding framework made for coding agents. It collapses application code and application state into a single HTML file that runs anywhere.
 
-**Why does this matter?** AI doesn't make apps - it makes *text*. By embedding the database in JavaScript (via [Fireproof](https://fireproof.storage)), your coding agent can describe an entire app - including its persistence layer - in one shot. No server setup, no schema imports. Just a working app.
+**Why does this matter?** AI doesn't make apps - it makes *text*. By embedding the database in JavaScript (via [TinyBase](https://tinybase.org)), your coding agent can describe an entire app - including its persistence layer - in one shot. No server setup, no schema imports. Just a working app.
 
 Your data lives locally in the browser, encrypted and portable. It syncs across users automatically. Share your creations with a simple link and friends can jump in immediately.
 
@@ -53,7 +53,7 @@ Skills are **model-invoked** - Claude automatically uses them when your task mat
 
 Generate a complete, working app from a prompt. Perfect when you have a clear idea and want to see it working quickly.
 
-Creates a single HTML file with inline JavaScript, Fireproof database for local-first persistence, and Tailwind CSS styling. No build step - just open and run.
+Creates a single HTML file with inline JavaScript, TinyBase for local-first reactive data, and Tailwind CSS styling. No build step - just open and run.
 
 **Example prompts:**
 - "Make a chore chart for my roommates"
@@ -128,7 +128,7 @@ Commands are **user-invoked** — run them explicitly when you want a specific s
 
 | Command | What it does |
 |---------|-------------|
-| `/vibes` | Generate a React web app with Fireproof database |
+| `/vibes` | Generate a React web app with TinyBase |
 | `/sell` | Transform an app into multi-tenant SaaS with Pocket ID auth and billing |
 | `/cloudflare` | Deploy a Vibes app to Cloudflare Workers (auto-configures Connect) |
 | `/launch` | Build and deploy a SaaS app end-to-end using Agent Teams |
@@ -148,12 +148,12 @@ You've drifted out of the vibe zone.
 
 ## How Data Works
 
-Vibes apps use [Fireproof](https://fireproof.storage), a local-first database:
+Vibes apps use [TinyBase](https://tinybase.org), a reactive data store for local-first apps:
 
 - **Offline-first**: Apps work without internet, sync when connected
-- **Encrypted**: Data is encrypted before leaving the browser
-- **Shareable**: Real-time sync across users via cloud relay
-- **Portable**: Export your data anytime
+- **Reactive**: Automatic re-rendering when data changes via React hooks
+- **Shareable**: Real-time sync across users via WebSocket relay
+- **Portable**: Simple table/row data model, easy to export
 
 The hidden settings menu (gear icon) lets you configure sync for collaboration.
 
@@ -163,16 +163,17 @@ Traditional SaaS multi-tenancy requires backend code, database configuration, te
 
 Vibes eliminates these categories of work entirely.
 
-Each subdomain creates a separate database namespace. Tenant isolation happens automatically—tenant A cannot query tenant B's data because the databases are physically separate. Data leaks become architecturally impossible.
+Each subdomain creates a separate data store. Tenant isolation happens automatically—tenant A cannot query tenant B's data because the stores are physically separate. Data leaks become architecturally impossible.
 
 The implementation:
 
 ```javascript
 const subdomain = window.location.hostname.split('.')[0];
-const { database } = useFireproofOIDC(`app-${subdomain}`);
+// TinyBase store per tenant, synced via per-app Durable Object
+const store = createStore();
 ```
 
-Three lines. No backend. No database configuration. No tenant middleware.
+A few lines. No backend. No database configuration. No tenant middleware.
 
 > **Note:** Auth credentials are managed automatically. No user-provided OIDC configuration needed.
 

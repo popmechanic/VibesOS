@@ -52,29 +52,21 @@ Rules:
 - ONLY pure-layout classes go outside markers: display, grid-template, gap, padding, margin, position, z-index, width, max-width, height, flex-*, align-items, justify-content, overflow, box-sizing`;
 
 /** Compact AI instructions for chat context (appended to edit prompts). */
-export const AI_INSTRUCTIONS_CHAT = `\n\nAI FEATURES — the useAI hook is available as a global (NO import needed):
+export const AI_INSTRUCTIONS_CHAT = `
 
+useAI() hook: \`const { callAI, streamAI, loading, error } = useAI();\`
 \`\`\`jsx
-const { callAI, streamAI, loading, error } = useAI();
-
-// Non-streaming:
-const text = await callAI({
-  model: "anthropic/claude-sonnet-4",
-  messages: [{ role: "user", content: userMessage }]
-});
-if (!text) return; // error state set automatically
-
-// Streaming (for chat UIs):
+const result = await callAI({ model: "anthropic/claude-sonnet-4", messages: [...] });
+// Streaming:
 const stream = streamAI({ model: "anthropic/claude-sonnet-4", messages: [...] });
-if (!stream) return;
 let result = "";
 for await (const chunk of stream) { result += chunk; setResponse(result); }
 \`\`\`
 
 Rules: useAI() at component top level. callAI() is async, returns text or null. streamAI() returns async iterator or null. Neither throws.
-IMPORTANT: Put useAI() in a SEPARATE child component from Fireproof hooks (useDocument, useLiveQuery). AI loading/error state changes cause re-renders that can conflict with Fireproof's write queue.
+useAI() can safely coexist with TinyBase hooks in the same component.
 Always show \`error.message\` to the user when callAI/streamAI returns null — never fail silently.
-Use Fireproof to persist conversations. Do NOT use fetch() for AI calls. Do NOT simulate AI responses.`;
+Use TinyBase to persist conversations (useAddRowCallback). Do NOT use fetch() for AI calls.`;
 
 /** Detailed AI instructions for generation context (new apps). */
 export const AI_INSTRUCTIONS_GENERATE = `
@@ -82,14 +74,9 @@ export const AI_INSTRUCTIONS_GENERATE = `
 
 This app needs AI capabilities. Use the global \`useAI\` hook (available as window.useAI — NO import needed).
 
-CRITICAL: Put useAI() in a SEPARATE child component from Fireproof hooks (useDocument, useLiveQuery).
-AI loading/error state changes cause re-renders that conflict with Fireproof's write queue if they share a component.
-
 \`\`\`jsx
-// AI features go in a child component — NOT in the same component as useFireproofClerk/useDocument/useLiveQuery
 function AIButton({ onResult }) {
   const { callAI, loading, error } = useAI();
-
   const handleClick = async () => {
     const text = await callAI({
       model: "anthropic/claude-sonnet-4",
@@ -100,7 +87,6 @@ function AIButton({ onResult }) {
     });
     if (text) onResult(text);
   };
-
   return (
     <div>
       <button onClick={handleClick} disabled={loading}>
@@ -111,37 +97,26 @@ function AIButton({ onResult }) {
   );
 }
 
-// Main app uses Fireproof — AI state changes won't re-render this component
+// Save AI results to TinyBase
 function App() {
-  const { database } = useFireproofClerk("my-db");
-
-  const handleAIResult = async (text) => {
-    await database.put({ type: "ai-response", content: text, timestamp: Date.now() });
-  };
-
-  return <AIButton onResult={handleAIResult} />;
+  const addResponse = useAddRowCallback(
+    'ai-responses',
+    (text) => ({ content: text, timestamp: Date.now() }),
+  );
+  return <AIButton onResult={addResponse} />;
 }
 
-// Streaming (for chat UIs — shows tokens as they arrive):
+// Streaming (for chat UIs):
 function ChatStream({ messages, onDone }) {
   const { streamAI, loading, error } = useAI();
   const [response, setResponse] = React.useState("");
-
   const handleSend = async () => {
-    const stream = streamAI({
-      model: "anthropic/claude-sonnet-4",
-      messages
-    });
-    if (!stream) return; // error state set, shown below
-
+    const stream = streamAI({ model: "anthropic/claude-sonnet-4", messages });
+    if (!stream) return;
     let accumulated = "";
-    for await (const chunk of stream) {
-      accumulated += chunk;
-      setResponse(accumulated);
-    }
+    for await (const chunk of stream) { accumulated += chunk; setResponse(accumulated); }
     if (accumulated) onDone(accumulated);
   };
-
   return (
     <div>
       <button onClick={handleSend} disabled={loading}>Send</button>
@@ -153,14 +128,11 @@ function ChatStream({ messages, onDone }) {
 \`\`\`
 
 RULES for AI features:
-- useAI() is a React hook — call it at the top of your component (not inside callbacks)
-- NEVER put useAI() in the same component as useFireproofClerk, useDocument, or useLiveQuery — use a child component and pass results up via callbacks
-- callAI() is async — returns text string on success, null on error. NEVER throws.
-- streamAI() returns an async iterator on success, null on error. Use for await...of to consume.
-- Prefer streamAI for chat interfaces, callAI for one-shot operations
-- Always show \`error.message\` to the user when callAI/streamAI returns null — never fail silently
-- Show a loading indicator while \`loading\` is true
-- Use Fireproof to persist AI conversations: save user messages and AI responses to the database
-- Do NOT use fetch() to call AI APIs directly — always use useAI()
-- Do NOT simulate or hardcode AI responses — use the real API via useAI()
+- useAI() is a React hook — call at component top level
+- useAI() can coexist with TinyBase hooks in the same component
+- callAI() returns text on success, null on error. NEVER throws.
+- streamAI() returns async iterator on success, null on error.
+- Always show \`error.message\` when callAI/streamAI returns null
+- Use TinyBase (useAddRowCallback) to persist AI conversations
+- Do NOT use fetch() for AI calls — always use useAI()
 `;

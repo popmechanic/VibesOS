@@ -1,3 +1,7 @@
+# DEPRECATED — Fireproof Patterns Reference (replaced by TinyBase)
+# See skills/vibes/SKILL.md for current TinyBase data patterns.
+# This file is kept for historical reference only.
+
 # Fireproof Patterns Reference
 
 Detailed code examples for common Fireproof patterns. Read this when building apps that need form + list combinations, demo data seeding, or complex query patterns.

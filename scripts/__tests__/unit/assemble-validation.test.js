@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { APP_PLACEHOLDER, validateAssembly } from '../../lib/assembly-utils.js';
+import { APP_PLACEHOLDER, validateAssembly, checkForbiddenPatterns } from '../../lib/assembly-utils.js';
 
 const PLACEHOLDER = APP_PLACEHOLDER;
 
@@ -17,7 +17,10 @@ const PLACEHOLDER = APP_PLACEHOLDER;
 const SAFE_PLACEHOLDER_PATTERNS = [
   '__PURE__',
   '__esModule',
-  '__VIBES_CONFIG__',
+  '__APP_CONFIG__',
+  '__APP_NAME__',
+  '__WS_URL__',
+  '__APP_PUBLIC__',
   '__OIDC_LOAD_ERROR__',
   '__VIBES_SYNC_STATUS__',
   '__VIBES_APP_CODE__',
@@ -140,7 +143,7 @@ describe('validateSellTemplate (pre-injection)', () => {
   });
 
   it('allows safe placeholder patterns', () => {
-    const html = '<html>/*#__PURE__*/ __esModule __VIBES_CONFIG__ __OIDC_LOAD_ERROR__</html>';
+    const html = '<html>/*#__PURE__*/ __esModule __APP_CONFIG__ __OIDC_LOAD_ERROR__</html>';
     expect(validateSellTemplate(html)).toEqual([]);
   });
 
@@ -164,6 +167,30 @@ describe('validateSellTemplate (pre-injection)', () => {
     // so user code like window.__SELL_HOOKS__ never triggers false positives
     const templateBeforeInjection = '<html>// __VIBES_APP_CODE__</html>';
     expect(validateSellTemplate(templateBeforeInjection)).toEqual([]);
+  });
+});
+
+describe('forbidden pattern warnings', () => {
+  it('warns on import statements', () => {
+    const warnings = checkForbiddenPatterns('import React from "react";\nfunction App() {}');
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]).toContain('import');
+  });
+
+  it('warns on createStore calls', () => {
+    const warnings = checkForbiddenPatterns('const s = createMergeableStore()');
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]).toContain('store');
+  });
+
+  it('warns on direct store method calls', () => {
+    const warnings = checkForbiddenPatterns('store.setCell("t", "r", "c", 1)');
+    expect(warnings.length).toBeGreaterThan(0);
+  });
+
+  it('returns empty array for clean code', () => {
+    const warnings = checkForbiddenPatterns('export default function App() { return <div>Hi</div>; }');
+    expect(warnings).toEqual([]);
   });
 });
 

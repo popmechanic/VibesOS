@@ -69,9 +69,9 @@ The LLM matches user intent to the correct skill.
 The skill's instruction file is loaded into the LLM's context. For app generation, this is `skills/vibes/SKILL.md`. It contains:
 
 - **Pre-flight check** — bash command to verify `.env` has valid OIDC credentials + Connect URLs
-- **Core rules** — use JSX, single HTML file, Fireproof for data, Tailwind for styling
+- **Core rules** — use JSX, single HTML file, TinyBase for data, Tailwind for styling
 - **Generation process** — design reasoning, token reading, theme selection, code output format
-- **Fireproof API** — correct hook patterns (`useFireproofClerk`), document operations, live queries
+- **TinyBase API** — correct hook patterns (useTable, useRow, useAddRowCallback), store operations, reactive queries
 - **Common mistakes** — what NOT to do (no standalone imports, no old API, etc.)
 - **Assembly + deploy workflow** — exact commands to run after code generation
 
@@ -122,7 +122,7 @@ After selecting 3 themes, the LLM reads **all 3 full theme files** (e.g., `theme
 
 **Component consistency:** All 3 theme variants share the same React components with the same props/interface. Themes differ through CSS (token overrides + theme-specific class styles) and through different JSX layout structures rendered conditionally based on the active theme. This ensures runtime theme switching works — the user can cycle between all 3 themes live.
 
-**Result:** The LLM now has all the context it needs — framework rules, design tokens, 3 theme personalities, and Fireproof API patterns — and will produce an app with 3 fully distinct visual interpretations.
+**Result:** The LLM now has all the context it needs — framework rules, design tokens, 3 theme personalities, and TinyBase API patterns — and will produce an app with 3 fully distinct visual interpretations.
 
 ---
 
@@ -149,17 +149,14 @@ The LLM generates a complete React component in `<code>` tags:
 
 // Imports (resolved by import map at runtime, NOT by bundler)
 import React, { useState, useEffect } from "react";
-import { useFireproofClerk } from "use-fireproof";
-
 export default function App() {
-  // Fireproof database + hooks
-  const { database, useLiveQuery, useDocument, syncStatus } = useFireproofClerk("my-app-db");
+  const { isReady, isSyncing, user } = useApp();
 
-  // Live query for real-time data
-  const { docs } = useLiveQuery("type", { key: "item" });
+  // TinyBase reactive hooks (exposed as window globals by the template)
+  const items = useTable("items");
 
-  // Document hook for create/edit
-  const { doc, merge, save } = useDocument({ type: "item", name: "" });
+  // Callback to add a row
+  const addItem = useAddRowCallback("items", (e) => ({ name: "", createdAt: Date.now() }));
 
   // App styles using design tokens
   const appStyles = `
@@ -323,11 +320,10 @@ Creates a timestamped backup of any existing `index.html`, then writes the new a
 node scripts/deploy-cloudflare.js --name my-app --file index.html
 ```
 
-1. Reads `index.html` and the Fireproof bundle files from `bundles/`
-2. Writes the HTML into the Cloudflare Worker's KV storage
-3. Copies bundle files (`fireproof-oidc-bridge.js`) as static assets
-4. Deploys the Worker using `wrangler`
-5. The Worker serves the HTML on `https://my-app.amber-e8c.workers.dev`
+1. Reads `index.html` and any bundle files from `bundles/`
+2. Deploys the app as a Worker in a Workers for Platforms namespace
+3. The Deploy API injects the WebSocket URL for TinyBase sync
+4. The Worker serves the HTML on `https://my-app.vibes.diy`
 
 The Worker handles:
 - Serving the main HTML page
@@ -373,7 +369,7 @@ The browser's native import map resolves bare specifiers:
   "imports": {
     "react": "https://esm.sh/stable/react@19.1.0",
     "react-dom/client": "https://esm.sh/stable/react-dom@19.1.0/client",
-    "use-fireproof": "/fireproof-oidc-bridge.js"
+    "tinybase": "https://esm.sh/tinybase@8?external=react,react-dom"
   }
 }
 ```
@@ -396,16 +392,15 @@ The template's delta code wraps the app in `OIDCProvider`:
 2. Shows sign-in UI via Pocket ID if the user isn't authenticated
 3. Once signed in, renders the `App` component
 
-### Step 6.5: Fireproof Database + Sync
+### Step 6.5: TinyBase Store + Sync
 
 Inside the app:
 
-1. `useFireproofClerk("db-name")` is called
-2. The bridge module (`fireproof-vibes-bridge.js`) wraps the raw bundle
-3. Fireproof creates a local IndexedDB database
-4. Pocket ID provides a JWT token for cloud sync authentication
-5. Fireproof connects to the Connect Studio WebSocket (`fpcloud://studio.exe.xyz`)
-6. Data syncs bidirectionally — local-first, works offline, syncs when connected
+1. TinyBase store is created via the template's `useApp()` hook
+2. Store persists locally via localStorage
+3. Pocket ID provides a JWT token for cloud sync authentication
+4. TinyBase connects to the Durable Object via WebSocket for real-time sync
+5. Data syncs bidirectionally — local-first, works offline, syncs when connected
 
 ### Step 6.6: Component System
 
@@ -497,7 +492,7 @@ User prompt ──→ LLM reads:                    .env (OIDC credentials,
                         Import map resolves
                         Babel transpiles JSX
                         OIDC authenticates
-                        Fireproof syncs data
+                        TinyBase syncs data
 ```
 
 ---

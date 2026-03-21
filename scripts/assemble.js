@@ -16,7 +16,7 @@ import { resolve } from 'path';
 import { TEMPLATES } from './lib/paths.js';
 import { createBackup } from './lib/backup.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID, DEPLOY_API_URL, AI_PROXY_URL } from './lib/auth-constants.js';
-import { APP_PLACEHOLDER, validateAssembly, loadAndValidateTemplate } from './lib/assembly-utils.js';
+import { APP_PLACEHOLDER, validateAssembly, loadAndValidateTemplate, checkForbiddenPatterns } from './lib/assembly-utils.js';
 import { stripForTemplate } from './lib/strip-code.js';
 
 
@@ -43,22 +43,29 @@ async function main() {
   const template = loadAndValidateTemplate(templatePath, readFileSync);
   const appCode = readFileSync(resolvedAppPath, 'utf8').trim();
 
-  console.log('Assembling (Connect URLs will be injected at deploy time)');
+  console.log('Assembling (App config will be injected at deploy time)');
 
   // Strip imports/exports/destructuring that conflict with the template.
   // The vibes delta imports React hooks via ES import (added in 0e59bd2),
   // so React destructuring in app code causes duplicate declarations.
   const cleanedAppCode = stripForTemplate(appCode, { stripReactHooks: true });
 
+  // Check for common builder mistakes
+  const assemblyWarnings = checkForbiddenPatterns(cleanedAppCode);
+  if (assemblyWarnings.length > 0) {
+    console.warn('Assembly warnings:');
+    assemblyWarnings.forEach(w => console.warn(`  - ${w}`));
+  }
+
   // Assemble: insert app code at placeholder
   let output = template.replace(APP_PLACEHOLDER, cleanedAppCode);
 
   // Inject hardcoded OIDC constants (same for every app) — replaceAll for templates
-  // with multiple occurrences of the same placeholder
-  output = output.replaceAll('__VITE_OIDC_AUTHORITY__', OIDC_AUTHORITY);
-  output = output.replaceAll('__VITE_OIDC_CLIENT_ID__', OIDC_CLIENT_ID);
-  output = output.replaceAll('__VITE_DEPLOY_API_URL__', DEPLOY_API_URL);
-  output = output.replaceAll('__VITE_AI_PROXY_URL__', AI_PROXY_URL);
+  // with multiple occurrences of the same placeholder.
+  output = output.replaceAll('__OIDC_AUTHORITY__', OIDC_AUTHORITY);
+  output = output.replaceAll('__OIDC_CLIENT_ID__', OIDC_CLIENT_ID);
+  output = output.replaceAll('__DEPLOY_API_URL__', DEPLOY_API_URL);
+  output = output.replaceAll('__AI_PROXY_URL__', AI_PROXY_URL);
 
   // Validate output
   const validationErrors = validateAssembly(output, appCode);
