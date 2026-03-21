@@ -3147,6 +3147,7 @@ window.escapeHtml = function(str) {
   let vibesAudio = null;
   let vibesPlaying = false;
   let vibesFirstPlay = true;
+  let vibesFadeInterval = null;
 
   function toggleVibesAudio() {
     const btn = document.getElementById('vibesAudioBtn');
@@ -3163,24 +3164,27 @@ window.escapeHtml = function(str) {
       vibesFirstPlay = true;
       // Fade in from 50% to 80% of full volume over ~4 seconds
       vibesAudio.addEventListener('play', () => {
+        if (vibesFadeInterval) clearInterval(vibesFadeInterval);
         vibesAudio.volume = 0.3;
         let vol = 0.3;
-        const fadeIn = setInterval(() => {
+        vibesFadeInterval = setInterval(() => {
           vol = Math.min(vol + 0.00225, 0.48);
           vibesAudio.volume = vol;
-          if (vol >= 0.48) clearInterval(fadeIn);
+          if (vol >= 0.48) { clearInterval(vibesFadeInterval); vibesFadeInterval = null; }
         }, 50);
       });
     }
 
     if (vibesPlaying) {
       // Fade out then pause
+      if (vibesFadeInterval) clearInterval(vibesFadeInterval);
       let vol = vibesAudio.volume;
-      const fadeOut = setInterval(() => {
+      vibesFadeInterval = setInterval(() => {
         vol = Math.max(vol - 0.02, 0);
         vibesAudio.volume = vol;
         if (vol <= 0) {
-          clearInterval(fadeOut);
+          clearInterval(vibesFadeInterval);
+          vibesFadeInterval = null;
           vibesAudio.pause();
         }
       }, 40);
