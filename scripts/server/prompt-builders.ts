@@ -16,6 +16,14 @@ import type { ServerContext } from './config.ts';
 import { currentAppDir } from './app-context.js';
 import { AI_INSTRUCTIONS_CHAT, AI_INSTRUCTIONS_GENERATE, THEME_SECTION_MARKERS } from './ai-instructions.ts';
 
+const TINYBASE_INVARIANT_RULES = `
+## MANDATORY (never skip)
+1. ALWAYS call useApp() in the root App component: const { isReady, isSyncing, user } = useApp(); — this activates sync.
+2. ALL persistent data in TinyBase tables. useState ONLY for ephemeral UI (modals, hover, in-progress form text).
+3. For shared/multiplayer apps: every user-owned row must include createdBy: user?.email || 'anonymous'.
+4. Cells are scalars only (string, number, boolean). Never objects or arrays.
+`;
+
 // --- Chat prompt builder ---
 
 const EFFECT_INSTRUCTIONS = {
@@ -112,7 +120,8 @@ RULES:
 - useApp() returns { isReady, isSyncing, user }.
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
 - Never rename table names or cell names — users would lose data
-- Table names are always simple string literals ('todos', 'items'). Never refactor them into variables or constants.${useAI ? AI_INSTRUCTIONS_CHAT : ''}`;
+- Table names are always simple string literals ('todos', 'items'). Never refactor them into variables or constants.${useAI ? AI_INSTRUCTIONS_CHAT : ''}
+${TINYBASE_INVARIANT_RULES}`;
 
   return prompt;
 }
@@ -324,7 +333,8 @@ EXAMPLE — a todo list (copy this pattern):
 CRITICAL: Table names MUST be simple string literals ('todos', 'items', 'notes').
 NEVER use variables, constants, or template literals for table names.
 WRONG: useRowIds(tableName)  useRowIds('\${tableId}')  useRowIds(TABLE_NAME)
-RIGHT: useRowIds('todos')    useCell('todos', id, 'text')${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
+RIGHT: useRowIds('todos')    useCell('todos', id, 'text')${useAI ? AI_INSTRUCTIONS_GENERATE : ''}
+${TINYBASE_INVARIANT_RULES}`;
 
     return {
       prompt: refPrompt,
@@ -456,7 +466,8 @@ EXAMPLE — a todo list (copy this pattern):
 CRITICAL: Table names MUST be simple string literals ('todos', 'items', 'notes').
 NEVER use variables, constants, or template literals for table names.
 WRONG: useRowIds(tableName)  useRowIds('\${tableId}')  useRowIds(TABLE_NAME)
-RIGHT: useRowIds('todos')    useCell('todos', id, 'text')${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
+RIGHT: useRowIds('todos')    useCell('todos', id, 'text')${useAI ? AI_INSTRUCTIONS_GENERATE : ''}
+${TINYBASE_INVARIANT_RULES}`;
 
   return {
     prompt,
