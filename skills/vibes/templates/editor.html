@@ -2548,10 +2548,6 @@
       opacity: 1;
       transition-delay: 0.1s;
     }
-    [data-tooltip-below]::after {
-      bottom: auto;
-      top: calc(100% + 6px);
-    }
   </style>
 </head>
 <body>
@@ -2562,9 +2558,9 @@
   <div class="header">
     <div class="header-left">
       <div class="window-controls" id="windowControls">
-        <button class="window-dot window-dot--close" onclick="windowControl('close')" data-tooltip="Close" data-tooltip-below></button>
-        <button class="window-dot window-dot--minimize" onclick="windowControl('minimize')" data-tooltip="Minimize" data-tooltip-below></button>
-        <button class="window-dot window-dot--zoom" onclick="windowControl('zoom')" data-tooltip="Zoom" data-tooltip-below></button>
+        <button class="window-dot window-dot--close" onclick="windowControl('close')"></button>
+        <button class="window-dot window-dot--minimize" onclick="windowControl('minimize')"></button>
+        <button class="window-dot window-dot--zoom" onclick="windowControl('zoom')"></button>
       </div>
       <div class="vibes-pill-wrap" onclick="setPhase('generate')" data-tooltip="Back to prompt">
         <svg class="vibes-pill" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 133 28.7">
