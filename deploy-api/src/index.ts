@@ -348,57 +348,49 @@ async function registerAppInPocketId(
   }
 
   try {
-    // 1. Register app in Pocket ID (or find existing)
     const appNamePocketId = `vibes-${appName}`;
-    console.log(`[pocket-id] Step 1: Looking for existing app ${appNamePocketId}...`);
-    const existingApp = await findAppByName(fetcher, apiKey, appNamePocketId);
-    let oidcClientId: string;
-
-    if (existingApp) {
-      oidcClientId = existingApp.id;
-      console.log(`[pocket-id] Step 1: found existing client=${oidcClientId}, ensuring isGroupRestricted...`);
-      await updateApp(fetcher, apiKey, oidcClientId, { isGroupRestricted: true });
-      console.log(`[pocket-id] Step 1 done: client=${oidcClientId} (group restriction ensured)`);
-    } else {
-      console.log(`[pocket-id] Step 1: Creating app ${appNamePocketId}...`);
-      const appResult = await createApp(fetcher, apiKey, {
-        name: appNamePocketId,
-        callbackURLs: [`${deployUrl}/**`],
-        isPublic: true,
-      });
-      oidcClientId = appResult.id;
-      console.log(`[pocket-id] Step 1 done: created client=${oidcClientId}`);
-    }
-
-    // 2. Create user group for this app (or find existing)
     const groupName = `vibes-${appName}-users`;
-    console.log(`[pocket-id] Step 2: Looking for existing group ${groupName}...`);
-    const existingGroup = await findUserGroupByName(fetcher, apiKey, groupName);
-    let userGroupId: string;
 
-    if (existingGroup) {
-      userGroupId = existingGroup.id;
-      console.log(`[pocket-id] Step 2 done: found existing group=${userGroupId}`);
-    } else {
-      console.log(`[pocket-id] Step 2: Creating user group ${groupName}...`);
-      const group = await createUserGroup(fetcher, apiKey, {
-        name: groupName,
-      });
-      userGroupId = group.id;
-      console.log(`[pocket-id] Step 2 done: created group=${userGroupId}`);
-    }
+    // Step 1: Find or create OIDC client AND user group in parallel
+    console.log(`[pocket-id] Finding/creating client + group in parallel...`);
+    const [appResult, groupResult] = await Promise.all([
+      findAppByName(fetcher, apiKey, appNamePocketId).then(async (found) => {
+        if (found) {
+          console.log(`[pocket-id] Found existing client=${found.id}`);
+          return found.id;
+        }
+        console.log(`[pocket-id] Creating client ${appNamePocketId}...`);
+        const created = await createApp(fetcher, apiKey, {
+          name: appNamePocketId,
+          callbackURLs: [`${deployUrl}/**`],
+          isPublic: true,
+        });
+        console.log(`[pocket-id] Created client=${created.id}`);
+        return created.id;
+      }),
+      findUserGroupByName(fetcher, apiKey, groupName).then(async (found) => {
+        if (found) {
+          console.log(`[pocket-id] Found existing group=${found.id}`);
+          return { id: found.id, isNew: false };
+        }
+        console.log(`[pocket-id] Creating group ${groupName}...`);
+        const created = await createUserGroup(fetcher, apiKey, { name: groupName });
+        console.log(`[pocket-id] Created group=${created.id}`);
+        return { id: created.id, isNew: true };
+      }),
+    ]);
 
-    // 3. Add deployer as first member
-    console.log(`[pocket-id] Step 3: Adding deployer ${userId} to group...`);
-    await addUsersToGroup(fetcher, apiKey, userGroupId, [userId]);
-    console.log(`[pocket-id] Step 3 done`);
+    const oidcClientId = appResult;
+    const userGroupId = groupResult.id;
 
-    // 4. Restrict app to this group
-    console.log(`[pocket-id] Step 4: Setting allowed groups on client...`);
-    await setAllowedGroups(fetcher, apiKey, oidcClientId, [userGroupId]);
-    console.log(`[pocket-id] Step 4 done`);
+    // Step 2: Add user to group + set allowed groups in parallel
+    console.log(`[pocket-id] Setting membership + allowed groups in parallel...`);
+    await Promise.all([
+      addUsersToGroup(fetcher, apiKey, userGroupId, [userId]),
+      setAllowedGroups(fetcher, apiKey, oidcClientId, [userGroupId]),
+    ]);
 
-    console.log(`[pocket-id] Registered app vibes-${appName}, client=${oidcClientId}, group=${userGroupId}`);
+    console.log(`[pocket-id] Done: client=${oidcClientId}, group=${userGroupId}`);
     return { oidcClientId, userGroupId };
   } catch (err) {
     console.error(`[pocket-id] Failed to register app vibes-${appName}:`, err);
