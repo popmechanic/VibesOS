@@ -470,12 +470,30 @@ Every app MUST call `useApp()` in the root App component. This activates the syn
 
 ```jsx
 function App() {
-  const { isReady, isSyncing, user } = useApp();
+  const { isReady, isSyncing } = useApp();
   // ... rest of your app
 }
 ```
 
 This is not optional. Never skip it. Never move it to a child component.
+
+### Getting the Signed-In User
+
+`useApp().user` is **NOT** the authenticated user — it may be null. To get the signed-in user's info, use `useUser()`:
+
+```jsx
+const { user: oidcUser } = useUser();
+const userEmail = oidcUser?.email || 'anonymous';
+const userName = oidcUser?.firstName || oidcUser?.email || 'anonymous';
+```
+
+`useUser()` is a global (no import needed). It returns `{ isSignedIn, isLoaded, user }` where `user` has `.email`, `.id`, `.firstName`, `.lastName`.
+
+**For auth gating**, do NOT check `useApp().user`. Use `useUser()`:
+```jsx
+const { user: oidcUser, isSignedIn } = useUser();
+if (!isSignedIn) return <SignInButton />;
+```
 
 **Fine-grained reactivity — each component calls its own hooks:**
 ```jsx
@@ -587,26 +605,30 @@ These are simpler than callback hooks when you need both the value and a setter.
 - Animations, transitions, temporary visual state
 
 **User attribution — when multiple people use the app:**
-Every row that belongs to a specific user must include `createdBy`:
+Every row that belongs to a specific user must include `createdBy`. Use `useUser()` to get the email:
 ```jsx
+const { user: oidcUser } = useUser();
+const userEmail = oidcUser?.email || 'anonymous';
+
 const addItem = useAddRowCallback(
   'items',
   (text) => ({
     text,
-    createdBy: user?.email || 'anonymous',
+    createdBy: userEmail,
     createdAt: Date.now(),
   }),
-  [user],
+  [userEmail],
 );
 ```
 
 To show only the current user's data, filter by `createdBy`:
 ```jsx
+const { user: oidcUser } = useUser();
+const userEmail = oidcUser?.email || 'anonymous';
 const allIds = useRowIds('scores');
-// Filter in the component — TinyBase syncs all rows, filter on read
 const myScores = allIds.filter(id => {
   const owner = useCell('scores', id, 'createdBy');
-  return owner === user?.email;
+  return owner === userEmail;
 });
 ```
 
