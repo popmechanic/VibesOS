@@ -223,8 +223,11 @@ DATABASE (TinyBase — all hooks are pre-existing globals, NO imports needed):
 - useSetPartialRowCallback('tableName', rowId, (param) => ({ cell: newVal })) for partial updates
 - useDelRowCallback('tableName', rowId) for deletion
 - useValue('key') / useSetValueCallback('key', () => value) for app-level settings
+- CONVENIENCE: const [val, setVal] = useCellState('table', rowId, 'cell') — read+write like useState but persisted
+- CONVENIENCE: const [val, setVal] = useValueState('key') — read+write app-level value
 - useApp() returns { isReady, isSyncing, user }
 - NO import statements. NO createStore. NO direct store.* calls. Use callback hooks only.
+- Store ALL persistent data in TinyBase (useAddRowCallback, useCellState). Use useState ONLY for ephemeral UI state (form inputs, modals, selections).
 
 EXAMPLE — a todo list (copy this pattern):
   const ids = useRowIds('todos');
@@ -359,8 +362,11 @@ DATABASE (TinyBase — all hooks are pre-existing globals, NO imports needed):
 - useSetPartialRowCallback('tableName', rowId, (param) => ({ cell: newVal })) for partial updates
 - useDelRowCallback('tableName', rowId) for deletion
 - useValue('key') / useSetValueCallback('key', () => value) for app-level settings
+- CONVENIENCE: const [val, setVal] = useCellState('table', rowId, 'cell') — read+write like useState but persisted
+- CONVENIENCE: const [val, setVal] = useValueState('key') — read+write app-level value
 - useApp() returns { isReady, isSyncing, user }
 - NO import statements. NO createStore. NO direct store.* calls. Use callback hooks only.
+- Store ALL persistent data in TinyBase (useAddRowCallback, useCellState). Use useState ONLY for ephemeral UI state (form inputs, modals, selections).
 
 EXAMPLE — a todo list (copy this pattern):
   const ids = useRowIds('todos');

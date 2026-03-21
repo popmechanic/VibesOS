@@ -452,7 +452,8 @@ useTable, useRow, useCell, useValue, useValues,
 useRowIds, useSortedRowIds, useRowCount,
 useAddRowCallback, useSetCellCallback, useSetRowCallback,
 useSetPartialRowCallback, useDelRowCallback, useDelCellCallback,
-useSetValueCallback
+useSetValueCallback,
+useCellState, useRowState, useValueState
 ```
 
 ### Data Access Patterns
@@ -534,15 +535,31 @@ const setTheme = useSetValueCallback('theme', (newTheme) => newTheme);
 const deleteTodo = useDelRowCallback('todos', id);
 ```
 
+**Convenience state hooks — familiar `[value, setValue]` pattern:**
+```jsx
+// Read + write a single cell (like useState but persisted and synced)
+const [name, setName] = useCellState('todos', id, 'name');
+
+// Read + write an app-level value
+const [theme, setTheme] = useValueState('theme');
+
+// Read + write an entire row
+const [row, setRow] = useRowState('todos', id);
+```
+
+These are simpler than callback hooks when you need both the value and a setter. Data is persisted and synced automatically — unlike `useState`, which is ephemeral.
+
 ### Choosing Your Pattern
 
-- **useCell / useRow** = Read single cells or full rows. Prefer `useCell` for fine-grained reactivity.
+- **useCellState** = Read + write a single cell. Best for: inline editing, toggles in simple components. Simpler than `useCell` + `useSetCellCallback` when you need both.
+- **useValueState** = Read + write an app-level value. Best for: settings, preferences. Simpler than `useValue` + `useSetValueCallback`.
+- **useCell / useRow** = Read-only access to cells or full rows. Prefer `useCell` for fine-grained reactivity.
 - **useAddRowCallback** = Create new rows with auto-generated IDs. Best for: forms, new items.
-- **useSetCellCallback** = Update a single cell. Best for: toggles, counters, inline edits.
-- **useSetPartialRowCallback** = Update multiple cells without replacing the whole row. Best for: form edits.
+- **useSetCellCallback** = Update a cell via event handler (supports MapCell pattern for toggles/increments). Best for: onClick handlers.
+- **useSetPartialRowCallback** = Update multiple cells without replacing the whole row. Best for: form saves.
 - **useRowIds + child components** = List all rows. Each child reads its own data via `useCell`.
 - **useSortedRowIds** = Sorted/paginated lists. Best for: tables, feeds, leaderboards.
-- **useValue / useSetValueCallback** = App-level singleton state (theme, settings, counters).
+- **useValue / useSetValueCallback** = Read / write app-level values via callbacks.
 
 ### Key Rules
 - **Prefer `useCell` in child components** over `useTable` — avoids re-rendering the entire list on every change

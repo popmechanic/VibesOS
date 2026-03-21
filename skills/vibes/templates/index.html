@@ -3358,7 +3358,7 @@ if (typeof window !== 'undefined') {
   import { createMergeableStore } from "tinybase/mergeable-store";
   import { createLocalPersister } from "tinybase/persisters/persister-browser";
   import { createWsSynchronizer } from "tinybase/synchronizers/synchronizer-ws-client";
-  import { Provider, useTable, useRow, useCell, useValue, useValues, useRowIds, useSortedRowIds, useRowCount, useAddRowCallback, useSetCellCallback, useSetRowCallback, useSetPartialRowCallback, useDelRowCallback, useDelCellCallback, useSetValueCallback } from "tinybase/ui-react";
+  import { Provider, useTable, useRow, useCell, useValue, useValues, useRowIds, useSortedRowIds, useRowCount, useAddRowCallback, useSetCellCallback, useSetRowCallback, useSetPartialRowCallback, useDelRowCallback, useDelCellCallback, useSetValueCallback, useCellState, useRowState, useValueState } from "tinybase/ui-react";
 
   // Expose TinyBase hooks as globals for generated app code
   // useTable warning wrapper — alerts when table has >100 rows
@@ -3392,6 +3392,10 @@ if (typeof window !== 'undefined') {
   window.useDelRowCallback = useDelRowCallback;
   window.useDelCellCallback = useDelCellCallback;
   window.useSetValueCallback = useSetValueCallback;
+  // Convenience state hooks — familiar [value, setValue] pattern
+  window.useCellState = useCellState;
+  window.useRowState = useRowState;
+  window.useValueState = useValueState;
 
   // --- App Context ---
   const AppContext = createContext(null);
