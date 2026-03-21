@@ -8,6 +8,8 @@ globs:
 description: Sharing and invite architecture for Fireproof collaboration
 ---
 
+> **DEPRECATED:** This architecture describes the pre-TinyBase sharing system based on Fireproof ledgers. TinyBase uses room-based sync (one Durable Object per app). Sharing will be redesigned in a future task.
+
 # Sharing / Invite Architecture
 
 Users invite collaborators via the VibesPanel invite UI. The architecture uses a DOM event bridge pattern.

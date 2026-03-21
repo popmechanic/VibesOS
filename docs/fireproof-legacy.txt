@@ -1,3 +1,7 @@
+# DEPRECATED — Fireproof API Guide (replaced by TinyBase)
+# See skills/vibes/SKILL.md for current TinyBase data patterns.
+# This file is kept for historical reference only.
+
 # Fireproof Database API Guide
 
 Fireproof is a lightweight embedded document database with encrypted live sync, designed to make browser apps easy. Use it in any JavaScript environment with a unified API that works both in React (with hooks) and as a standalone core API.

@@ -1,3 +1,5 @@
+// NOTE: This example uses legacy Fireproof hooks. See skills/vibes/SKILL.md for current TinyBase patterns.
+
 window.__VIBES_THEMES__ = [{ id: "custom-ref", name: "Custom Reference" }];
 
 function useVibesTheme() {
