@@ -65,18 +65,18 @@ export function stripReactDestructuring(code) {
 }
 
 /**
- * Remove window destructuring assignments (e.g., const { useFireproofClerk } = window;)
+ * Remove window destructuring assignments (e.g., const { useApp } = window;)
  * These conflict with templates that already provide these via ES imports.
  * @param {string} code - Source code
  * @returns {string} Code with window destructuring removed
  */
 export function stripWindowDestructuring(code) {
   return code
-    // Multi-line first (greedy): const {\n  useFireproofClerk,\n} = window;
+    // Multi-line first (greedy): const {\n  useApp,\n} = window;
     .replace(/^const\s+\{[\s\S]*?\}\s*=\s*window\s*;?\s*$/gm, '')
-    // Single-line: const { useFireproofClerk } = window;
+    // Single-line: const { useApp } = window;
     .replace(/^const\s+\{[^}]*\}\s*=\s*window\s*;?\s*$/gm, '')
-    // Conditional: const { useFireproof } = React.useMemo ? window : {};
+    // Conditional: const { useApp } = React.useMemo ? window : {};
     .replace(/^const\s+\{[^}]*\}\s*=\s*React\.useMemo\s*\?\s*window\s*:\s*\{\}\s*;?\s*$/gm, '');
 }
 

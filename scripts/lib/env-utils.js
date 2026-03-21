@@ -1,7 +1,7 @@
 /**
  * Shared environment/config utilities
  *
- * Connect config population.
+ * App config population.
  */
 
 
@@ -21,12 +21,13 @@ export const APP_CONFIG_PLACEHOLDERS = {
 
 
 /**
- * Replace Connect config placeholders with values from env vars object
+ * Replace app config placeholders with values from env vars object
  * @param {string} html - Template HTML
  * @param {object} envVars - Environment variables
  * @param {boolean} [globalReplace=false] - Use global regex replacement (for sell templates with multiple occurrences)
  */
 
+// Legacy — validates Connect URLs for backward compatibility
 /**
  * Validate Connect URL format
  * @param {string} url - URL to validate

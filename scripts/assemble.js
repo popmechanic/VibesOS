@@ -43,7 +43,7 @@ async function main() {
   const template = loadAndValidateTemplate(templatePath, readFileSync);
   const appCode = readFileSync(resolvedAppPath, 'utf8').trim();
 
-  console.log('Assembling (Connect URLs will be injected at deploy time)');
+  console.log('Assembling (App config will be injected at deploy time)');
 
   // Strip imports/exports/destructuring that conflict with the template.
   // The vibes delta imports React hooks via ES import (added in 0e59bd2),

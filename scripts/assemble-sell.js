@@ -159,11 +159,11 @@ if (registryAppName) {
   if (app?.connect) {
     envVars.VITE_API_URL = app.connect.apiUrl;
     envVars.VITE_CLOUD_URL = app.connect.cloudUrl;
-    console.log(`Connect config: from registry (app: ${registryAppName})`);
+    console.log(`App config: from registry (app: ${registryAppName})`);
   }
 }
 if (!envVars.VITE_API_URL) {
-  console.log('Note: No Connect URLs — will be set at deploy time');
+  console.log('Note: No app config URLs — will be set at deploy time');
 }
 
 // Configuration replacements
@@ -219,9 +219,9 @@ for (const [placeholder, value] of Object.entries(replacements)) {
   output = output.split(placeholder).join(value);
 }
 
-// Populate Connect config placeholders (from registry if available)
-// Must run before placeholder validation so Connect placeholders are replaced
-console.log('Connect mode: OIDC auth + cloud sync enabled');
+// Populate app config placeholders (from registry if available)
+// Must run before placeholder validation so app config placeholders are replaced
+console.log('App config mode: OIDC auth + cloud sync enabled');
 output = populateConnectConfig(output, envVars, true);
 
 // Inject hardcoded OIDC constants (same for every app)
