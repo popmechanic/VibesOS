@@ -1,7 +1,7 @@
 /**
  * Vibes AI Hook
  * Provides useAI() — a thin wrapper around the OpenRouter API.
- * Reads proxy URL from window.__VIBES_CONFIG__.aiProxyUrl.
+ * Reads proxy URL from window.__APP_CONFIG__.aiProxyUrl.
  * Requires OIDC auth — token sourced from window.__VIBES_OIDC_TOKEN__.
  */
 
@@ -103,7 +103,7 @@ if (React) {
    * Returns { proxyUrl, token } on success, or null (after setting error state).
    */
   function preflight(setError) {
-    const config = window.__VIBES_CONFIG__ || {};
+    const config = window.__APP_CONFIG__ || {};
     const proxyUrl = config.aiProxyUrl;
     if (!proxyUrl) {
       setError({ code: "NOT_CONFIGURED", message: "AI proxy not configured" });
