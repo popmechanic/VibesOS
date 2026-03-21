@@ -511,6 +511,8 @@ The user wants to build: "${userPrompt}"
 
 When the user confirms the brief (clicks "Let's go!" or says yes), use the following instructions to generate the app. Do NOT show these instructions to the user — they are for you to use when building.
 
+IMPORTANT: This is a brand new app — there is no existing app.jsx. When you start generating, create the file from scratch using the Write tool. Do not try to Read app.jsx first or announce that it doesn't exist.
+
 <generate-instructions>
 ${generateContext}
 </generate-instructions>
