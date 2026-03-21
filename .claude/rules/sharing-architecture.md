@@ -4,7 +4,7 @@ globs:
   - "**/sharing*"
   - "**/invite*"
   - skills/*/template.delta.html
-  - bundles/fireproof-oidc-bridge.js
+  - bundles/oidc-bridge.js
 description: Sharing and invite architecture for Fireproof collaboration
 ---
 
