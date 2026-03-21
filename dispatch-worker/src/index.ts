@@ -9,18 +9,18 @@ interface Env {
   OIDC_JWKS_URL: string;
 }
 
-let cachedJwks: { keys: JsonWebKey[]; fetchedAt: number } | null = null;
+let cachedJwks: { keys: JsonWebKey[]; cryptoKeys: Map<string, CryptoKey>; fetchedAt: number } | null = null;
 const JWKS_TTL = 5 * 60_000;
 
-async function fetchJwks(url: string): Promise<JsonWebKey[]> {
+async function fetchJwks(url: string): Promise<{ keys: JsonWebKey[]; cryptoKeys: Map<string, CryptoKey> }> {
   if (cachedJwks && Date.now() - cachedJwks.fetchedAt < JWKS_TTL) {
-    return cachedJwks.keys;
+    return cachedJwks;
   }
   const res = await fetch(url);
   if (!res.ok) throw new Error(`JWKS fetch failed: ${res.status}`);
   const data = (await res.json()) as { keys: JsonWebKey[] };
-  cachedJwks = { keys: data.keys, fetchedAt: Date.now() };
-  return data.keys;
+  cachedJwks = { keys: data.keys, cryptoKeys: new Map(), fetchedAt: Date.now() };
+  return cachedJwks;
 }
 
 async function verifyJwt(token: string, jwksUrl: string): Promise<boolean> {
@@ -31,17 +31,22 @@ async function verifyJwt(token: string, jwksUrl: string): Promise<boolean> {
     const header = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')));
     if (header.alg !== 'RS256') return false;
 
-    const keys = await fetchJwks(jwksUrl);
+    const jwks = await fetchJwks(jwksUrl);
     const jwk = header.kid
-      ? keys.find((k: any) => k.kid === header.kid)
-      : keys.find((k: any) => k.kty === 'RSA');
+      ? jwks.keys.find((k: any) => k.kid === header.kid)
+      : jwks.keys.find((k: any) => k.kty === 'RSA');
     if (!jwk) return false;
 
-    const cryptoKey = await crypto.subtle.importKey(
-      'jwk', jwk,
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-      false, ['verify']
-    );
+    const cacheKey = (jwk as any).kid || 'default';
+    let cryptoKey = jwks.cryptoKeys.get(cacheKey);
+    if (!cryptoKey) {
+      cryptoKey = await crypto.subtle.importKey(
+        'jwk', jwk,
+        { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+        false, ['verify']
+      );
+      jwks.cryptoKeys.set(cacheKey, cryptoKey);
+    }
 
     const sigBase64 = parts[2].replace(/-/g, '+').replace(/_/g, '/');
     const sigPadded = sigBase64 + '='.repeat((4 - sigBase64.length % 4) % 4);
@@ -64,14 +69,12 @@ async function verifyJwt(token: string, jwksUrl: string): Promise<boolean> {
   }
 }
 
-function getSubdomain(request: Request): string {
-  const host = new URL(request.url).hostname;
-  const parts = host.split('.');
-  return parts.length > 2 ? parts[0] : host;
+function getSubdomain(hostname: string): string {
+  const parts = hostname.split('.');
+  return parts.length > 2 ? parts[0] : hostname;
 }
 
-function getTokenFromRequest(request: Request): string | null {
-  const url = new URL(request.url);
+function getTokenFromRequest(request: Request, url: URL): string | null {
   const qToken = url.searchParams.get('token');
   if (qToken) return qToken;
   const auth = request.headers.get('Authorization');
@@ -97,7 +100,7 @@ export default {
       // REVERT to `appMeta?.public !== true` (default-deny) after the Deploy API is
       // deployed and writes app-meta: keys during deploy. See deploy-api/src/index.ts:550.
       if (appMeta && appMeta.public === false) {
-        const token = getTokenFromRequest(request);
+        const token = getTokenFromRequest(request, url);
         if (!token) return new Response('Unauthorized', { status: 401 });
         const valid = await verifyJwt(token, env.OIDC_JWKS_URL);
         if (!valid) return new Response('Unauthorized', { status: 401 });
@@ -107,7 +110,7 @@ export default {
       return env.APP_SYNC.get(doId).fetch(request);
     }
 
-    const appName = getSubdomain(request);
+    const appName = getSubdomain(url.hostname);
     return env.DISPATCH.get(appName).fetch(request);
   },
 };

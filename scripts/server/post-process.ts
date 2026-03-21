@@ -52,8 +52,8 @@ export function sanitizeCssEscapes(code: string): string {
 
 /**
  * Strip redeclared globals that collide with template-provided identifiers.
- * Common builder mistake: subprocess creates fallback wrappers that shadow template globals
- * that shadow the real global from the import map.
+ * Common builder mistake: subprocess creates fallback wrappers that shadow the real
+ * globals provided by the import map.
  */
 export function stripRedeclaredGlobals(code) {
   // Remove `const { useFireproofClerk } = React.useMemo(...)` blocks
