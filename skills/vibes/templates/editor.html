@@ -3156,19 +3156,19 @@ window.escapeHtml = function(str) {
     if (!vibesAudio) {
       vibesAudio = new Audio();
       vibesAudio.loop = true;
-      vibesAudio.volume = 0.6;
+      vibesAudio.volume = 0.48;
       vibesAudio.preload = 'auto';
       vibesAudio.crossOrigin = 'anonymous';
       vibesAudio.src = 'https://pub-e36a1ee9446e4db6bebcb6b041dc3d33.r2.dev/vibes.mp3';
       vibesFirstPlay = true;
-      // Fade in when starting
+      // Fade in from 50% to 80% of full volume over ~4 seconds
       vibesAudio.addEventListener('play', () => {
-        vibesAudio.volume = 0;
-        let vol = 0;
+        vibesAudio.volume = 0.3;
+        let vol = 0.3;
         const fadeIn = setInterval(() => {
-          vol = Math.min(vol + 0.05, 0.6);
+          vol = Math.min(vol + 0.00225, 0.48);
           vibesAudio.volume = vol;
-          if (vol >= 0.6) clearInterval(fadeIn);
+          if (vol >= 0.48) clearInterval(fadeIn);
         }, 50);
       });
     }
@@ -3177,7 +3177,7 @@ window.escapeHtml = function(str) {
       // Fade out then pause
       let vol = vibesAudio.volume;
       const fadeOut = setInterval(() => {
-        vol = Math.max(vol - 0.05, 0);
+        vol = Math.max(vol - 0.02, 0);
         vibesAudio.volume = vol;
         if (vol <= 0) {
           clearInterval(fadeOut);
