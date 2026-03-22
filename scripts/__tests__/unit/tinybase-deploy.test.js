@@ -24,9 +24,14 @@ describe('TinyBase assembly config injection', () => {
 });
 
 describe('deploy script public link provisioning', () => {
-  it('deploy script provisions public link after deploy', () => {
+  it('deploy script calls provisionInviteLink', () => {
     const script = readFileSync(join(PLUGIN_ROOT, 'scripts/deploy-cloudflare.js'), 'utf8');
-    expect(script).toContain('/public-link');
-    expect(script).toContain('/status/');
+    expect(script).toContain('provisionInviteLink');
+  });
+
+  it('provision-invite-link helper calls Deploy API', () => {
+    const helper = readFileSync(join(PLUGIN_ROOT, 'scripts/lib/provision-invite-link.js'), 'utf8');
+    expect(helper).toContain('/public-link');
+    expect(helper).toContain('/status/');
   });
 });
