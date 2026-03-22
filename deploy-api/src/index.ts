@@ -313,21 +313,37 @@ export default {
     "index.js"
   );
 
-  // Upload the worker to the dispatch namespace
+  // Upload the worker to the dispatch namespace (retry on transient 5xx)
   const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/dispatch/namespaces/${APP_NAMESPACE}/scripts/${appName}`;
-  const uploadRes = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${apiToken}` },
-    body: formData,
-  });
+  const MAX_RETRIES = 2;
+  let lastStatus = 0;
+  let lastBody = "";
 
-  if (!uploadRes.ok) {
-    const body = await uploadRes.text();
-    console.error(`Upload failed (${uploadRes.status}): ${body}`);
-    return { ok: false, url: "", error: `Deploy failed (${uploadRes.status}). Please try again.` };
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      console.log(`[deploy] Retrying (attempt ${attempt + 1})...`);
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${apiToken}` },
+      body: formData,
+    });
+
+    if (uploadRes.ok) {
+      return { ok: true, url: `https://${appName}.vibesos.com` };
+    }
+
+    lastStatus = uploadRes.status;
+    lastBody = await uploadRes.text();
+
+    // Only retry on server errors (5xx)
+    if (lastStatus < 500) break;
   }
 
-  return { ok: true, url: `https://${appName}.vibesos.com` };
+  console.error(`Upload failed (${lastStatus}): ${lastBody}`);
+  return { ok: false, url: "", error: `Deploy failed (${lastStatus}). Please try again.` };
 }
 
 // ---------------------------------------------------------------------------
