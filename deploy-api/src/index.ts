@@ -403,8 +403,8 @@ async function registerAppInPocketId(
  * Replaces the placeholder or shared client ID in window.__APP_CONFIG__.
  */
 function injectClientId(html: string, clientId: string): string {
-  return html.replace(
-    /oidcClientId:\s*"[^"]*"/,
+  return html.replaceAll(
+    /oidcClientId:\s*"[^"]*"/g,
     `oidcClientId: "${clientId}"`
   );
 }
