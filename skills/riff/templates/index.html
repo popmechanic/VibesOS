@@ -3264,62 +3264,78 @@ if (typeof window !== 'undefined') {
 
       // === SharingBridge ===
       // Listens for VibesPanel DOM events and calls Deploy API endpoints.
-      // Rendered inside OIDCProvider in delta templates — has access to useOIDCContext().
+      // Event listeners are ALWAYS registered — state is resolved at event time,
+      // not render time, to avoid timing issues with React context and OIDC.
       function SharingBridge() {
-        var oidc = window.useOIDCContext ? window.useOIDCContext() : {};
-        var accessToken = oidc.accessToken;
-        var config = window.__APP_CONFIG__ || {};
-        var appName = config.appName;
-        var deployApiUrl = config.deployApiUrl;
         var joinLinkRef = React.useRef(null);
         var fetchedRef = React.useRef(false);
 
-        // Skip in preview mode, placeholder config, or when not signed in
-        var skip = !appName || appName === '__APP_NAME__' || !deployApiUrl ||
-                   deployApiUrl.startsWith('__') || !accessToken;
-
-        if (!skip) {
-          console.debug('[SharingBridge] Active — appName=' + appName + ' deployApiUrl=' + deployApiUrl);
-        } else {
-          console.debug('[SharingBridge] Skipped — appName=' + appName + ' deployApiUrl=' + (deployApiUrl || 'missing') + ' token=' + (accessToken ? 'yes' : 'no'));
+        // Helper: read current auth + config at call time (not render time)
+        function getContext() {
+          var config = window.__APP_CONFIG__ || {};
+          var appName = config.appName;
+          var deployApiUrl = config.deployApiUrl;
+          if (!appName || appName === '__APP_NAME__' || !deployApiUrl || deployApiUrl.startsWith('__')) {
+            return null;
+          }
+          var oidc = window.useOIDCContext ? window.useOIDCContext() : null;
+          // Also check the global token (set by OIDC bridge outside React)
+          var accessToken = (oidc && oidc.accessToken) || window.__VIBES_OIDC_TOKEN__;
+          if (!accessToken) return null;
+          return { appName: appName, deployApiUrl: deployApiUrl, accessToken: accessToken };
         }
 
-        // Fetch existing public link on mount
+        // Fetch existing public link on mount (retry until context is ready)
         React.useEffect(function() {
-          if (skip || fetchedRef.current) return;
+          if (fetchedRef.current) return;
+          var ctx = getContext();
+          if (!ctx) return;
           fetchedRef.current = true;
-          fetch(deployApiUrl + '/status/' + encodeURIComponent(appName), {
-              headers: { 'Authorization': 'Bearer ' + accessToken }
+          console.log('[SharingBridge] Fetching public link for ' + ctx.appName);
+          fetch(ctx.deployApiUrl + '/status/' + encodeURIComponent(ctx.appName), {
+              headers: { 'Authorization': 'Bearer ' + ctx.accessToken }
             })
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(data) {
               if (data && data.publicInvite && data.publicInvite.token) {
-                joinLinkRef.current = deployApiUrl + '/join/' +
-                  encodeURIComponent(appName) + '/' + data.publicInvite.token;
+                joinLinkRef.current = ctx.deployApiUrl + '/join/' +
+                  encodeURIComponent(ctx.appName) + '/' + data.publicInvite.token;
+                console.log('[SharingBridge] Cached public link');
               }
             })
             .catch(function(err) {
               console.warn('[SharingBridge] Failed to fetch public link:', err);
             });
-        }, [skip]);
+        });
 
-        // Listen for share-request (email invite)
+        // Always register event listeners — resolve state at event time
         React.useEffect(function() {
-          if (skip) return;
           function handleShareRequest(e) {
+            var ctx = getContext();
+            if (!ctx) {
+              console.warn('[SharingBridge] share-request but no auth context');
+              document.dispatchEvent(new CustomEvent('vibes-share-error', {
+                detail: { error: { message: 'Not signed in. Please sign in and try again.' } }
+              }));
+              return;
+            }
             var detail = e.detail || {};
             var email = detail.email;
             if (!email) return;
-            fetch(deployApiUrl + '/apps/' + encodeURIComponent(appName) + '/invite', {
+            console.log('[SharingBridge] Inviting ' + email);
+            fetch(ctx.deployApiUrl + '/apps/' + encodeURIComponent(ctx.appName) + '/invite', {
               method: 'POST',
               headers: {
-                'Authorization': 'Bearer ' + accessToken,
+                'Authorization': 'Bearer ' + ctx.accessToken,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({ email: email })
             })
             .then(function(r) {
-              if (!r.ok) return r.json().then(function(err) { throw new Error(err.error || 'Invite failed'); });
+              if (!r.ok) return r.text().then(function(t) {
+                try { var err = JSON.parse(t); throw new Error(err.error || 'Invite failed'); }
+                catch(e) { if (e instanceof SyntaxError) throw new Error('Invite failed (server error)'); throw e; }
+              });
               return r.json();
             })
             .then(function(data) {
@@ -3337,15 +3353,9 @@ if (typeof window !== 'undefined') {
               }));
             });
           }
-          document.addEventListener('vibes-share-request', handleShareRequest);
-          return function() { document.removeEventListener('vibes-share-request', handleShareRequest); };
-        }, [skip, accessToken]);
 
-        // Listen for public-link-request (copy link)
-        React.useEffect(function() {
-          if (skip) return;
           function handlePublicLinkRequest(e) {
-            console.debug('[SharingBridge] public-link-request received, cached=' + !!joinLinkRef.current);
+            console.log('[SharingBridge] public-link-request, cached=' + !!joinLinkRef.current);
             // Return cached link immediately if available
             if (joinLinkRef.current) {
               document.dispatchEvent(new CustomEvent('vibes-public-link-success', {
@@ -3353,18 +3363,30 @@ if (typeof window !== 'undefined') {
               }));
               return;
             }
+            var ctx = getContext();
+            if (!ctx) {
+              console.warn('[SharingBridge] public-link-request but no auth context');
+              document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
+                detail: { error: 'Not signed in. Please sign in and try again.' }
+              }));
+              return;
+            }
             // Fallback: provision a new link
             var detail = e.detail || {};
-            fetch(deployApiUrl + '/apps/' + encodeURIComponent(appName) + '/public-link', {
+            console.log('[SharingBridge] Provisioning new public link...');
+            fetch(ctx.deployApiUrl + '/apps/' + encodeURIComponent(ctx.appName) + '/public-link', {
               method: 'POST',
               headers: {
-                'Authorization': 'Bearer ' + accessToken,
+                'Authorization': 'Bearer ' + ctx.accessToken,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({ right: detail.right || 'write' })
             })
             .then(function(r) {
-              if (!r.ok) return r.json().then(function(err) { throw new Error(err.error || 'Failed to generate link'); });
+              if (!r.ok) return r.text().then(function(t) {
+                try { var err = JSON.parse(t); throw new Error(err.error || 'Failed to generate link'); }
+                catch(e) { if (e instanceof SyntaxError) throw new Error('Failed to generate link (server error)'); throw e; }
+              });
               return r.json();
             })
             .then(function(data) {
@@ -3374,14 +3396,20 @@ if (typeof window !== 'undefined') {
               }));
             })
             .catch(function(err) {
+              console.error('[SharingBridge] public-link failed:', err);
               document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
                 detail: { error: err.message || 'Failed to generate public link.' }
               }));
             });
           }
+
+          document.addEventListener('vibes-share-request', handleShareRequest);
           document.addEventListener('vibes-public-link-request', handlePublicLinkRequest);
-          return function() { document.removeEventListener('vibes-public-link-request', handlePublicLinkRequest); };
-        }, [skip, accessToken]);
+          return function() {
+            document.removeEventListener('vibes-share-request', handleShareRequest);
+            document.removeEventListener('vibes-public-link-request', handlePublicLinkRequest);
+          };
+        }, []);
 
         return null;
       }
