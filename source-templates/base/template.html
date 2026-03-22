@@ -344,13 +344,16 @@
           var config = window.__APP_CONFIG__ || {};
           var appName = config.appName;
           var deployApiUrl = config.deployApiUrl;
-          if (!appName || appName === '__APP_NAME__' || !deployApiUrl || deployApiUrl.startsWith('__')) {
+          if (!appName || appName === '__APP' + '_NAME__' || !deployApiUrl || deployApiUrl.startsWith('__')) {
             return null;
           }
           var accessToken = window.__VIBES_OIDC_TOKEN__;
-          if (!accessToken) {
-            try { accessToken = sessionStorage.getItem('vibes_oidc_access_token'); } catch(e) {}
-          }
+          var sessionToken = null;
+          try { sessionToken = sessionStorage.getItem('vibes_oidc_access_token'); } catch(e) {}
+          if (!accessToken) accessToken = sessionToken;
+          console.log('[SharingBridge] getContext: globalToken=' + !!window.__VIBES_OIDC_TOKEN__ +
+            ' sessionToken=' + !!sessionToken +
+            ' appName=' + appName + ' deployApiUrl=' + !!deployApiUrl);
           if (!accessToken) return null;
           return { appName: appName, deployApiUrl: deployApiUrl, accessToken: accessToken };
         }
