@@ -3995,8 +3995,7 @@ window.escapeHtml = function(str) {
         console.log('[Stream] Init:', msg.model, 'session:', msg.session_id);
       } else if (msg.type === 'token') {
         // Streaming text token — append to current assistant bubble
-        // Trim leading whitespace from first token (Claude often starts with \n)
-        streamingText += streamingText === '' ? msg.text.trimStart() : msg.text;
+        streamingText += msg.text;
         updateStreamingBubble();
         // Hide stage label while text is streaming
         const stageEl = document.querySelector('.thinking-stage');
@@ -5369,7 +5368,7 @@ window.escapeHtml = function(str) {
 
   function updateStreamingBubble() {
     const bubble = getOrCreateStreamingBubble();
-    bubble.innerHTML = renderMarkdown(streamingText);
+    bubble.innerHTML = renderMarkdown(streamingText.trimStart());
     const container = document.getElementById('chatMessages');
     container.scrollTop = container.scrollHeight;
   }
@@ -5442,6 +5441,7 @@ window.escapeHtml = function(str) {
   }
 
   function addMessage(role, content) {
+    if (role === 'assistant') content = content.trimStart();
     const container = document.getElementById('chatMessages');
     const indicator = container.querySelector('.thinking-indicator');
     if (indicator) indicator.remove();
