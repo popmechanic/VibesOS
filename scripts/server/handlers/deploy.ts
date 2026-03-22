@@ -201,7 +201,9 @@ export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, t
   // Auto-provision public invite link for private apps (fire-and-forget)
   if (isPrivate && token) {
     try {
-      const statusResp = await fetch(`${DEPLOY_API_URL}/status/${encodeURIComponent(appName)}`);
+      const statusResp = await fetch(`${DEPLOY_API_URL}/status/${encodeURIComponent(appName)}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
       if (statusResp.ok) {
         const statusData: any = await statusResp.json();
         if (statusData.oidcClientId && !statusData.publicInvite?.token) {

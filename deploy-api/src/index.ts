@@ -596,13 +596,32 @@ app.post("/deploy", async (c) => {
   return c.json(response);
 });
 
-// Status endpoint — returns deploy status
+// Status endpoint — returns filtered deploy status
 app.get("/status/:name", async (c) => {
   const name = c.req.param("name");
   const record = await getSubdomain(c.env.REGISTRY_KV, name);
   if (!record) return c.json({ exists: false }, 404);
-  // Full record for debugging — TODO: restrict after share link debugging
-  return c.json({ exists: true, ...record });
+
+  // Authenticate — only app owner/collaborators see full details
+  const authHeader = c.req.header("Authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const payload = token ? await verifyJWT(token, c.env.OIDC_ISSUER, c.env.POCKET_ID) : null;
+  const userId = payload?.sub;
+  const isAuthorized = userId && (record.owner === userId ||
+    record.collaborators?.some((col) => col.userId === userId));
+
+  if (isAuthorized) {
+    // Authenticated owner/collaborator — return details needed by SharingBridge and deploy scripts
+    return c.json({
+      exists: true,
+      oidcClientId: record.oidcClientId,
+      publicInvite: record.publicInvite,
+      sync: record.sync,
+    });
+  }
+
+  // Unauthenticated or non-member — minimal info only
+  return c.json({ exists: true });
 });
 
 // Debug: check OIDC client config in Pocket ID

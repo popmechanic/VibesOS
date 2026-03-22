@@ -126,7 +126,9 @@ async function main() {
 
   // Auto-provision public invite link for private apps (fire-and-forget)
   try {
-    const statusResp = await fetch(`${DEPLOY_API_URL}/status/${encodeURIComponent(name)}`);
+    const statusResp = await fetch(`${DEPLOY_API_URL}/status/${encodeURIComponent(name)}`, {
+      headers: { 'Authorization': `Bearer ${tokens.accessToken}` },
+    });
     if (statusResp.ok) {
       const statusData = await statusResp.json();
       // Only provision for private apps (have oidcClientId) without existing link
