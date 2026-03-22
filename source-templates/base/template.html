@@ -337,7 +337,9 @@
         var joinLinkRef = React.useRef(null);
         var fetchedRef = React.useRef(false);
 
-        // Helper: read current auth + config at call time (not render time)
+        // Helper: read current auth + config at call time (not render time).
+        // Does NOT call React hooks — safe to use in event handlers.
+        // Reads token from globals/sessionStorage set by the OIDC bridge.
         function getContext() {
           var config = window.__APP_CONFIG__ || {};
           var appName = config.appName;
@@ -345,9 +347,10 @@
           if (!appName || appName === '__APP_NAME__' || !deployApiUrl || deployApiUrl.startsWith('__')) {
             return null;
           }
-          var oidc = window.useOIDCContext ? window.useOIDCContext() : null;
-          // Also check the global token (set by OIDC bridge outside React)
-          var accessToken = (oidc && oidc.accessToken) || window.__VIBES_OIDC_TOKEN__;
+          var accessToken = window.__VIBES_OIDC_TOKEN__;
+          if (!accessToken) {
+            try { accessToken = sessionStorage.getItem('vibes_oidc_access_token'); } catch(e) {}
+          }
           if (!accessToken) return null;
           return { appName: appName, deployApiUrl: deployApiUrl, accessToken: accessToken };
         }
