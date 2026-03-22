@@ -437,7 +437,7 @@
             if (!ctx) {
               console.warn('[SharingBridge] public-link-request but no auth context');
               document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
-                detail: { error: 'Not signed in. Please sign in and try again.' }
+                detail: { error: { message: 'Not signed in. Please sign in and try again.' } }
               }));
               return;
             }
@@ -468,7 +468,7 @@
             .catch(function(err) {
               console.error('[SharingBridge] public-link failed:', err);
               document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
-                detail: { error: err.message || 'Failed to generate public link.' }
+                detail: { error: { message: err.message || 'Failed to generate public link.' } }
               }));
             });
           }

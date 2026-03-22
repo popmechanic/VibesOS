@@ -1,7 +1,7 @@
 // Auto-generated vibes menu components
 // Run: bun scripts/build-components.js --force to regenerate
 // Source: components/
-// Generated: 2026-03-22T22:22:52.358Z
+// Generated: 2026-03-22T22:39:19.209Z
 // Components: 26/26
 
 // === useMobile ===
@@ -1944,7 +1944,7 @@ function VibesPanel({
       const customEvent = event;
       setPublicLinkStatus("error");
       setPublicLinkMessage(
-        customEvent.detail?.error || "Failed to generate public link."
+        customEvent.detail?.error?.message || "Failed to generate public link."
       );
     };
     document.addEventListener("vibes-share-success", handleShareSuccess);

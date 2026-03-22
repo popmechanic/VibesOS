@@ -145,10 +145,10 @@ export function VibesPanel({
     };
 
     const handlePublicLinkError = (event: Event) => {
-      const customEvent = event as CustomEvent<{ error: string }>;
+      const customEvent = event as CustomEvent<{ error: { message: string } }>;
       setPublicLinkStatus("error");
       setPublicLinkMessage(
-        customEvent.detail?.error || "Failed to generate public link.",
+        customEvent.detail?.error?.message || "Failed to generate public link.",
       );
     };
 

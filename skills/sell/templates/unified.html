@@ -951,7 +951,7 @@
       // Auto-generated vibes menu components
 // Run: bun scripts/build-components.js --force to regenerate
 // Source: components/
-// Generated: 2026-03-22T22:22:52.358Z
+// Generated: 2026-03-22T22:39:19.209Z
 // Components: 26/26
 
 // === useMobile ===
@@ -2894,7 +2894,7 @@ function VibesPanel({
       const customEvent = event;
       setPublicLinkStatus("error");
       setPublicLinkMessage(
-        customEvent.detail?.error || "Failed to generate public link."
+        customEvent.detail?.error?.message || "Failed to generate public link."
       );
     };
     document.addEventListener("vibes-share-success", handleShareSuccess);
@@ -3368,7 +3368,7 @@ if (typeof window !== 'undefined') {
             if (!ctx) {
               console.warn('[SharingBridge] public-link-request but no auth context');
               document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
-                detail: { error: 'Not signed in. Please sign in and try again.' }
+                detail: { error: { message: 'Not signed in. Please sign in and try again.' } }
               }));
               return;
             }
@@ -3399,7 +3399,7 @@ if (typeof window !== 'undefined') {
             .catch(function(err) {
               console.error('[SharingBridge] public-link failed:', err);
               document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
-                detail: { error: err.message || 'Failed to generate public link.' }
+                detail: { error: { message: err.message || 'Failed to generate public link.' } }
               }));
             });
           }
