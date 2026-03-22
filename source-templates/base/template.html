@@ -345,6 +345,12 @@
         var skip = !appName || appName === '__APP_NAME__' || !deployApiUrl ||
                    deployApiUrl.startsWith('__') || !accessToken;
 
+        if (!skip) {
+          console.debug('[SharingBridge] Active — appName=' + appName + ' deployApiUrl=' + deployApiUrl);
+        } else {
+          console.debug('[SharingBridge] Skipped — appName=' + appName + ' deployApiUrl=' + (deployApiUrl || 'missing') + ' token=' + (accessToken ? 'yes' : 'no'));
+        }
+
         // Fetch existing public link on mount
         React.useEffect(function() {
           if (skip || fetchedRef.current) return;
@@ -406,6 +412,7 @@
         React.useEffect(function() {
           if (skip) return;
           function handlePublicLinkRequest(e) {
+            console.debug('[SharingBridge] public-link-request received, cached=' + !!joinLinkRef.current);
             // Return cached link immediately if available
             if (joinLinkRef.current) {
               document.dispatchEvent(new CustomEvent('vibes-public-link-success', {

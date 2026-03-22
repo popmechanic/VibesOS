@@ -951,7 +951,7 @@
       // Auto-generated vibes menu components
 // Run: bun scripts/build-components.js --force to regenerate
 // Source: components/
-// Generated: 2026-03-22T00:42:13.219Z
+// Generated: 2026-03-22T01:20:56.571Z
 // Components: 26/26
 
 // === useMobile ===
@@ -3278,6 +3278,12 @@ if (typeof window !== 'undefined') {
         var skip = !appName || appName === '__APP_NAME__' || !deployApiUrl ||
                    deployApiUrl.startsWith('__') || !accessToken;
 
+        if (!skip) {
+          console.debug('[SharingBridge] Active — appName=' + appName + ' deployApiUrl=' + deployApiUrl);
+        } else {
+          console.debug('[SharingBridge] Skipped — appName=' + appName + ' deployApiUrl=' + (deployApiUrl || 'missing') + ' token=' + (accessToken ? 'yes' : 'no'));
+        }
+
         // Fetch existing public link on mount
         React.useEffect(function() {
           if (skip || fetchedRef.current) return;
@@ -3339,6 +3345,7 @@ if (typeof window !== 'undefined') {
         React.useEffect(function() {
           if (skip) return;
           function handlePublicLinkRequest(e) {
+            console.debug('[SharingBridge] public-link-request received, cached=' + !!joinLinkRef.current);
             // Return cached link immediately if available
             if (joinLinkRef.current) {
               document.dispatchEvent(new CustomEvent('vibes-public-link-success', {

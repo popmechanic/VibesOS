@@ -1,7 +1,7 @@
 // Auto-generated vibes menu components
 // Run: bun scripts/build-components.js --force to regenerate
 // Source: components/
-// Generated: 2026-03-22T00:42:13.219Z
+// Generated: 2026-03-22T01:20:56.571Z
 // Components: 26/26
 
 // === useMobile ===

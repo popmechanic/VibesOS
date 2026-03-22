@@ -198,6 +198,34 @@ export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, t
     console.error('[Deploy] Failed to save app metadata:', e.message);
   }
 
+  // Auto-provision public invite link for private apps (fire-and-forget)
+  if (isPrivate && token) {
+    try {
+      const statusResp = await fetch(`${DEPLOY_API_URL}/status/${encodeURIComponent(appName)}`);
+      if (statusResp.ok) {
+        const statusData: any = await statusResp.json();
+        if (statusData.oidcClientId && !statusData.publicInvite?.token) {
+          const linkResp = await fetch(`${DEPLOY_API_URL}/apps/${encodeURIComponent(appName)}/public-link`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ right: 'write' }),
+          });
+          if (linkResp.ok) {
+            const linkData: any = await linkResp.json();
+            if (linkData.joinUrl) console.log(`[Deploy] Invite link: ${linkData.joinUrl}`);
+          }
+        } else if (statusData.publicInvite?.token) {
+          console.log(`[Deploy] Invite link: ${DEPLOY_API_URL}/join/${encodeURIComponent(appName)}/${statusData.publicInvite.token}`);
+        }
+      }
+    } catch (linkErr: any) {
+      console.warn('[Deploy] Could not provision invite link:', linkErr.message);
+    }
+  }
+
   onEvent({ type: 'progress', progress: 100, stage: 'Done!', elapsed: getElapsed() });
   onEvent({ type: 'deploy_complete', url: deployUrl, name: appName });
 
