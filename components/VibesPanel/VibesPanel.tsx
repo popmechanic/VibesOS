@@ -39,10 +39,7 @@ export function VibesPanel({
   const [inviteLink, setInviteLink] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
   const [publicLink, setPublicLink] = useState("");
-  const [publicLinkStatus, setPublicLinkStatus] = useState<
-    "idle" | "generating" | "success" | "error"
-  >("idle");
-  const [publicLinkMessage, setPublicLinkMessage] = useState("");
+  const [publicLinkError, setPublicLinkError] = useState("");
   const [publicLinkCopied, setPublicLinkCopied] = useState(false);
 
   const handleInviteClick = () => {
@@ -53,9 +50,8 @@ export function VibesPanel({
       setInviteMessage("");
       setInviteLink("");
       setLinkCopied(false);
-      setPublicLinkStatus("idle");
       setPublicLink("");
-      setPublicLinkMessage("");
+      setPublicLinkError("");
       setPublicLinkCopied(false);
       // Pre-fetch the public link so it's visible immediately
       document.dispatchEvent(
@@ -76,15 +72,14 @@ export function VibesPanel({
         setPublicLinkCopied(true);
         setTimeout(() => setPublicLinkCopied(false), 2000);
       });
-      return;
+    } else {
+      // Request link from SharingBridge (responds synchronously from cache)
+      document.dispatchEvent(
+        new CustomEvent("vibes-public-link-request", {
+          detail: { right: "write" },
+        }),
+      );
     }
-    // First click: request link from SharingBridge (instant from cache)
-    setPublicLinkStatus("generating");
-    document.dispatchEvent(
-      new CustomEvent("vibes-public-link-request", {
-        detail: { right: "write" },
-      }),
-    );
   };
 
   const handleLogoutClick = () => {
@@ -139,15 +134,13 @@ export function VibesPanel({
 
     const handlePublicLinkSuccess = (event: Event) => {
       const customEvent = event as CustomEvent<{ link: string }>;
-      const link = customEvent.detail?.link || "";
-      setPublicLinkStatus("success");
-      setPublicLink(link);
+      setPublicLink(customEvent.detail?.link || "");
+      setPublicLinkError("");
     };
 
     const handlePublicLinkError = (event: Event) => {
       const customEvent = event as CustomEvent<{ error: { message: string } }>;
-      setPublicLinkStatus("error");
-      setPublicLinkMessage(
+      setPublicLinkError(
         customEvent.detail?.error?.message || "Failed to generate public link.",
       );
     };
@@ -268,11 +261,7 @@ export function VibesPanel({
                     type="text"
                     readOnly
                     value={publicLink}
-                    placeholder={
-                      publicLinkStatus === "error"
-                        ? publicLinkMessage
-                        : "Loading..."
-                    }
+                    placeholder={publicLinkError || "Loading..."}
                     onClick={publicLink ? handleCopyPublicLink : undefined}
                     style={{
                       ...getInviteInputStyle(),
@@ -282,13 +271,8 @@ export function VibesPanel({
                   <VibesButton
                     variant={YELLOW}
                     onClick={handleCopyPublicLink}
-                    disabled={publicLinkStatus === "generating"}
                   >
-                    {publicLinkStatus === "generating"
-                      ? "Copying..."
-                      : publicLinkCopied
-                        ? "Copied!"
-                        : "Copy Link"}
+                    {publicLinkCopied ? "Copied!" : "Copy Link"}
                   </VibesButton>
                 </div>
               </div>

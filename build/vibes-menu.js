@@ -1,7 +1,7 @@
 // Auto-generated vibes menu components
 // Run: bun scripts/build-components.js --force to regenerate
 // Source: components/
-// Generated: 2026-03-22T22:39:19.209Z
+// Generated: 2026-03-22T22:58:06.677Z
 // Components: 26/26
 
 // === useMobile ===
@@ -1856,8 +1856,7 @@ function VibesPanel({
   const [inviteLink, setInviteLink] = React.useState("");
   const [linkCopied, setLinkCopied] = React.useState(false);
   const [publicLink, setPublicLink] = React.useState("");
-  const [publicLinkStatus, setPublicLinkStatus] = React.useState("idle");
-  const [publicLinkMessage, setPublicLinkMessage] = React.useState("");
+  const [publicLinkError, setPublicLinkError] = React.useState("");
   const [publicLinkCopied, setPublicLinkCopied] = React.useState(false);
   const handleInviteClick = () => {
     if (mode === "default") {
@@ -1867,9 +1866,8 @@ function VibesPanel({
       setInviteMessage("");
       setInviteLink("");
       setLinkCopied(false);
-      setPublicLinkStatus("idle");
       setPublicLink("");
-      setPublicLinkMessage("");
+      setPublicLinkError("");
       setPublicLinkCopied(false);
       document.dispatchEvent(
         new CustomEvent("vibes-public-link-request", {
@@ -1887,14 +1885,13 @@ function VibesPanel({
         setPublicLinkCopied(true);
         setTimeout(() => setPublicLinkCopied(false), 2e3);
       });
-      return;
+    } else {
+      document.dispatchEvent(
+        new CustomEvent("vibes-public-link-request", {
+          detail: { right: "write" }
+        })
+      );
     }
-    setPublicLinkStatus("generating");
-    document.dispatchEvent(
-      new CustomEvent("vibes-public-link-request", {
-        detail: { right: "write" }
-      })
-    );
   };
   const handleLogoutClick = () => {
     document.dispatchEvent(new CustomEvent("vibes-sync-disable"));
@@ -1936,14 +1933,12 @@ function VibesPanel({
     };
     const handlePublicLinkSuccess = (event) => {
       const customEvent = event;
-      const link = customEvent.detail?.link || "";
-      setPublicLinkStatus("success");
-      setPublicLink(link);
+      setPublicLink(customEvent.detail?.link || "");
+      setPublicLinkError("");
     };
     const handlePublicLinkError = (event) => {
       const customEvent = event;
-      setPublicLinkStatus("error");
-      setPublicLinkMessage(
+      setPublicLinkError(
         customEvent.detail?.error?.message || "Failed to generate public link."
       );
     };
@@ -2043,7 +2038,7 @@ function VibesPanel({
           type: "text",
           readOnly: true,
           value: publicLink,
-          placeholder: publicLinkStatus === "error" ? publicLinkMessage : "Loading...",
+          placeholder: publicLinkError || "Loading...",
           onClick: publicLink ? handleCopyPublicLink : void 0,
           style: {
             ...getInviteInputStyle(),
@@ -2054,10 +2049,9 @@ function VibesPanel({
         VibesButton,
         {
           variant: YELLOW,
-          onClick: handleCopyPublicLink,
-          disabled: publicLinkStatus === "generating"
+          onClick: handleCopyPublicLink
         },
-        publicLinkStatus === "generating" ? "Copying..." : publicLinkCopied ? "Copied!" : "Copy Link"
+        publicLinkCopied ? "Copied!" : "Copy Link"
       ))), /* @__PURE__ */ React.createElement(VibesButton, { variant: GRAY, onClick: handleBackClick, icon: "back" }, "Back")) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
         VibesButton,
         {
