@@ -124,6 +124,36 @@ async function main() {
     wsUrl: result.wsUrl,
   });
 
+  // Auto-provision public invite link for private apps (fire-and-forget)
+  try {
+    const statusResp = await fetch(`${DEPLOY_API_URL}/status/${encodeURIComponent(name)}`);
+    if (statusResp.ok) {
+      const statusData = await statusResp.json();
+      // Only provision for private apps (have oidcClientId) without existing link
+      if (statusData.oidcClientId && !statusData.publicInvite?.token) {
+        const linkResp = await fetch(`${DEPLOY_API_URL}/apps/${encodeURIComponent(name)}/public-link`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${tokens.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ right: 'write' }),
+        });
+        if (linkResp.ok) {
+          const linkData = await linkResp.json();
+          if (linkData.joinUrl) {
+            console.log(`Invite link: ${linkData.joinUrl}`);
+          }
+        }
+      } else if (statusData.publicInvite?.token) {
+        console.log(`Invite link: ${DEPLOY_API_URL}/join/${encodeURIComponent(name)}/${statusData.publicInvite.token}`);
+      }
+    }
+  } catch (linkErr) {
+    // Non-fatal — deploy already succeeded
+    console.warn('Note: Could not provision invite link:', linkErr.message);
+  }
+
   console.log(`\nDeployed to ${deployedUrl}`);
 }
 

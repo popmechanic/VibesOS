@@ -1,4 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PLUGIN_ROOT = join(__dirname, '..', '..', '..');
 
 describe('TinyBase assembly config injection', () => {
   it('injects __APP_CONFIG__ with appName and wsUrl', () => {
@@ -14,5 +20,13 @@ describe('TinyBase assembly config injection', () => {
     expect(output).toContain('appName: "test-app"');
     expect(output).toContain('wsUrl: "wss://sync.vibesos.com/test-app"');
     expect(output).toContain('public: true');
+  });
+});
+
+describe('deploy script public link provisioning', () => {
+  it('deploy script provisions public link after deploy', () => {
+    const script = readFileSync(join(PLUGIN_ROOT, 'scripts/deploy-cloudflare.js'), 'utf8');
+    expect(script).toContain('/public-link');
+    expect(script).toContain('/status/');
   });
 });
