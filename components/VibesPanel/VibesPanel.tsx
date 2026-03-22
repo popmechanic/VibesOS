@@ -57,6 +57,12 @@ export function VibesPanel({
       setPublicLink("");
       setPublicLinkMessage("");
       setPublicLinkCopied(false);
+      // Pre-fetch the public link so it's visible immediately
+      document.dispatchEvent(
+        new CustomEvent("vibes-public-link-request", {
+          detail: { right: "write" },
+        }),
+      );
     }
   };
 
@@ -270,11 +276,9 @@ export function VibesPanel({
                     readOnly
                     value={publicLink}
                     placeholder={
-                      publicLinkStatus === "generating"
-                        ? "Generating..."
-                        : publicLinkStatus === "error"
-                          ? publicLinkMessage
-                          : "Click Copy Link below"
+                      publicLinkStatus === "error"
+                        ? publicLinkMessage
+                        : "Loading..."
                     }
                     onClick={publicLink ? handleCopyPublicLink : undefined}
                     style={{

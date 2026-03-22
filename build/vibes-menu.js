@@ -1,7 +1,7 @@
 // Auto-generated vibes menu components
 // Run: bun scripts/build-components.js --force to regenerate
 // Source: components/
-// Generated: 2026-03-22T01:20:56.571Z
+// Generated: 2026-03-22T21:48:26.932Z
 // Components: 26/26
 
 // === useMobile ===
@@ -1871,6 +1871,11 @@ function VibesPanel({
       setPublicLink("");
       setPublicLinkMessage("");
       setPublicLinkCopied(false);
+      document.dispatchEvent(
+        new CustomEvent("vibes-public-link-request", {
+          detail: { right: "write" }
+        })
+      );
     }
   };
   const handleBackClick = () => {
@@ -2045,7 +2050,7 @@ function VibesPanel({
           type: "text",
           readOnly: true,
           value: publicLink,
-          placeholder: publicLinkStatus === "generating" ? "Generating..." : publicLinkStatus === "error" ? publicLinkMessage : "Click Copy Link below",
+          placeholder: publicLinkStatus === "error" ? publicLinkMessage : "Loading...",
           onClick: publicLink ? handleCopyPublicLink : void 0,
           style: {
             ...getInviteInputStyle(),
