@@ -166,27 +166,36 @@
 
         // 2. Sync (if wsUrl configured)
         if (config.wsUrl && !config.wsUrl.startsWith('__')) {
-          // For private apps, append OIDC access token for dispatch worker auth
-          let syncUrl = config.wsUrl;
-          if (!config.public) {
-            const token = sessionStorage.getItem('vibes_oidc_access_token');
-            if (!token) return; // Skip sync until auth completes — will connect on next mount
-            syncUrl += (syncUrl.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
-          }
-          destroySync = createReconnectingSynchronizer(
-            store,
-            syncUrl,
-            (syncing) => {
-              setIsSyncing(syncing);
-              window.__VIBES_SYNC_STATUS__ = syncing ? 'synced' : 'reconnecting';
-              window.dispatchEvent(new Event('vibes-sync-status-change'));
-            },
-          );
+          startSync();
         }
       }
 
+      function startSync() {
+        if (destroySync) return; // Already connected
+        let syncUrl = config.wsUrl;
+        if (!config.public) {
+          const token = sessionStorage.getItem('vibes_oidc_access_token');
+          if (!token) return; // Token not yet available — will retry via vibes-oidc-ready event
+          syncUrl += (syncUrl.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
+        }
+        destroySync = createReconnectingSynchronizer(
+          store,
+          syncUrl,
+          (syncing) => {
+            setIsSyncing(syncing);
+            window.__VIBES_SYNC_STATUS__ = syncing ? 'synced' : 'reconnecting';
+            window.dispatchEvent(new Event('vibes-sync-status-change'));
+          },
+        );
+      }
+
+      // If token wasn't available on mount, retry when OIDC completes
+      function onOidcReady() { startSync(); }
+      window.addEventListener('vibes-oidc-ready', onOidcReady);
+
       init();
       return () => {
+        window.removeEventListener('vibes-oidc-ready', onOidcReady);
         if (destroySync) destroySync();
         if (persister) persister.destroy();
       };
@@ -238,6 +247,7 @@
         <OIDCProvider authority={config.oidcAuthority} clientId={config.oidcClientId}>
           <SignedOut><AuthGate /></SignedOut>
           <SignedIn>
+            <SharingBridge />
             <AppContext.Provider value={{ isReady, isSyncing, user }}>
               <HiddenMenuWrapper menuContent={<VibesPanel />}>
                 <AppErrorBoundary><App /></AppErrorBoundary>

@@ -63,4 +63,15 @@ describe('TinyBase template', () => {
     const delta = readFileSync(join(PLUGIN_ROOT, 'skills/vibes/template.delta.html'), 'utf8');
     expect(delta).toMatch(/window\.useTable\s*=\s*function useTableWithWarning/);
   });
+
+  it('vibes delta renders SharingBridge inside SignedIn', () => {
+    const delta = readFileSync(join(PLUGIN_ROOT, 'skills/vibes/template.delta.html'), 'utf8');
+    expect(delta).toContain('<SharingBridge />');
+    // Must be inside SignedIn, before AppContext.Provider
+    const sharingIdx = delta.indexOf('<SharingBridge />');
+    const signedInIdx = delta.indexOf('<SignedIn>');
+    const appCtxIdx = delta.indexOf('<AppContext.Provider', sharingIdx);
+    expect(sharingIdx).toBeGreaterThan(signedInIdx);
+    expect(sharingIdx).toBeLessThan(appCtxIdx);
+  });
 });
