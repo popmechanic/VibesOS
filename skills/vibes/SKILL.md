@@ -335,7 +335,7 @@ const store = createMergeableStore();                   // WRONG - template crea
 store.setCell('todos', id, 'done', true);               // WRONG - use callback hooks
 ```
 
-**Sync Status**: `isSyncing` from `useApp()` indicates active sync. The template handles WebSocket connection and reconnection automatically.
+**Sync Status**: `isSyncing` from `useApp()` indicates active sync. The template handles WebSocket connection and reconnection automatically. **Do NOT build custom sync indicators** — the template includes a built-in `SyncStatusDot` (top-right corner pill showing "synced", "connecting", "reconnecting", "offline"). It activates automatically when sync connects. Never add your own "SYNCING", "ONLINE/OFFLINE", or connection status UI — it will duplicate what's already there.
 
 **What Generated Code Must Never Contain:**
 - `import` statements of any kind
