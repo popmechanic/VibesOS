@@ -302,11 +302,19 @@ export function createWsHandler(ctx: ServerContext) {
               break;
             }
 
-            // Create app directory from prompt
-            const slug = slugifyPrompt(msg.prompt);
-            const appName = resolveAppName(ctx.appsDir, slug);
-            const newAppDir = join(ctx.appsDir, appName);
-            mkdirSync(newAppDir, { recursive: true });
+            // Reuse existing app directory if regenerating, otherwise create new
+            let appName: string;
+            let newAppDir: string;
+            if (msg.previousApp && existsSync(join(ctx.appsDir, msg.previousApp))) {
+              appName = msg.previousApp;
+              newAppDir = join(ctx.appsDir, appName);
+              console.log(`[Generate] Regenerating into existing app: ${appName}`);
+            } else {
+              const slug = slugifyPrompt(msg.prompt);
+              appName = resolveAppName(ctx.appsDir, slug);
+              newAppDir = join(ctx.appsDir, appName);
+              mkdirSync(newAppDir, { recursive: true });
+            }
             onEvent({ type: 'app_created', name: appName });
 
             // Build the generate context (theme, style guide, TinyBase patterns)
