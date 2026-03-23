@@ -12,7 +12,7 @@ import Electrobun, {
 	Utils,
 } from "electrobun/bun";
 import { join } from "path";
-import { appendFileSync, mkdirSync, readFileSync } from "fs";
+import { appendFileSync, mkdirSync, readFileSync, existsSync } from "fs";
 import { homedir } from "os";
 import { discoverVibesPlugin } from "./plugin-discovery.ts";
 import { CLAUDE_BIN, isClaudeInstalled, VIBES_CONFIG_DIR } from "./auth.ts";
@@ -133,6 +133,10 @@ const LINK_PRELOAD = `
 async function main() {
 	log(`[vibes-desktop] Starting ${BUILD_ID}`);
 
+	// --- Deep link handler state ---
+	let pendingFixPayload: Record<string, string | null> | null = null;
+	let editorLoaded = false;
+
 	const appVersion = getAppVersion();
 	let needsSetup = !isSetupComplete(appVersion);
 	log(`[vibes-desktop] Version: ${appVersion}, needsSetup: ${needsSetup}`);
@@ -169,6 +173,42 @@ async function main() {
 	// Hide native zoom + miniaturize buttons as early as possible.
 	// Called again after editor loads as a belt-and-suspenders fallback.
 	setTimeout(() => hideZoomButton(), 500);
+
+	// --- Deep link handler (vibes://fix) ---
+	Electrobun.events.on("open-url", (e) => {
+		try {
+			const url = new URL(e.data.url);
+			if (url.protocol === "vibes:" && url.hostname === "fix") {
+				const payload = {
+					app: url.searchParams.get("app"),
+					error: url.searchParams.get("error"),
+					stack: url.searchParams.get("stack"),
+					componentStack: url.searchParams.get("componentStack"),
+					console: url.searchParams.get("console"),
+				};
+				log("[vibes-desktop] Received vibes://fix deep link for app:", payload.app);
+
+				// Verify the target app exists locally (spec requirement)
+				if (payload.app) {
+					const appPath = join(homedir(), ".vibes", "apps", payload.app, "app.jsx");
+					if (!existsSync(appPath)) {
+						log("[vibes-desktop] App not found locally:", payload.app, "at", appPath);
+						// Still forward — the editor can show an appropriate error
+					}
+				}
+
+				if (editorLoaded) {
+					mainWindow.webview.executeJavascript(
+						`window.__vibesFixError && window.__vibesFixError(${JSON.stringify(payload)})`
+					);
+				} else {
+					pendingFixPayload = payload;
+				}
+			}
+		} catch (err: any) {
+			log("[vibes-desktop] Failed to parse deep link:", err.message);
+		}
+	});
 
 	// Register will-navigate early — active for setup HTML pages AND editor.
 	// Handles vibes://setup/* actions from setup buttons, and opens external
@@ -263,11 +303,25 @@ async function main() {
 
 	// Load the editor in the window (transition from setup UI or blank page)
 	mainWindow.webview.loadURL(SERVER_URL);
+	editorLoaded = true;
 
 	// Inject preload via executeJavascript on dom-ready (preload option doesn't work)
 	mainWindow.webview.on("dom-ready", () => {
 		log("[dom-ready] Injecting link preload script");
 		mainWindow.webview.executeJavascript(LINK_PRELOAD);
+
+		// Only drain pending deep links after the editor is loaded (not setup pages)
+		if (!editorLoaded) {
+			return;
+		}
+
+		if (pendingFixPayload) {
+			log("[dom-ready] Draining pending fix payload for app:", pendingFixPayload.app);
+			mainWindow.webview.executeJavascript(
+				`window.__vibesFixError && window.__vibesFixError(${JSON.stringify(pendingFixPayload)})`
+			);
+			pendingFixPayload = null;
+		}
 	});
 
 	// 4b. Navigation rules — allow local server only, block everything else
