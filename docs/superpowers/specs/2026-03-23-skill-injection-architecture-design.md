@@ -81,7 +81,16 @@ function buildSkillAppendix(pluginRoot) {
   if (loaded.length === 0) {
     console.error('[skill-inject] FATAL: No core reference files found. Agent will lack framework guidance.');
   }
-  return loaded.join('\n\n---\n\n');
+  // Editor environment preamble — constant across all skills, always relevant.
+  // Moved here from the per-message buildSkillBlock() hardcoded block.
+  const EDITOR_ENVIRONMENT = `
+EDITOR ENVIRONMENT CONSTRAINTS:
+You are running inside the Vibes web editor.
+Available tools: Read, Edit, Write, Glob, Grep. No Bash, no terminal, no Agent spawning.
+Working directory is the app project root. You are editing app.jsx.
+Prioritize Edit calls over analysis — turns are limited.`;
+
+  return [EDITOR_ENVIRONMENT, ...loaded].join('\n\n---\n\n');
 }
 
 function buildPersistentArgs(config) {
@@ -130,6 +139,60 @@ inject: system-prompt
 ```
 
 The skill discovery code in `config.ts` filters out references with `inject: system-prompt` from the selectable skill list. Existing reference files without this frontmatter remain selectable as before.
+
+### Skill Deduplication in Chat
+
+**Problem:** The current `buildSkillBlock()` re-injects full skill content on every message. A 10-turn conversation with a 7KB skill injects ~70KB of repeated content, wasting context.
+
+Additionally, the 15-line "ENVIRONMENT CONSTRAINTS" preamble is hardcoded in `buildSkillBlock()` — constant across all skills, invisible to skill authors, and repeated per-message. This moves to `--append-system-prompt` (see `buildSkillAppendix` above).
+
+**Solution:** The bridge tracks which skill has been injected and deduplicates:
+
+```javascript
+// Bridge state (alongside existing BridgeState in claude-bridge.ts)
+let lastInjectedSkillId = null;
+let messagesSinceSkillInjection = 0;
+
+function buildSkillBlock(ctx, skillId) {
+  const skill = ctx.pluginSkills.find(s => s.id === skillId);
+  if (!skill) return '';
+
+  messagesSinceSkillInjection++;
+
+  // Full injection on: first use, skill change, or every 5th message (compaction resilience)
+  const needsFullInjection =
+    skillId !== lastInjectedSkillId ||
+    messagesSinceSkillInjection >= 5;
+
+  if (needsFullInjection) {
+    lastInjectedSkillId = skillId;
+    messagesSinceSkillInjection = 0;
+    const content = readFileSync(skill.skillMdPath, 'utf-8');
+    return `\nSKILL CONTEXT: "${skill.name}"\n\n${content}\n`;
+  }
+
+  // Lightweight pointer — skill is already in conversation context
+  return `\n(Using skill: "${skill.name}" — full guidance was provided earlier)\n`;
+}
+```
+
+**Injection pattern over a 10-message conversation with the same skill:**
+
+| Message | Injection | Tokens |
+|---------|-----------|--------|
+| 1 | Full skill content | ~7K |
+| 2–4 | 1-line pointer | ~20 each |
+| 5 | Full re-injection (compaction resilience) | ~7K |
+| 6–9 | 1-line pointer | ~20 each |
+| 10 | Full re-injection | ~7K |
+
+**Total: ~21K tokens** vs ~70K today (70% reduction).
+
+**What changes in `buildSkillBlock()`:**
+- Delete the hardcoded "ENVIRONMENT CONSTRAINTS" and "ACTION REQUIREMENT" blocks (moved to `--append-system-prompt`)
+- Delete the 30KB truncation (skill files should be properly sized; if a skill is too large, that's the skill author's problem to solve, not a silent truncation)
+- Add injection tracking and the deduplication logic above
+- The function moves from `prompt-builders.ts` to `claude-bridge.ts` (or a shared module) since it needs access to bridge state
 
 ### pluginRoot Plumbing
 
@@ -274,16 +337,21 @@ Context budget: Only the three core references are injected at spawn time (not t
 5. Verify no content is lost (diff total line count)
 
 ### Phase 2: Wire Injection
-1. Add `buildSkillAppendix()` to `claude-subprocess.js`
+1. Add `buildSkillAppendix()` to `claude-subprocess.js` (includes core references + editor environment preamble)
 2. Add `--append-system-prompt` to `buildPersistentArgs()` and `buildClaudeArgs()`
 3. Pass `pluginRoot` through to subprocess builders
+4. Add `inject: system-prompt` frontmatter to the three core reference files
+5. Filter `inject: system-prompt` files from skill selector in `config.ts`
 
-### Phase 3: Clean Prompt Builders
+### Phase 3: Clean Prompt Builders + Skill Deduplication
 1. Delete `TINYBASE_INVARIANT_RULES` constant
 2. Delete `NON-NEGOTIABLE DATA RULES` inline block
 3. Delete TinyBase API fallback in `buildGeneratePrompt`
 4. Delete `vibesSkillContent` extraction in `config.ts`
 5. Simplify `buildChatPrompt` and `buildGeneratePrompt` to runtime-data-only
+6. Refactor `buildSkillBlock()`: remove hardcoded environment preamble and 30KB truncation
+7. Add skill deduplication state to bridge (`lastInjectedSkillId`, `messagesSinceSkillInjection`)
+8. Move `buildSkillBlock` to bridge module (needs access to bridge state) or pass state as parameter
 
 ### Phase 4: Verify
 
