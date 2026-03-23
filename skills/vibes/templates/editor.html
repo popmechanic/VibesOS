@@ -3376,6 +3376,7 @@ window.escapeHtml = function(str) {
   let streamingToolId = null;    // Current tool block being tracked
   let sessionModel = '';         // Model name from init event
   let lastUsage = null;          // Last usage/cost from complete event
+  let interrupted = false;       // True after user interrupts — ignore trailing events
 
   const TOOL_LABELS = {
     Read: 'Reading files...', Edit: 'Editing code...', Write: 'Writing files...',
@@ -3970,6 +3971,14 @@ window.escapeHtml = function(str) {
       const msg = JSON.parse(event.data);
       // DEBUG: log all incoming WS events
       if (msg.type !== 'token') console.log('[WS-IN]', msg.type, msg.type === 'tool_result' ? msg.name : '', msg.type === 'complete' ? 'usage:' + JSON.stringify(msg.usage) : '');
+
+      // After interrupt, ignore trailing events until the turn completes
+      if (interrupted) {
+        if (msg.type === 'complete') {
+          interrupted = false;
+        }
+        return;
+      }
 
       if (msg.type === 'status') {
         if (msg.status === 'saving_theme') {
@@ -5094,6 +5103,7 @@ window.escapeHtml = function(str) {
     const text = input.value.trim();
     const referenceFile = EditorReference.getFile('edit');
     if ((!text && !referenceFile) || isThinking || !ws || ws.readyState !== WebSocket.OPEN) return;
+    interrupted = false;
 
     // Dismiss any pending choice buttons when user types manually
     document.querySelectorAll('.chat-bubble.choice:not(.chosen)').forEach(b => {
@@ -5496,7 +5506,10 @@ window.escapeHtml = function(str) {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'cancel' }));
     }
+    interrupted = true;
     finalizeStreaming();
+    setThinking(false);
+    addMessage('system', 'Interrupted.');
   }
 
   function resetSession() {
@@ -5642,8 +5655,8 @@ window.escapeHtml = function(str) {
   }
 
   // === Deep link repair handler ===
-  // Called by desktop app via executeJavascript when vibes://fix deep link is received.
-  // Also drains __pendingVibesFix if the desktop stashed a payload before this script ran.
+  // Called by desktop app via executeJavascript when vibes://fix deep link is received,
+  // or by the preview iframe via postMessage when an app crashes in the editor preview.
   window.__vibesFixError = function(payload) {
     if (!payload || !payload.app) return;
 
@@ -5682,6 +5695,12 @@ window.escapeHtml = function(str) {
     }
   };
 
+  // Listen for fix-error messages from the preview iframe
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'vibes-fix-error' && e.data.payload) {
+      window.__vibesFixError(e.data.payload);
+    }
+  });
 
   // === Init ===
 

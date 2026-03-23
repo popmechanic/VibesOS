@@ -55,14 +55,22 @@
       // Deep link uses last 5 (URL length constraint); details section shows last 10
       const linkConsoleText = allConsoleLogs.slice(-5).map(e => `[${e.level}] ${e.message}`).join('\n');
 
+      const fixPayload = {
+        app: appName,
+        error: errorMsg,
+        stack: stack,
+        componentStack: cStack,
+        console: linkConsoleText,
+      };
+
       const deepLink = () => {
-        const params = new URLSearchParams({
-          app: appName,
-          error: errorMsg,
-          stack: stack,
-          componentStack: cStack,
-          console: linkConsoleText,
-        });
+        // Inside editor preview iframe: send payload to parent editor frame
+        if (window.parent !== window) {
+          window.parent.postMessage({ type: 'vibes-fix-error', payload: fixPayload }, '*');
+          return;
+        }
+        // Standalone deployed app: use vibes:// URL scheme to open desktop app
+        const params = new URLSearchParams(fixPayload);
         window.location.href = 'vibes://fix?' + params.toString();
       };
 
