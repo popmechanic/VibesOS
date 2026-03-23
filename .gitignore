@@ -80,3 +80,7 @@ skill-dynamic-injection-explained.html
 
 # Working app.jsx in project root (generated during editing)
 /app.jsx
+
+# Eval infrastructure (local autoresearch, not distributed)
+eval/
+.mcp.json
