@@ -39,3 +39,43 @@ describe('Console capture ring buffer', () => {
     expect(bufferPos).toBeLessThan(babelPos);
   });
 });
+
+describe('Vibes error screen redesign', () => {
+  const delta = () => readFileSync(join(PLUGIN_ROOT, 'skills/vibes/template.delta.html'), 'utf8');
+
+  it('AppErrorBoundary stores componentStack in state', () => {
+    expect(delta()).toContain('componentStack');
+    expect(delta()).toContain('componentDidCatch');
+  });
+
+  it('error screen has vibes grid background', () => {
+    expect(delta()).toContain('#CCCDC8');
+    expect(delta()).toContain('32px 32px');
+  });
+
+  it('error screen has "Fix in VibesOS" button', () => {
+    expect(delta()).toContain('Fix in VibesOS');
+  });
+
+  it('error screen constructs vibes://fix deep link', () => {
+    expect(delta()).toContain('vibes://fix');
+  });
+
+  it('error screen has clipboard fallback', () => {
+    expect(delta()).toContain('clipboard');
+  });
+
+  it('error screen has collapsed technical details', () => {
+    expect(delta()).toContain('<details');
+    expect(delta()).toContain('Technical details');
+  });
+
+  it('error screen reads __VIBES_CONSOLE_LOG__', () => {
+    expect(delta()).toContain('__VIBES_CONSOLE_LOG__');
+  });
+
+  it('error screen has Try Again button', () => {
+    expect(delta()).toContain('Try Again');
+    expect(delta()).toContain('this.setState');
+  });
+});
