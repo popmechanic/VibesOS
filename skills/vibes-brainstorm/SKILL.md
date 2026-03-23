@@ -47,12 +47,12 @@ Draw from these categories. Skip what the prompt already answers. Tailor options
   ▸ Shared with a group
   ▸ Real-time with others (like a game or collaboration)
 
-- **What's the vibe?** — "What should this feel like?"
+- **What's the vibe?** — "What personality should this have?" — focus on mood and tone, not colors or visuals (the theme handles that)
 
-  ▸ Clean and professional
-  ▸ Playful and colorful
-  ▸ Dark and minimal
-  ▸ Retro / nostalgic
+  ▸ Serious and buttoned-up
+  ▸ Casual and friendly
+  ▸ Playful and a little weird
+  ▸ Calm and focused
 
 - **Main interaction** — "What's the main thing you'll do in this app?" — options specific to the app type (e.g., "Check off items", "Drag cards between columns", "Fill in a form", "Take turns playing")
 
@@ -86,12 +86,12 @@ Principles for mapping user answers to data architecture:
 - "Personal views" — tag all items with `createdBy`, filter by current user on read
 - "Same view for everyone" — no filtering, all items visible to all clients
 
-Principles for mapping vibe/mood to design:
+Principles for mapping vibe/mood to app personality:
 
-- "Clean and professional" — muted palette, generous whitespace, subtle shadows, system fonts or Inter
-- "Playful and colorful" — saturated oklch accents, rounded corners, bouncy animations, fun typography
-- "Dark and minimal" — dark surfaces, high-contrast text, minimal decoration, monospace or geometric fonts
-- "Retro / nostalgic" — terminal green, pixel-ish fonts, scanline effects, CRT glow
+- "Serious and buttoned-up" — formal labels, no emoji, concise copy, structured layouts, no playful animations
+- "Casual and friendly" — conversational microcopy, gentle humor, relaxed spacing, approachable empty states
+- "Playful and a little weird" — emoji in labels, fun empty states, bouncy interactions, personality in error messages, easter eggs
+- "Calm and focused" — minimal UI chrome, generous whitespace, no distractions, zen-like empty states
 
 Principles for mapping scope to architecture:
 
@@ -203,7 +203,7 @@ When the user confirms (clicks "Let's go!" or says yes), output the brief as a s
 ```
 <vibes-brief>
 App: [description]
-Vibe: [visual mood — e.g., "dark and minimal", "warm and cozy", "playful and colorful"]
+Vibe: [personality and tone — e.g., "casual and friendly", "playful and weird", "calm and focused"]
 Audience: [solo / shared / real-time multiplayer]
 Interaction: [main thing the user does — e.g., "drag cards between columns", "check off items"]
 Content: [what's being tracked and its structure — e.g., "recipes with ingredients, steps, and categories"]
