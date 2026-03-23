@@ -335,7 +335,20 @@ const store = createMergeableStore();                   // WRONG - template crea
 store.setCell('todos', id, 'done', true);               // WRONG - use callback hooks
 ```
 
-**Sync Status**: `isSyncing` from `useApp()` indicates active sync. The template handles WebSocket connection and reconnection automatically. **Do NOT build custom sync indicators** — the template includes a built-in `SyncStatusDot` (top-right corner pill showing "synced", "connecting", "reconnecting", "offline"). It activates automatically when sync connects. Never add your own "SYNCING", "ONLINE/OFFLINE", or connection status UI — it will duplicate what's already there.
+**Sync Status**: `isSyncing` from `useApp()` indicates active sync. The template handles WebSocket connection and reconnection automatically.
+
+**Don't build sync/connection status UI.** The template already renders a `SyncStatusDot` in the top-right corner that shows "synced", "connecting", "reconnecting", or "offline" automatically. If your app adds its own sync indicator, users will see two overlapping status elements — yours and the built-in one. Use `isSyncing` for logic (e.g., disabling a save button while syncing) but not for rendering status text or icons.
+
+```jsx
+// These all duplicate the built-in SyncStatusDot — don't render sync state:
+{isSyncing && <div className="sync-badge">Syncing...</div>}
+<span className="status">{isOnline ? 'Online' : 'Offline'}</span>
+<div className="connection-status">Connected</div>
+
+// isSyncing is fine for logic, just not for display:
+const { isReady, isSyncing } = useApp();
+if (!isReady) return <div>Loading...</div>;
+```
 
 **What Generated Code Must Never Contain:**
 - `import` statements of any kind
@@ -343,6 +356,7 @@ store.setCell('todos', id, 'done', true);               // WRONG - use callback 
 - WebSocket URLs, auth logic, connection handling
 - Direct `store.*` method calls — use callback hooks exclusively
 - Schema definitions or store configuration
+- Sync/connection status indicators (dots, badges, "online/offline" text, "syncing" spinners) — the built-in `SyncStatusDot` already handles this, and a custom one will visually overlap with it
 
 ## Assembly Workflow
 
@@ -528,13 +542,13 @@ Do NOT use `useApp().user` — it is always null. Use `useUser()` instead:
 
 ```jsx
 const { user: oidcUser, isSignedIn } = useUser();
-const userEmail = oidcUser?.email;  // always a string when signed in
-const userName = oidcUser?.firstName || oidcUser?.email;
+const userEmail = oidcUser.email;   // always a string — OIDC guarantees it
+const userName = oidcUser.firstName || oidcUser.email.split('@')[0];
 ```
 
 `useUser()` is a global (no import needed). It returns `{ isSignedIn, isLoaded, user }` where `user` has `.email`, `.id`, `.firstName`, `.lastName`, `.username`.
 
-**Email is always present** — the OIDC provider guarantees it. Use `oidcUser.email` as the user identifier. Do NOT build fallback chains like `email || username || sub || 'anonymous'` — just use email.
+**Email is always present** — the OIDC provider guarantees it, so use `oidcUser.email` directly (no `?.`, no fallback). The template gates rendering behind auth, so by the time your component runs, the user is always signed in and `email` is always a string. If you add optional chaining or a fallback like `|| 'anonymous'`, you're guarding against a case that can't happen — and the fallback creates a bug where every user appears identical.
 
 **For auth gating:**
 ```jsx
@@ -542,7 +556,7 @@ const { isSignedIn } = useUser();
 if (!isSignedIn) return <SignInButton />;
 ```
 
-**IMPORTANT:** `useUser()` is only available in private apps (apps deployed with the Private toggle). In public apps, `useUser` is undefined — check with `typeof useUser === 'function'` before calling it.
+`useUser()` is only available in private apps (apps deployed with the Private toggle). In public apps, `useUser` is undefined — check with `typeof useUser === 'function'` before calling it.
 
 **Fine-grained reactivity — each component calls its own hooks:**
 ```jsx
@@ -567,10 +581,10 @@ const addTodo = useAddRowCallback(
   (text) => ({
     text: text ?? '',
     done: false,
-    createdBy: user?.email,
+    createdBy: oidcUser.email,
     createdAt: Date.now(),
   }),
-  [user],  // deps — include anything from closure that changes
+  [oidcUser.email],  // deps — include anything from closure that changes
 );
 ```
 
@@ -660,7 +674,7 @@ These are simpler than callback hooks when you need both the value and a setter.
 
 **User attribution — when multiple people use the app:**
 
-**Apps with multiple users MUST be deployed as private.** Private apps require sign-in, which guarantees every user has a unique email. Public apps have no user identity — `useUser` is undefined — so user attribution is impossible. NEVER use `'anonymous'` as a fallback identity; it makes all unauthenticated users look identical.
+**Apps with multiple users need to be private.** Private apps require sign-in, which guarantees every user has a unique email via OIDC. Public apps have no user identity (`useUser` is undefined), so user attribution is impossible. Don't use `'anonymous'` or `'Guest'` as a fallback display name — if two people both show up as "anonymous" in a chat, neither can tell who said what. The email is always present in private apps, so there's no case to fall back from.
 
 Every row that belongs to a specific user must include `createdBy`. Use `useUser()` to get the email:
 ```jsx
@@ -693,14 +707,14 @@ const myScores = allIds.filter(id => {
 
 **Multiplayer/shared apps:** MUST be private. Shared data goes in TinyBase with `createdBy` on user-owned rows. Each client sees all data; filter by user when showing "my stuff."
 
-**User identity in shared apps — CRITICAL:**
+**User identity in shared apps:**
 
-`useUser().user.email` is the unique user identifier. Every authenticated user has a distinct email from Pocket ID. NEVER generate random client IDs (localStorage UUIDs, crypto.randomUUID, etc.) for user identity — that's what authentication solves.
+`useUser().user.email` is the unique user identifier — every authenticated user has a distinct email from Pocket ID. Authentication already solves user identity, so there's no reason to generate random client IDs (localStorage UUIDs, `crypto.randomUUID`, etc.). Similarly, don't add `?.` optional chaining on `email` — it's always present in private apps, and the optional chaining suggests to readers that a null case exists, which leads to adding fallbacks like `|| 'anonymous'` that break multi-user identity.
 
 ```jsx
 const { user: oidcUser } = useUser();
-const myEmail = oidcUser?.email;
-const myName = oidcUser?.firstName || myEmail.split('@')[0];
+const myEmail = oidcUser.email;
+const myName = oidcUser.firstName || myEmail.split('@')[0];
 ```
 
 **Every shared app needs a `users` table.** Whether it's a game, chat, collaborative doc, or kanban board — store a row per user keyed by email with their display name. Auto-register on load:

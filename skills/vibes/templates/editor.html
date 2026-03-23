@@ -5643,6 +5643,7 @@ window.escapeHtml = function(str) {
 
   // === Deep link repair handler ===
   // Called by desktop app via executeJavascript when vibes://fix deep link is received.
+  // Also drains __pendingVibesFix if the desktop stashed a payload before this script ran.
   window.__vibesFixError = function(payload) {
     if (!payload || !payload.app) return;
 
@@ -5680,6 +5681,7 @@ window.escapeHtml = function(str) {
       input.focus();
     }
   };
+
 
   // === Init ===
 

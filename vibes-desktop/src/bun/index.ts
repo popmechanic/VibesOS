@@ -129,13 +129,49 @@ const LINK_PRELOAD = `
 })();
 `;
 
+// --- Deep link capture (module-level, before any async work) ---
+// Must be registered immediately so we don't miss open-url events
+// that fire during startup (e.g., when macOS launches the app via a URL scheme).
+let pendingFixPayload: Record<string, string | null> | null = null;
+let editorLoaded = false;
+let editorWindow: BrowserWindow | null = null;
+
+Electrobun.events.on("open-url", (e) => {
+	try {
+		const url = new URL(e.data.url);
+		if (url.protocol === "vibes:" && url.hostname === "fix") {
+			const payload = {
+				app: url.searchParams.get("app"),
+				error: url.searchParams.get("error"),
+				stack: url.searchParams.get("stack"),
+				componentStack: url.searchParams.get("componentStack"),
+				console: url.searchParams.get("console"),
+			};
+			log("[vibes-desktop] Received vibes://fix deep link for app:", payload.app);
+
+			if (payload.app) {
+				const appPath = join(homedir(), ".vibes", "apps", payload.app, "app.jsx");
+				if (!existsSync(appPath)) {
+					log("[vibes-desktop] App not found locally:", payload.app, "at", appPath);
+				}
+			}
+
+			if (editorLoaded && editorWindow) {
+				editorWindow.webview.executeJavascript(
+					`window.__vibesFixError && window.__vibesFixError(${JSON.stringify(payload)})`
+				);
+			} else {
+				pendingFixPayload = payload;
+			}
+		}
+	} catch (err: any) {
+		log("[vibes-desktop] Failed to parse deep link:", err.message);
+	}
+});
+
 // --- Startup ---
 async function main() {
 	log(`[vibes-desktop] Starting ${BUILD_ID}`);
-
-	// --- Deep link handler state ---
-	let pendingFixPayload: Record<string, string | null> | null = null;
-	let editorLoaded = false;
 
 	const appVersion = getAppVersion();
 	let needsSetup = !isSetupComplete(appVersion);
@@ -174,41 +210,8 @@ async function main() {
 	// Called again after editor loads as a belt-and-suspenders fallback.
 	setTimeout(() => hideZoomButton(), 500);
 
-	// --- Deep link handler (vibes://fix) ---
-	Electrobun.events.on("open-url", (e) => {
-		try {
-			const url = new URL(e.data.url);
-			if (url.protocol === "vibes:" && url.hostname === "fix") {
-				const payload = {
-					app: url.searchParams.get("app"),
-					error: url.searchParams.get("error"),
-					stack: url.searchParams.get("stack"),
-					componentStack: url.searchParams.get("componentStack"),
-					console: url.searchParams.get("console"),
-				};
-				log("[vibes-desktop] Received vibes://fix deep link for app:", payload.app);
-
-				// Verify the target app exists locally (spec requirement)
-				if (payload.app) {
-					const appPath = join(homedir(), ".vibes", "apps", payload.app, "app.jsx");
-					if (!existsSync(appPath)) {
-						log("[vibes-desktop] App not found locally:", payload.app, "at", appPath);
-						// Still forward — the editor can show an appropriate error
-					}
-				}
-
-				if (editorLoaded) {
-					mainWindow.webview.executeJavascript(
-						`window.__vibesFixError && window.__vibesFixError(${JSON.stringify(payload)})`
-					);
-				} else {
-					pendingFixPayload = payload;
-				}
-			}
-		} catch (err: any) {
-			log("[vibes-desktop] Failed to parse deep link:", err.message);
-		}
-	});
+	// Make the window accessible to the module-level open-url handler
+	editorWindow = mainWindow;
 
 	// Register will-navigate early — active for setup HTML pages AND editor.
 	// Handles vibes://setup/* actions from setup buttons, and opens external
@@ -310,17 +313,23 @@ async function main() {
 		log("[dom-ready] Injecting link preload script");
 		mainWindow.webview.executeJavascript(LINK_PRELOAD);
 
-		// Only drain pending deep links after the editor is loaded (not setup pages)
-		if (!editorLoaded) {
-			return;
-		}
-
+		// Drain pending deep link payload after the editor page has loaded.
+		// dom-ready fires when HTML is parsed, but inline scripts (including
+		// Babel transpilation) may still be running. Poll until __vibesFixError
+		// is defined, then call it.
 		if (pendingFixPayload) {
 			log("[dom-ready] Draining pending fix payload for app:", pendingFixPayload.app);
-			mainWindow.webview.executeJavascript(
-				`window.__vibesFixError && window.__vibesFixError(${JSON.stringify(pendingFixPayload)})`
-			);
+			const payloadJson = JSON.stringify(pendingFixPayload);
 			pendingFixPayload = null;
+			mainWindow.webview.executeJavascript(`
+				(function drainFix(attempts) {
+					if (window.__vibesFixError) {
+						window.__vibesFixError(${payloadJson});
+					} else if (attempts < 50) {
+						setTimeout(() => drainFix(attempts + 1), 100);
+					}
+				})(0);
+			`);
 		}
 	});
 
