@@ -128,9 +128,9 @@ describe('buildGeneratePrompt', () => {
       themes: [{ id: 'default', name: 'Default' }],
     });
     const result = buildGeneratePrompt(ctx as any, 'build app', { themeId: 'default' });
-    expect(result.prompt).toContain('useRowIds');
-    expect(result.prompt).toContain('useAddRowCallback');
     expect(result.prompt).toContain('NON-NEGOTIABLE DATA RULES');
+    expect(result.prompt).toContain('CRITICAL REMINDERS');
+    expect(result.prompt).toContain('NO imports. NO createStore');
   });
 
   it('includes AI instructions when useAI is true', () => {
