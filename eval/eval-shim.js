@@ -11,25 +11,36 @@
   const testEmail = params.get('testUser') || 'anonymous@eval.test';
   const testName = testEmail.split('@')[0];
 
+  const userObj = {
+    email: testEmail,
+    id: 'eval-' + testName,
+    sub: 'eval-' + testName,
+    firstName: testName.charAt(0).toUpperCase() + testName.slice(1),
+    lastName: 'Eval',
+    username: testName,
+    imageUrl: null,
+    groups: [],
+  };
+
   window.useUser = function useUser() {
     return {
-      email: testEmail,
-      sub: 'eval-' + testName,
-      firstName: testName.charAt(0).toUpperCase() + testName.slice(1),
-      lastName: 'Eval',
-      username: testName,
-      imageUrl: null,
-      groups: [],
+      isSignedIn: true,
+      isLoaded: true,
+      user: userObj,
     };
   };
 
   window.useOIDCContext = function useOIDCContext() {
     return {
-      user: window.useUser(),
+      user: userObj,
       isAuthenticated: true,
       dashApi: null,
     };
   };
+
+  // Set a fake OIDC token so the template's sync code doesn't bail
+  // (private apps check sessionStorage for vibes_oidc_access_token before connecting)
+  sessionStorage.setItem('vibes_oidc_access_token', 'eval-fake-token');
 
   // Stub OIDC components so any template code referencing them doesn't crash
   const Passthrough = (props) => props.children;

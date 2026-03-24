@@ -9,6 +9,70 @@ Detailed explanations of the most common bugs agents encounter when generating T
 
 ---
 
+## Never Call Hooks Inside Loops or Callbacks
+
+React hooks must be called at the **top level** of a component — never inside `.map()`, `.filter()`, `.forEach()`, conditionals, or any other nested function. When the array length changes between renders, the number of hook calls changes, and React crashes with error #310 ("Rendered fewer hooks than expected").
+
+This applies to ALL hooks — `useCell`, `useRow`, `useHasRow`, `useState`, etc.
+
+```jsx
+// BAD — hooks inside .filter() and .forEach() crash when list length changes
+function Dashboard() {
+  const entryIds = useRowIds('entries');
+  const totals = {};
+  entryIds.forEach(id => {
+    const cat = useCell('entries', id, 'category');  // CRASH: hook count varies
+    const amt = useCell('entries', id, 'amount');     // CRASH: hook count varies
+    totals[cat] = (totals[cat] || 0) + amt;
+  });
+  // ...
+}
+
+// BAD — hooks inside .filter() crash when list length changes
+function Column({ status }) {
+  const allIds = useRowIds('tasks');
+  const filtered = allIds.filter(id => {
+    const s = useCell('tasks', id, 'status');  // CRASH: hook count varies
+    return s === status;
+  });
+  // ...
+}
+```
+
+**Fix option A: Render a child component per row** (preferred — fine-grained reactivity):
+
+```jsx
+// GOOD — each child calls hooks at its own top level
+function Column({ status }) {
+  const allIds = useRowIds('tasks');
+  return allIds.map(id => <TaskCard key={id} id={id} showForStatus={status} />);
+}
+function TaskCard({ id, showForStatus }) {
+  const status = useCell('tasks', id, 'status');  // top-level — safe
+  if (status !== showForStatus) return null;       // filter by returning null
+  const title = useCell('tasks', id, 'title');
+  return <div>{title}</div>;
+}
+```
+
+**Fix option B: Use `useTable` to read all data at once** (OK for small tables):
+
+```jsx
+// GOOD — one hook call, then filter plain objects
+function Dashboard() {
+  const entries = useTable('entries');  // one hook call — always stable
+  const totals = {};
+  Object.values(entries).forEach(row => {
+    totals[row.category] = (totals[row.category] || 0) + (row.amount || 0);
+  });
+  // ...
+}
+```
+
+Use option A when the table could be large (tasks, messages, entries). Use option B only for small, bounded tables (players, preferences, slots).
+
+---
+
 ## Reactivity and Performance
 
 TinyBase hooks subscribe to specific data. Subscribing too broadly causes unnecessary re-renders — the UI rebuilds every time any cell in the table changes, even cells not visible on screen. Keep subscriptions narrow by letting each component read only the data it displays:
