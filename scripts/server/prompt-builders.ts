@@ -33,6 +33,71 @@ const EFFECT_INSTRUCTIONS = {
   'shader': `MANDATORY: Add a WebGL fragment shader background. Create a fullscreen quad with vertex shader, pass u_time/u_resolution/u_mouse uniforms. Use effects like: aurora (sine wave color mixing), plasma (layered sine interference), noise gradient mesh (hash-based noise with mouse reactivity), or animated color fields. Use precision mediump float. Graceful fallback if WebGL unavailable.`,
 };
 
+// --- Auto-detect reference files from user message keywords ---
+
+const REFERENCE_TRIGGERS: Array<{ keywords: RegExp; file: string; label: string }> = [
+  {
+    keywords: /\b(multiplayer|collaborat|shared\b.*\b(app|board|doc|list|timer|edit)|multi[- ]?user|real[- ]?time.*edit|team|players?\b.*\bgame|auction|poll|voting|lobby|trading|inventory)/i,
+    file: 'multiplayer-guide.md',
+    label: 'Multiplayer Guide',
+  },
+  {
+    keywords: /\b(game|timer|countdown|turn[- ]?based|score|leaderboard|round|level|reaction)\b/i,
+    file: 'game-patterns.md',
+    label: 'Game Patterns',
+  },
+  {
+    keywords: /\b(forms?|filter(?:ing)?|sort(?:ing)?|pagination|paginate|master[- ]?detail|kanban|crud|dashboard)\b/i,
+    file: 'tinybase-patterns.md',
+    label: 'TinyBase Patterns',
+  },
+  {
+    keywords: /\b(debug(?:ging)?|troubleshoot|fix(?:ing)?\s+(?:bug|error|crash)|broken|not working)\b/i,
+    file: 'bug-prevention.md',
+    label: 'Bug Prevention',
+  },
+];
+
+/**
+ * Detect which reference files to inject based on keyword matching.
+ * For generate prompts, bug-prevention.md is injected unconditionally
+ * (new apps have the highest bug density).
+ */
+function detectReferences(
+  ctx: ServerContext,
+  message: string,
+  opts: { alwaysIncludeBugPrevention?: boolean } = {},
+): string {
+  const refsDir = join(ctx.projectRoot, 'skills/vibes/references');
+  const matched: string[] = [];
+  const loadedFiles = new Set<string>();
+
+  for (const trigger of REFERENCE_TRIGGERS) {
+    if (trigger.keywords.test(message)) {
+      if (loadedFiles.has(trigger.file)) continue;
+      loadedFiles.add(trigger.file);
+      const filePath = join(refsDir, trigger.file);
+      if (existsSync(filePath)) {
+        const content = readFileSync(filePath, 'utf-8')
+          .replace(/^---[\s\S]*?---\n*/, ''); // strip YAML frontmatter
+        matched.push(`=== ${trigger.label} ===\n\n${content}`);
+      }
+    }
+  }
+
+  if (opts.alwaysIncludeBugPrevention && !loadedFiles.has('bug-prevention.md')) {
+    const filePath = join(refsDir, 'bug-prevention.md');
+    if (existsSync(filePath)) {
+      const content = readFileSync(filePath, 'utf-8')
+        .replace(/^---[\s\S]*?---\n*/, '');
+      matched.push(`=== Bug Prevention ===\n\n${content}`);
+    }
+  }
+
+  if (matched.length === 0) return '';
+  return `\n${matched.join('\n\n---\n\n')}\n`;
+}
+
 /**
  * Build the prompt for iterative chat edits to app.jsx.
  *
@@ -110,7 +175,10 @@ EFFECT RULES:
     skillBlock = result.block;
   }
 
-  const prompt = `${skillBlock}${referenceBlock}The user is iterating on a React app in app.jsx. Read app.jsx first, then Edit it.
+  // Auto-inject reference files based on user message keywords
+  const referenceGuides = detectReferences(ctx, message);
+
+  const prompt = `${skillBlock}${referenceGuides}${referenceBlock}The user is iterating on a React app in app.jsx. Read app.jsx first, then Edit it.
 
 User says: "${message}"${effectBlock}
 
@@ -255,10 +323,12 @@ The goal: the generated app should look like the image was its design spec.
       }
     }
 
+    const referenceGuides = detectReferences(ctx, userPrompt, { alwaysIncludeBugPrevention: true });
+
     const refPrompt = `${referenceBlock}You are an expert React app designer. Generate a beautiful, creative app.
 
 === NON-NEGOTIABLE DATA RULES ===${RECENCY_REMINDER}
-
+${referenceGuides}
 USER REQUEST: "${userPrompt}"
 
 Your app.jsx MUST start with these EXACT lines (copy-paste, do not modify):
@@ -346,10 +416,12 @@ ${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
     .trim();
   if (themeEssentials.length > 4000) themeEssentials = themeEssentials.slice(0, 4000) + '\n...';
 
+  const referenceGuides = detectReferences(ctx, userPrompt, { alwaysIncludeBugPrevention: true });
+
   const prompt = `You are an expert React app designer. Generate a beautiful, creative app.
 
 === NON-NEGOTIABLE DATA RULES ===${RECENCY_REMINDER}
-
+${referenceGuides}
 USER REQUEST: "${userPrompt}"
 
 === MANDATORY THEME: "${themeName}" (id: "${themeId}") ===

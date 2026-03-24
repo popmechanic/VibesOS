@@ -51,8 +51,10 @@ describe('extract-import-map.js', () => {
   });
 });
 
-describe('sell SKILL.md', () => {
-  const content = readFileSync(join(PLUGIN_ROOT, 'skills', 'sell', 'SKILL.md'), 'utf8');
+describe('sell import map injection', () => {
+  // Import map section moved from sell/SKILL.md to sell/references/components-and-troubleshooting.md
+  const refPath = join(PLUGIN_ROOT, 'skills', 'sell', 'references', 'components-and-troubleshooting.md');
+  const content = readFileSync(refPath, 'utf8');
   const importMapSection = content.split('## Import Map')[1]?.split('##')[0] || '';
 
   it('uses dynamic injection, not hardcoded URLs', () => {
