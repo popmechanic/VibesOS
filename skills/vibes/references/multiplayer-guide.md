@@ -165,3 +165,22 @@ useEffect(() => {
 ```
 
 **When is direct `store.*` access OK?** Only in `useEffect` initialization patterns where the row ID is determined at runtime (like finding an open slot above). For all normal reads and writes, use hooks — they integrate with React's reactivity system and ensure other components re-render on changes.
+
+---
+
+## First-Writer-Wins (Host / Leader Assignment)
+
+**Don't use a Value for "who is the host."** Two clients loading simultaneously will both check `if (!hostEmail) setHostEmail(myEmail)` — the check sees `undefined` before sync delivers the first writer's value, so both write, and the later timestamp wins (CRDT last-writer-wins). The "first user" becomes the last one to load.
+
+**Instead, derive the host from the `users` table:**
+
+```jsx
+// Every user registers with joinedAt on load (see Users Table Registration above)
+const allUsers = useTable('users');
+const usersByJoinTime = Object.entries(allUsers)
+  .sort(([, a], [, b]) => (a.joinedAt || 0) - (b.joinedAt || 0));
+const hostEmail = usersByJoinTime.length > 0 ? usersByJoinTime[0][0] : null;
+const isHost = hostEmail === myEmail;
+```
+
+This is deterministic — both clients compute the same host from the same data. No race condition, no Value needed. The same pattern works for any "first user gets a role" scenario.

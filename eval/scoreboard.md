@@ -4,7 +4,8 @@
 
 | Iteration | Aggregate | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 10 | SKILL.md Change |
 |-----------|-----------|----|----|----|----|----|----|----|----|----|----|-----------------|
-| (no iterations yet) | | | | | | | | | | | | |
+| 1 | 92.5% | 4 | 4 | 3 | 4 | 2 | 4 | 4 | 4 | 4 | 4 | Baseline (no changes) |
+| 2 | 95.0% | 4 | 4 | 4 | 4 | 3 | 4 | 4 | 4 | 4 | 4 | Added: derive-host-from-table, never-null-values, sentinel-values |
 
 ## Scoring Key
 

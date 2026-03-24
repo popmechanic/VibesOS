@@ -168,6 +168,30 @@ The template manages React, store creation, persistence, sync, and the import ma
 
 ---
 
+## Never Set Values or Cells to Null
+
+Setting a Value or Cell to `null` **deletes** it from the CRDT. If you then immediately re-create it (`setTimerRunning(false)` then `setTimerRunning(true)`), the delete and create have near-identical timestamps, causing sync issues — the other client may receive the deletion but miss the re-creation, or the CRDT merge may resolve in favor of the delete.
+
+```jsx
+// BAD — setting to null deletes the Value, causing sync issues on re-create
+const stopTimer = () => {
+  setTimerRunning(false);
+  setTimerEndTime(null);    // DELETES the Value — sync race on next start
+  setTimerDuration(null);   // DELETES the Value
+};
+
+// GOOD — use sentinel values to represent "cleared" state
+const stopTimer = () => {
+  setTimerRunning(false);
+  setTimerEndTime(0);       // 0 means "no end time" — check with > 0
+  setTimerDuration(0);      // 0 means "no duration"
+};
+```
+
+**Rule:** Use `0`, `false`, or `''` (empty string) as "cleared" sentinel values. Check for them explicitly (`timerEndTime > 0`, `status !== ''`) rather than relying on truthiness. This keeps the Value alive in the CRDT and avoids delete-recreate race conditions.
+
+---
+
 ## Demo Data Pattern
 
 Seed demo data via a user-triggered button, not `useEffect` on mount. The store hydrates asynchronously from localStorage/sync — a mount-time write can race with hydration and either lose data or duplicate it:

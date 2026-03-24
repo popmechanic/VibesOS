@@ -332,3 +332,5 @@ Quick checklist — for detailed explanations and code examples, read `${CLAUDE_
 - **Every app needs a "Load Demo Data" button** — visible when table is empty (`useRowCount('tableName') === 0`)
 - **`isReady` is always true** — the template gates rendering. Use `useApp()` for sync activation, not readiness checks.
 - **No sync/connection status UI — not even decorative** — the template renders a built-in `SyncStatusDot` (top-right corner). Never render anything that implies connection state, including static labels like "Online", "LIVE", "Connected", "Crew Online", or user-online counts. Use `isSyncing` for logic only (e.g., disabling a button), never for display.
+- **Never set Values or Cells to `null`** — this deletes them from the CRDT. Use sentinel values (`0`, `false`, `''`) to represent "cleared" state. Rapid delete-then-recreate causes sync failures.
+- **Derive roles from data, not Values** — don't use `if (!hostEmail) setHostEmail(myEmail)` for first-writer-wins. Both clients race. Instead, derive the host from the `users` table (earliest `joinedAt` wins).
