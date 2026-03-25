@@ -6,6 +6,7 @@ account_id = "e33948793047032de7f5e18ec342a7d1"
 
 [vars]
 OIDC_JWKS_URL = "https://vibesos.com/.well-known/jwks.json"
+OIDC_ISSUER = "https://vibesos.com"
 
 [[durable_objects.bindings]]
 name = "APP_SYNC"
