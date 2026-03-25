@@ -121,25 +121,24 @@ This is not optional. Never skip it. Never move it to a child component.
 
 ### Getting the Signed-In User
 
-Do not use `useApp().user` — it is always null. Use `useUser()` instead:
+Do not use `useApp().user` — it is always null. Use `useUser()` instead.
+
+**IMPORTANT:** `useUser()` is only available in private (auth-enabled) apps. In public apps and during local preview, `useUser` is undefined. Apps that use user identity **must guard against this** — the app runs in public/preview mode before being deployed as private.
 
 ```jsx
-const { user: oidcUser, isSignedIn } = useUser();
-const userEmail = oidcUser.email;   // always a string — OIDC guarantees it
-const userName = oidcUser.firstName || oidcUser.email.split('@')[0];
+// Safe pattern — works in both public preview and deployed private apps
+const oidcUser = typeof useUser === 'function' ? useUser()?.user : null;
+const userEmail = oidcUser?.email || 'anonymous';
+const userName = oidcUser?.firstName || userEmail.split('@')[0];
 ```
 
-`useUser()` is a global (no import needed). It returns `{ isSignedIn, isLoaded, user }` where `user` has `.email`, `.id`, `.firstName`, `.lastName`, `.username`.
+`useUser()` returns `{ isSignedIn, isLoaded, user }` where `user` has `.email`, `.id`, `.firstName`, `.lastName`, `.username`. In private apps after sign-in, `email` is always a string (OIDC guarantees it).
 
-**Email is always present** — the OIDC provider guarantees it, so use `oidcUser.email` directly (no `?.`, no fallback). The template gates rendering behind auth, so by the time your component runs, the user is always signed in and `email` is always a string. If you add optional chaining or a fallback like `|| 'anonymous'`, you're guarding against a case that can't happen — and the fallback creates a bug where every user appears identical.
-
-**For auth gating:**
+**For auth gating** (show sign-in button when not authenticated):
 ```jsx
-const { isSignedIn } = useUser();
-if (!isSignedIn) return <SignInButton />;
+const { isSignedIn } = typeof useUser === 'function' ? useUser() : { isSignedIn: false };
+if (!isSignedIn) return typeof SignInButton === 'function' ? <SignInButton /> : <p>Sign in required</p>;
 ```
-
-`useUser()` is only available in private apps (apps deployed with the Private toggle). In public apps, `useUser` is undefined — check with `typeof useUser === 'function'` before calling it.
 
 For detailed code examples (reactivity, master-detail, filtering, forms, custom ordering, multi-table references), read `${CLAUDE_SKILL_DIR}/references/tinybase-patterns.md`.
 
@@ -339,7 +338,8 @@ Quick checklist — for detailed explanations and code examples, read `${CLAUDE_
 - **NEVER call hooks inside loops or conditionals** — `useCell` inside `.map()`, `.filter()`, `.forEach()` crashes when list length changes; hooks inside ternaries (`x ? useHook() : null`) crash when the condition flips (React error #310). Call hooks unconditionally, guard the invocation instead.
 - **Use `useCell` in child components**, not `useTable` — avoids re-rendering the entire list on every change
 - **Use string literals for table names** — `useRowIds('todos')`, not variables or constants
-- **Include closure deps** in callback hooks — `[oidcUser.email]` not `[]` when using email
+- **Guard `useUser()` for public/preview** — always `typeof useUser === 'function' ? useUser()?.user : null` — never call `useUser()` directly
+- **Include closure deps** in callback hooks — `[userEmail]` not `[]` when using email
 - **Use `useSetPartialRowCallback`** instead of `useSetRowCallback` — preserves concurrent edits to other cells
 - **Cells are scalars only** — strings, numbers, booleans. Objects in cells break CRDT granularity
 - **Guard cell values** — `useCell`/`useValue` return `undefined` when unset; use `String(val || '')`

@@ -250,9 +250,14 @@ if (!isReady) return <div>Loading...</div>;
 
 **User Identity (when needed)**
 
-For user identity, use `useUser()` which returns `{ isSignedIn, user }` where `user` has `.email`, `.id`, `.firstName` (private apps only).
+For user identity, use `useUser()` which returns `{ isSignedIn, user }` where `user` has `.email`, `.id`, `.firstName` (private apps only). **Always guard for public/preview mode:**
 
-For shared/multiplayer apps: every user-owned row must include `createdBy: oidcUser.email` (not `useApp().user` which is always null in shared contexts).
+```jsx
+const oidcUser = typeof useUser === 'function' ? useUser()?.user : null;
+const userEmail = oidcUser?.email || 'anonymous';
+```
+
+For shared/multiplayer apps: every user-owned row must include `createdBy: userEmail`.
 
 ## Assembly Workflow
 

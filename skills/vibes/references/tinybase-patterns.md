@@ -59,15 +59,18 @@ function ItemContent({ id }) {
 ## Adding Rows with useAddRowCallback
 
 ```jsx
+const oidcUser = typeof useUser === 'function' ? useUser()?.user : null;
+const userEmail = oidcUser?.email || 'anonymous';
+
 const addTodo = useAddRowCallback(
   'todos',
   (text) => ({
     text: text ?? '',
     done: false,
-    createdBy: oidcUser.email,
+    createdBy: userEmail,
     createdAt: Date.now(),
   }),
-  [oidcUser.email],  // deps — include anything from closure that changes
+  [userEmail],  // deps — include anything from closure that changes
 );
 ```
 

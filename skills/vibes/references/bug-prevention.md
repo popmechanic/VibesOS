@@ -95,6 +95,24 @@ function SlotCard({ id }) {
 
 ---
 
+## Guard useUser() for Public/Preview Mode
+
+`useUser()` is only available in private (auth-enabled) apps. In public apps and during local editor preview, `useUser` is **undefined** — calling it crashes with "undefined is not an object". Since every app runs in preview mode before being deployed as private, **every use of `useUser()` must be guarded:**
+
+```jsx
+// BAD — crashes in public/preview mode
+const { user: oidcUser } = useUser();
+const userEmail = oidcUser.email;  // CRASH: useUser is undefined
+
+// GOOD — works everywhere, real email when deployed private
+const oidcUser = typeof useUser === 'function' ? useUser()?.user : null;
+const userEmail = oidcUser?.email || 'anonymous';
+```
+
+This is the **only** correct pattern. Never call `useUser()` directly without the `typeof` guard.
+
+---
+
 ## Reactivity and Performance
 
 TinyBase hooks subscribe to specific data. Subscribing too broadly causes unnecessary re-renders — the UI rebuilds every time any cell in the table changes, even cells not visible on screen. Keep subscriptions narrow by letting each component read only the data it displays:
@@ -131,10 +149,13 @@ Similarly, call TinyBase hooks directly rather than wrapping them in custom hook
 Callback hooks like `useAddRowCallback` capture variables from their closure. Include any value that changes over time in the deps array — otherwise the callback sees a stale snapshot:
 
 ```jsx
+const oidcUser = typeof useUser === 'function' ? useUser()?.user : null;
+const userEmail = oidcUser?.email || 'anonymous';
+
 const addTodo = useAddRowCallback(
   'todos',
-  () => ({ createdBy: oidcUser.email, createdAt: Date.now() }),
-  [oidcUser.email],  // re-create callback when user changes
+  () => ({ createdBy: userEmail, createdAt: Date.now() }),
+  [userEmail],  // re-create callback when user changes
 );
 ```
 

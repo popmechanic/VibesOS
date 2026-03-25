@@ -37,8 +37,8 @@ This is the most common mistake in multiplayer apps: storing a personal choice a
 **The rule: if each user should have their own version of the data, key it by user email.** Use the user's email as the row ID in a players/users table, and store their personal choices as cells in that row:
 
 ```jsx
-const { user: oidcUser } = useUser();
-const myEmail = oidcUser.email;
+const oidcUser = typeof useUser === 'function' ? useUser()?.user : null;
+const myEmail = oidcUser?.email || 'anonymous';
 
 // PER-USER: each player's team choice — stored in their own row
 const [myTeam, setMyTeam] = useCellState('players', myEmail, 'team');
@@ -81,10 +81,10 @@ Table rows merge more reliably because both clients have a row at the same key �
 
 Apps with multiple users need to be private. Private apps require sign-in via Pocket ID, which guarantees every user has a unique email via OIDC. Public apps have no user identity (`useUser` is undefined), so user attribution is impossible.
 
-Every row that belongs to a specific user must include `createdBy`. Use `useUser()` to get the email:
+Every row that belongs to a specific user must include `createdBy`. Use `useUser()` to get the email — always guard for public/preview mode:
 ```jsx
-const { user: oidcUser } = useUser();
-const userEmail = oidcUser.email; // always present in private apps
+const oidcUser = typeof useUser === 'function' ? useUser()?.user : null;
+const userEmail = oidcUser?.email || 'anonymous';
 
 const addItem = useAddRowCallback(
   'items',
@@ -99,8 +99,8 @@ const addItem = useAddRowCallback(
 
 To show only the current user's data, filter by `createdBy` using `useTable` (never call hooks inside `.filter()` — see bug-prevention.md):
 ```jsx
-const { user: oidcUser } = useUser();
-const userEmail = oidcUser.email;
+const oidcUser = typeof useUser === 'function' ? useUser()?.user : null;
+const userEmail = oidcUser?.email || 'anonymous';
 const allScores = useTable('scores');
 const myScores = Object.entries(allScores).filter(([id, row]) => row.createdBy === userEmail);
 ```
@@ -113,13 +113,17 @@ const myScores = Object.entries(allScores).filter(([id, row]) => row.createdBy =
 
 ## User Identity in Shared Apps
 
-`useUser().user.email` is the unique user identifier — every authenticated user has a distinct email from Pocket ID. Authentication already solves user identity, so there's no reason to generate random client IDs (localStorage UUIDs, `crypto.randomUUID`, etc.). Similarly, don't add `?.` optional chaining on `email` — it's always present in private apps, and the optional chaining suggests to readers that a null case exists, which leads to adding fallbacks like `|| 'anonymous'` that break multi-user identity.
+`useUser().user.email` is the unique user identifier — every authenticated user has a distinct email from Pocket ID. Authentication already solves user identity, so there's no reason to generate random client IDs (localStorage UUIDs, `crypto.randomUUID`, etc.).
+
+**Always guard `useUser()` for public/preview mode** — apps run in the editor preview before being deployed as private. Without the guard, `useUser` is undefined and the app crashes:
 
 ```jsx
-const { user: oidcUser } = useUser();
-const myEmail = oidcUser.email;
-const myName = oidcUser.firstName || myEmail.split('@')[0];
+const oidcUser = typeof useUser === 'function' ? useUser()?.user : null;
+const myEmail = oidcUser?.email || 'anonymous';
+const myName = oidcUser?.firstName || myEmail.split('@')[0];
 ```
+
+Once deployed as a private app, `email` is always a real string from the OIDC provider. The `'anonymous'` fallback only applies during local preview.
 
 ---
 
