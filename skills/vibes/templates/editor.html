@@ -5530,6 +5530,141 @@ window.escapeHtml = function(str) {
     setThinking(false);
   }
 
+  // --- ASCII Preview Animation ---
+  const AsciiAnimation = (() => {
+    let cachedData = null;
+    let animFrameId = null;
+    let resizeObserver = null;
+    let currentFrame = 0;
+    let lastFrameTime = 0;
+
+    const CHAR_WIDTH_RATIO = 0.6;
+    const LINE_HEIGHT_RATIO = 1.2;
+    const MAX_FONT_SIZE = 18;
+    const FRAME_INTERVAL = 1000 / 24; // 24fps = 41.67ms
+
+    async function fetchData() {
+      if (cachedData) return cachedData;
+      try {
+        const res = await fetch('/assets/ascii/preview-ascii.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        cachedData = await res.json();
+        return cachedData;
+      } catch (err) {
+        console.warn('[AsciiAnimation] Failed to load animation data:', err);
+        return null;
+      }
+    }
+
+    function calculateFontSize(canvas) {
+      const paneWidth = canvas.clientWidth;
+      const paneHeight = canvas.clientHeight;
+      const maxLines = 45;
+      const maxChars = 110;
+
+      const fromWidth = paneWidth / (maxChars * CHAR_WIDTH_RATIO);
+      const fromHeight = paneHeight / (maxLines * LINE_HEIGHT_RATIO);
+      return Math.min(MAX_FONT_SIZE, fromWidth, fromHeight);
+    }
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      return ctx;
+    }
+
+    function renderFrame(ctx, data, frameIndex, fontSize, canvasWidth, canvasHeight) {
+      const frame = data.frames[frameIndex];
+      if (!frame || !frame.content) return;
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `${fontSize}px "Courier New", Courier, monospace`;
+      ctx.textBaseline = 'top';
+
+      const lineHeight = fontSize * LINE_HEIGHT_RATIO;
+      // Center the grid vertically
+      const totalHeight = frame.content.length * lineHeight;
+      const yOffset = Math.max(0, (canvasHeight - totalHeight) / 2);
+      // Center horizontally
+      const charWidth = fontSize * CHAR_WIDTH_RATIO;
+      const totalWidth = 110 * charWidth;
+      const xOffset = Math.max(0, (canvasWidth - totalWidth) / 2);
+
+      for (let i = 0; i < frame.content.length; i++) {
+        ctx.fillText(frame.content[i], xOffset, yOffset + i * lineHeight);
+      }
+    }
+
+    function startLoop(canvas, data) {
+      let ctx = setupCanvas(canvas);
+      let fontSize = calculateFontSize(canvas);
+      let canvasWidth = canvas.clientWidth;
+      let canvasHeight = canvas.clientHeight;
+      currentFrame = 0;
+      lastFrameTime = 0;
+
+      // ResizeObserver for splitter drag / window resize
+      resizeObserver = new ResizeObserver(() => {
+        ctx = setupCanvas(canvas);
+        fontSize = calculateFontSize(canvas);
+        canvasWidth = canvas.clientWidth;
+        canvasHeight = canvas.clientHeight;
+        renderFrame(ctx, data, currentFrame, fontSize, canvasWidth, canvasHeight);
+      });
+      resizeObserver.observe(canvas);
+
+      function tick(timestamp) {
+        if (!lastFrameTime) lastFrameTime = timestamp;
+        const elapsed = timestamp - lastFrameTime;
+
+        if (elapsed >= FRAME_INTERVAL) {
+          renderFrame(ctx, data, currentFrame, fontSize, canvasWidth, canvasHeight);
+          currentFrame = (currentFrame + 1) % data.frames.length;
+          lastFrameTime = timestamp - (elapsed % FRAME_INTERVAL);
+        }
+        animFrameId = requestAnimationFrame(tick);
+      }
+
+      animFrameId = requestAnimationFrame(tick);
+    }
+
+    async function start() {
+      const canvas = document.getElementById('asciiCanvas');
+      if (!canvas) return;
+
+      const data = await fetchData();
+      if (!data || !data.frames || data.frames.length === 0) return;
+
+      canvas.style.display = 'block';
+      startLoop(canvas, data);
+    }
+
+    function stop() {
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+      }
+      const canvas = document.getElementById('asciiCanvas');
+      if (canvas) canvas.style.display = 'none';
+      currentFrame = 0;
+      lastFrameTime = 0;
+    }
+
+    return { start, stop };
+  })();
+
   function showPreviewOverlay() {
     const overlay = document.getElementById('previewOverlay');
     overlay.classList.remove('hidden');
