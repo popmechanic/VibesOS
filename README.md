@@ -93,7 +93,7 @@ Each variation is a genuinely different concept - not just styling changes. You'
 
 ### `sell`
 
-Ready to monetize? Sell transforms your app into a multi-tenant SaaS with Pocket ID authentication, subscription billing, and isolated databases per customer.
+Ready to monetize? Sell transforms your app into a multi-tenant SaaS with authentication, subscription billing, and isolated databases per customer.
 
 Each user gets their own subdomain (alice.yourapp.com) with their own data. Includes a marketing landing page, admin dashboard, and subscription gating - everything you need to start charging.
 
@@ -116,9 +116,9 @@ admin.yourdomain.com    → Admin dashboard
 
 ### `test`
 
-End-to-end integration test for plugin developers. Assembles a pre-written fixture, deploys to Cloudflare Workers (Connect auto-provisioned), and presents a live URL for browser verification.
+End-to-end integration test for plugin developers. Assembles a pre-written fixture, deploys to Cloudflare Workers, and presents a live URL for browser verification.
 
-Walks you through each step interactively: credentials, fixture selection, assembly, deploy, and verification.
+Walks you through each step interactively: fixture selection, assembly, deploy, and verification.
 
 **Example prompt:** "Test the plugin" or "Run an integration test"
 
@@ -129,8 +129,8 @@ Commands are **user-invoked** — run them explicitly when you want a specific s
 | Command | What it does |
 |---------|-------------|
 | `/vibes` | Generate a React web app with TinyBase |
-| `/sell` | Transform an app into multi-tenant SaaS with Pocket ID auth and billing |
-| `/cloudflare` | Deploy a Vibes app to Cloudflare Workers (auto-configures Connect) |
+| `/sell` | Transform an app into multi-tenant SaaS with auth and billing |
+| `/cloudflare` | Deploy a Vibes app to Cloudflare Workers |
 | `/launch` | Build and deploy a SaaS app end-to-end using Agent Teams |
 | `/test` | Run end-to-end integration test with real deployment |
 
@@ -175,7 +175,7 @@ const store = createStore();
 
 A few lines. No backend. No database configuration. No tenant middleware.
 
-> **Note:** Auth credentials are managed automatically. No user-provided OIDC configuration needed.
+> **Note:** Auth credentials are managed automatically. No user-provided configuration needed.
 
 ### What This Enables
 
