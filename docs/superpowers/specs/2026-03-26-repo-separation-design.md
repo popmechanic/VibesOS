@@ -1,7 +1,7 @@
 # Repo Separation Design: VibesOS / vibes-infra / vibes-dev-tools
 
 **Date:** 2026-03-26
-**Status:** Draft (rev 2 — addressed spec review findings)
+**Status:** Draft (rev 3 — addressed second review pass)
 
 ## Summary
 
@@ -57,6 +57,7 @@ Internal development and quality tooling:
 | `scripts/build-desktop.sh` | Desktop build + sign + DMG |
 | `scripts/templates/` | nginx/systemd configs for registry server |
 | `skills/cloudflare/worker/` | Registry worker (vibes-registry, has KV namespace IDs and secrets) |
+| `scripts/deployables/` | AI proxy server deploy script (ai-proxy.js for exe.dev VMs) |
 | `skills/upload-dmg/` | DMG upload skill (depends on desktop pipeline + install worker) |
 | `vibes-desktop/` | ElectroBun desktop app |
 | `.env`, `.env.backup`, `.env.example` | Secrets and env templates |
@@ -81,6 +82,7 @@ Internal development and quality tooling:
 | `eval-test.html` | Eval test page |
 | `skills/autoresearch/` | Autoresearch skill (references eval scripts) |
 | `.claude/agents/autoresearch-*.md` | Autoresearch agent definitions |
+| `.claude/agent-memory/autoresearch-*/` | Autoresearch agent memory files |
 
 ### VibesOS keeps:
 
@@ -99,11 +101,10 @@ Internal development and quality tooling:
 | `scripts/server.ts`, `scripts/server/` | Local preview server |
 | `scripts/lib/` | Shared libraries (cli-auth, auth-constants, paths, registry, etc.) |
 | `scripts/__tests__/`, `scripts/vitest.config.js` | Tests |
-| `scripts/deployables/` | Deployable configs |
 | `scripts/package.json` | Scripts dependencies |
 | `source-templates/` | Base HTML templates |
 | `components/` | UI components |
-| `bundles/` | OIDC bridge bundle |
+| `bundles/` | Client-side bundles (OIDC bridge, AI integration, SSE parser) |
 | `build/` | Build outputs (tracked subset) |
 | `hooks/` | Plugin hooks |
 | `examples/` | Example apps |
@@ -225,7 +226,7 @@ Keep other `.claude/agents/` and all `.claude/rules/`.
 ### Remove skills that moved
 - `skills/autoresearch/` — moved to vibes-dev-tools
 - `skills/upload-dmg/` — moved to vibes-infra
-- `skills/cloudflare/worker/` — moved to vibes-infra (keep `skills/cloudflare/SKILL.md` and `skills/cloudflare/templates/`)
+- `skills/cloudflare/worker/` — moved to vibes-infra (keep `skills/cloudflare/SKILL.md`)
 
 ### Rename local directory
 `vibes-skill` → `VibesOS`
@@ -248,6 +249,7 @@ Design specs in `docs/superpowers/specs/` that relate to infrastructure (desktop
      --path scripts/install.sh \
      --path scripts/build-desktop.sh \
      --path scripts/templates/ \
+     --path scripts/deployables/ \
      --path skills/cloudflare/worker/ \
      --path skills/upload-dmg/ \
      --path vibes-desktop/ \
@@ -280,7 +282,14 @@ Design specs in `docs/superpowers/specs/` that relate to infrastructure (desktop
      --path autoresearch-vibes/ \
      --path eval/ \
      --path eval-results-playground.html \
-     --path eval-test.html
+     --path eval-test.html \
+     --path .claude/agents/autoresearch-cross-pollinator.md \
+     --path .claude/agents/autoresearch-generator.md \
+     --path .claude/agents/autoresearch-mutator.md \
+     --path .claude/agents/autoresearch-orchestrator.md \
+     --path .claude/agents/autoresearch-red-teamer.md \
+     --path .claude/agent-memory/autoresearch-cross-pollinator/ \
+     --path .claude/agent-memory/autoresearch-red-teamer/
    ```
 3. Create `CLAUDE.md` from migrated sections
 4. Create own `scripts/package.json` with eval-specific dependencies
@@ -313,7 +322,7 @@ Update memory files that reference the old monolithic structure.
 | Dev-tools scripts have hardcoded paths | Update paths to accept `VIBES_ROOT` env var pointing to VibesOS checkout |
 | Missing files discovered after split | The original repo's history is the backup — files can be recovered |
 | CI/CD needs access to multiple repos | vibes-infra CI can clone public VibesOS. Dev-tools CI can do the same. No cross-private-repo dependency. |
-| `skills/cloudflare/` partially split | Keep `SKILL.md` and `templates/` in VibesOS, move `worker/` to infra. Update `SKILL.md` to remove worker deployment instructions. |
+| `skills/cloudflare/` partially split | Keep `SKILL.md` in VibesOS, move `worker/` to infra. Update `SKILL.md` to remove worker deployment instructions. |
 | vibes-dev-tools needs its own dependencies | Create a `scripts/package.json` in dev-tools with eval-specific deps extracted from the current scripts `package.json`. |
 
 ## Notes
