@@ -1,7 +1,7 @@
 # Repo Separation Design: VibesOS / vibes-infra / vibes-dev-tools
 
 **Date:** 2026-03-26
-**Status:** Draft (rev 3 — addressed second review pass)
+**Status:** Draft (rev 4 — addressed third review pass)
 
 ## Summary
 
@@ -53,6 +53,7 @@ Internal development and quality tooling:
 | `ai-worker/` | OpenRouter AI proxy worker |
 | `alchemy/` | Pocket ID OIDC server (container + worker) |
 | `scripts/install-worker/` | DMG distribution worker |
+| `scripts/__tests__/unit/install-worker.test.js` | Install worker unit test |
 | `scripts/install.sh` | CLI install script (served by install worker) |
 | `scripts/build-desktop.sh` | Desktop build + sign + DMG |
 | `scripts/templates/` | nginx/systemd configs for registry server |
@@ -83,6 +84,8 @@ Internal development and quality tooling:
 | `skills/autoresearch/` | Autoresearch skill (references eval scripts) |
 | `.claude/agents/autoresearch-*.md` | Autoresearch agent definitions |
 | `.claude/agent-memory/autoresearch-*/` | Autoresearch agent memory files |
+| `scripts/__tests__/unit/eval-*.test.*` | Unit tests for eval scripts (6 files) |
+| `scripts/__tests__/integration/eval-*.test.*` | Integration tests for eval scripts (3 files) |
 
 ### VibesOS keeps:
 
@@ -212,7 +215,7 @@ All paths listed in the vibes-infra and vibes-dev-tools manifests.
 - Update: Deploy Workflow section — remove `dispatch-worker/` internal reference, keep client-side flow description
 
 ### Update .gitignore
-Remove entries for: `alchemy/.alchemy/`, `.env`, `.connect`, `.env.backup`, `eval/`, `dist/`, `.mcp.json`, `eval-results-playground.html`, `eval-test.html`, `wrangler.jsonc.bak`, `VIBES-SYSTEM-PROMPT-ANALYSIS.md`, `.git-backup/`, `.vibes-tmp/`.
+Remove entries for: `alchemy/.alchemy/`, `.env`, `.connect`, `.env.backup`, `eval/`, `dist/`, `.mcp.json`, `eval-results-playground.html`, `eval-test.html`, `*.jsonc.bak`, `VIBES-SYSTEM-PROMPT-ANALYSIS.md`, `.git-backup/`, `.vibes-tmp/`, `skills/cloudflare/worker/public/`.
 
 ### Update README.md
 Remove references to backend workers, update architecture description.
@@ -246,6 +249,7 @@ Design specs in `docs/superpowers/specs/` that relate to infrastructure (desktop
      --path ai-worker/ \
      --path alchemy/ \
      --path scripts/install-worker/ \
+     --path scripts/__tests__/unit/install-worker.test.js \
      --path scripts/install.sh \
      --path scripts/build-desktop.sh \
      --path scripts/templates/ \
@@ -289,7 +293,18 @@ Design specs in `docs/superpowers/specs/` that relate to infrastructure (desktop
      --path .claude/agents/autoresearch-orchestrator.md \
      --path .claude/agents/autoresearch-red-teamer.md \
      --path .claude/agent-memory/autoresearch-cross-pollinator/ \
-     --path .claude/agent-memory/autoresearch-red-teamer/
+     --path .claude/agent-memory/autoresearch-red-teamer/ \
+     --path scripts/__tests__/unit/eval-ablation.test.ts \
+     --path scripts/__tests__/unit/eval-directives.test.ts \
+     --path scripts/__tests__/unit/eval-harness.test.ts \
+     --path scripts/__tests__/unit/eval-report.test.ts \
+     --path scripts/__tests__/unit/eval-scoring.test.ts \
+     --path scripts/__tests__/unit/eval-shim.test.js \
+     --path scripts/__tests__/unit/eval-ssr-check.test.ts \
+     --path scripts/__tests__/unit/eval-static-check.test.js \
+     --path scripts/__tests__/integration/eval-assembly.test.js \
+     --path scripts/__tests__/integration/eval-pipeline.test.ts \
+     --path scripts/__tests__/integration/eval-sync-replay.test.ts
    ```
 3. Create `CLAUDE.md` from migrated sections
 4. Create own `scripts/package.json` with eval-specific dependencies
@@ -327,8 +342,10 @@ Update memory files that reference the old monolithic structure.
 
 ## Notes
 
-### Gitignored directories
+### Gitignored files and directories
 `.netlify-deploy/`, `dist/`, `.git-backup/`, `.vibes-tmp/`, `.worktrees/`, `superpowers/`, `scripts/coverage/`, `test-vibes/`, `scripts/test-app/` are local artifacts and do not appear in any manifest. They are not tracked in git and do not migrate.
+
+**Important:** Some files in the manifests are gitignored and untracked (`.env`, `.env.backup`, `.connect`, `wrangler.jsonc.bak`, `eval-results-playground.html`, `eval-test.html`). `git filter-repo` only operates on tracked history, so these paths will silently produce nothing. They must be **manually copied** from the current working directory to the new repo after filter-repo runs. The filter-repo commands include them for documentation purposes (to capture any historical commits where they were briefly tracked).
 
 ### Per-developer state
 `.claude/settings.local.json`, `.claude/agent-memory/`, `.claude/worktrees/` are per-developer and do not migrate. Each repo starts fresh.
