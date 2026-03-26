@@ -13,7 +13,10 @@
     "preview": "bun run server.ts"
   },
   "dependencies": {
+    "@babel/standalone": "^7.26.0",
     "esbuild": "^0.24.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "tinybase": "^8.0.2",
     "ws": "^8.20.0"
   },
