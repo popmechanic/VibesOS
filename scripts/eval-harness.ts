@@ -275,6 +275,120 @@ export function analyzeDataModel(jsxOrPath: string): DataModelAnalysis {
   return { aliceOps, bobOps, failures };
 }
 
+export interface EvalSpec {
+  tables: string[];
+  perUserFields: Record<string, string[]>; // table → fields that must contain user identity
+  sharedTables: string[];                  // tables where ALL data is shared (no per-user requirement)
+}
+
+export interface AssertionResult {
+  passed: boolean;
+  score: number; // 0-4 per scoring rubric
+  failures: string[];
+}
+
+/**
+ * Assert that recorded ops match the expected data model from the eval spec.
+ * Scoring rubric:
+ *   0 — no ops recorded or analysis has failures
+ *   2 — more than 3 failures
+ *   3 — some failures (1-3)
+ *   4 — all assertions pass
+ */
+export function assertDataModel(analysis: DataModelAnalysis, spec: EvalSpec): AssertionResult {
+  // If analysis itself failed, score 0 immediately
+  if (analysis.failures.length > 0) {
+    return { passed: false, score: 0, failures: analysis.failures };
+  }
+
+  const totalOps = analysis.aliceOps.length + analysis.bobOps.length;
+  if (totalOps === 0) {
+    return { passed: false, score: 0, failures: ['No ops recorded for either user'] };
+  }
+
+  const failures: string[] = [];
+
+  // Check per-user field requirements
+  for (const [table, requiredFields] of Object.entries(spec.perUserFields)) {
+    for (const field of requiredFields) {
+      // Find addRow ops for this table for each user
+      const aliceAddRow = analysis.aliceOps.find(
+        (op) => op.op === 'addRow' && op.table === table
+      );
+      const bobAddRow = analysis.bobOps.find(
+        (op) => op.op === 'addRow' && op.table === table
+      );
+
+      if (!aliceAddRow) {
+        failures.push(`Table '${table}': alice has no addRow op`);
+        continue;
+      }
+      if (!bobAddRow) {
+        failures.push(`Table '${table}': bob has no addRow op`);
+        continue;
+      }
+
+      // Invoke the row factories to get the actual row data
+      const aliceRow = aliceAddRow.rowFactory ? aliceAddRow.rowFactory() : {};
+      const bobRow = bobAddRow.rowFactory ? bobAddRow.rowFactory() : {};
+
+      // Check that the required field exists in the row
+      if (!(field in aliceRow)) {
+        failures.push(
+          `Table '${table}': alice addRow missing required per-user field '${field}'`
+        );
+      } else {
+        // Check that the field value contains alice's email substring
+        const val = String(aliceRow[field]);
+        if (!val.includes('alice')) {
+          failures.push(
+            `Table '${table}': alice addRow field '${field}' does not contain user identity (got '${val}')`
+          );
+        }
+      }
+
+      if (!(field in bobRow)) {
+        failures.push(
+          `Table '${table}': bob addRow missing required per-user field '${field}'`
+        );
+      } else {
+        const val = String(bobRow[field]);
+        if (!val.includes('bob')) {
+          failures.push(
+            `Table '${table}': bob addRow field '${field}' does not contain user identity (got '${val}')`
+          );
+        }
+      }
+    }
+  }
+
+  // Check that both users access the expected tables (reads or writes)
+  for (const table of spec.tables) {
+    const aliceAccessesTable = analysis.aliceOps.some((op) => op.table === table);
+    const bobAccessesTable = analysis.bobOps.some((op) => op.table === table);
+
+    if (!aliceAccessesTable) {
+      failures.push(`Table '${table}': alice never accesses this table`);
+    }
+    if (!bobAccessesTable) {
+      failures.push(`Table '${table}': bob never accesses this table`);
+    }
+  }
+
+  // Compute score
+  const passed = failures.length === 0;
+  let score: number;
+  if (failures.length === 0) {
+    score = 4;
+  } else if (failures.length <= 3) {
+    score = 3;
+  } else {
+    score = 2;
+  }
+
+  return { passed, score, failures };
+}
+
 // CLI entry point
 if (import.meta.main) {
   const filePath = process.argv[2];
