@@ -405,30 +405,20 @@ git commit -m "chore: add CLAUDE.md, package.json, and .gitignore for vibes-dev-
 - [ ] **Step 1: Create vibes-infra repo on GitHub**
 
 ```bash
-gh repo create popmechanic/vibes-infra --private --description "VibesOS backend infrastructure — Workers, Pocket ID, desktop app" --confirm
-```
-
-- [ ] **Step 2: Push vibes-infra**
-
-```bash
 cd /Users/marcusestes/Websites/VibesCLI/vibes-infra
-git remote add origin https://github.com/popmechanic/vibes-infra.git
-git push -u origin main
+gh repo create popmechanic/vibes-infra --private --description "VibesOS backend infrastructure — Workers, Pocket ID, desktop app" --source=. --push
 ```
 
-- [ ] **Step 3: Create vibes-dev-tools repo on GitHub**
+Expected: Repo created and pushed in one step. Verify at https://github.com/popmechanic/vibes-infra
 
-```bash
-gh repo create popmechanic/vibes-dev-tools --private --description "VibesOS eval and autoresearch tooling" --confirm
-```
-
-- [ ] **Step 4: Push vibes-dev-tools**
+- [ ] **Step 2: Create vibes-dev-tools repo on GitHub and push**
 
 ```bash
 cd /Users/marcusestes/Websites/VibesCLI/vibes-dev-tools
-git remote add origin https://github.com/popmechanic/vibes-dev-tools.git
-git push -u origin main
+gh repo create popmechanic/vibes-dev-tools --private --description "VibesOS eval and autoresearch tooling" --source=. --push
 ```
+
+Expected: Repo created and pushed. Verify at https://github.com/popmechanic/vibes-dev-tools
 
 ---
 
@@ -495,17 +485,22 @@ git rm -f scripts/__tests__/integration/eval-pipeline.test.ts
 git rm -f scripts/__tests__/integration/eval-sync-replay.test.ts
 ```
 
-Note: `.claude/agents/autoresearch-*.md` and `.claude/agent-memory/autoresearch-*/` are gitignored — delete from disk:
+Also remove tracked files under `.claude/` and `eval/` (these are tracked despite gitignore patterns):
 
 ```bash
-rm -f .claude/agents/autoresearch-*.md
-rm -rf .claude/agent-memory/autoresearch-*/
+git rm -f .claude/agents/autoresearch-cross-pollinator.md
+git rm -f .claude/agents/autoresearch-generator.md
+git rm -f .claude/agents/autoresearch-mutator.md
+git rm -f .claude/agents/autoresearch-orchestrator.md
+git rm -f .claude/agents/autoresearch-red-teamer.md
+git rm -rf .claude/agent-memory/autoresearch-cross-pollinator/
+git rm -rf .claude/agent-memory/autoresearch-red-teamer/
+git rm -rf eval/
 ```
 
-Also delete gitignored eval files from disk:
+Delete remaining untracked eval files from disk:
 
 ```bash
-rm -rf eval/
 rm -f eval-results-playground.html eval-test.html
 ```
 
@@ -517,10 +512,12 @@ rm -f VIBES-SYSTEM-PROMPT-ANALYSIS.md
 rm -f package.json  # the 59-byte root one, not scripts/package.json
 ```
 
-- [ ] **Step 4: Commit the deletions**
+- [ ] **Step 4: Clean up untracked test fixtures and commit**
 
 ```bash
 cd /Users/marcusestes/Websites/VibesCLI/vibes-skill
+# Remove untracked eval test fixtures to avoid accidentally committing them
+rm -rf scripts/__tests__/fixtures/eval-tmp/
 git add -A
 git commit -m "chore: remove infra and dev-tools code extracted to private repos
 
