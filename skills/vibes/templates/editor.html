@@ -5639,6 +5639,9 @@ window.escapeHtml = function(str) {
       if (!pendingStart) return; // stop() was called during fetch
       if (!data || !data.frames || data.frames.length === 0) return;
 
+      // Set black background now that animation data is ready
+      const overlay = document.getElementById('previewOverlay');
+      if (overlay) overlay.style.background = '#000000';
       canvas.style.display = 'block';
       startLoop(canvas, data);
     }
@@ -5668,8 +5671,7 @@ window.escapeHtml = function(str) {
     document.getElementById('previewProgressLabel').textContent = 'Starting Claude...';
     const progressFill = document.getElementById('previewProgressFill');
     if (progressFill) progressFill.style.width = '0%';
-    // Set black background for ASCII animation (avoids theme-color flash before canvas loads)
-    overlay.style.background = '#000000';
+    overlay.style.background = '';
     // Start ASCII animation (async, non-blocking — canvas appears when data loads)
     AsciiAnimation.start();
   }
@@ -5677,6 +5679,7 @@ window.escapeHtml = function(str) {
   function hidePreviewOverlay() {
     AsciiAnimation.stop();
     const overlay = document.getElementById('previewOverlay');
+    overlay.style.background = '';
     overlay.classList.add('hidden');
   }
 
