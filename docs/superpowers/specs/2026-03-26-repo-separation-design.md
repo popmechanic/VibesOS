@@ -1,7 +1,7 @@
 # Repo Separation Design: VibesOS / vibes-infra / vibes-dev-tools
 
 **Date:** 2026-03-26
-**Status:** Draft (rev 4 — addressed third review pass)
+**Status:** Draft (rev 5 — moved jwt-validation + ai-proxy test to infra)
 
 ## Summary
 
@@ -54,6 +54,10 @@ Internal development and quality tooling:
 | `alchemy/` | Pocket ID OIDC server (container + worker) |
 | `scripts/install-worker/` | DMG distribution worker |
 | `scripts/__tests__/unit/install-worker.test.js` | Install worker unit test |
+| `scripts/lib/jwt-validation.js` | JWT validation (only used by infra code) |
+| `scripts/__tests__/unit/jwt-validation.test.js` | JWT validation unit test |
+| `scripts/__tests__/unit/jwt-sync-check.test.js` | JWT sync check unit test |
+| `scripts/__tests__/unit/ai-proxy.test.js` | AI proxy unit test |
 | `scripts/install.sh` | CLI install script (served by install worker) |
 | `scripts/build-desktop.sh` | Desktop build + sign + DMG |
 | `scripts/templates/` | nginx/systemd configs for registry server |
@@ -250,6 +254,10 @@ Design specs in `docs/superpowers/specs/` that relate to infrastructure (desktop
      --path alchemy/ \
      --path scripts/install-worker/ \
      --path scripts/__tests__/unit/install-worker.test.js \
+     --path scripts/lib/jwt-validation.js \
+     --path scripts/__tests__/unit/jwt-validation.test.js \
+     --path scripts/__tests__/unit/jwt-sync-check.test.js \
+     --path scripts/__tests__/unit/ai-proxy.test.js \
      --path scripts/install.sh \
      --path scripts/build-desktop.sh \
      --path scripts/templates/ \
