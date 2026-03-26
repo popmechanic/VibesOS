@@ -1,7 +1,7 @@
 # Repo Separation Design: VibesOS / vibes-infra / vibes-dev-tools
 
 **Date:** 2026-03-26
-**Status:** Draft
+**Status:** Draft (rev 2 — addressed spec review findings)
 
 ## Summary
 
@@ -55,8 +55,11 @@ Internal development and quality tooling:
 | `scripts/install-worker/` | DMG distribution worker |
 | `scripts/install.sh` | CLI install script (served by install worker) |
 | `scripts/build-desktop.sh` | Desktop build + sign + DMG |
+| `scripts/templates/` | nginx/systemd configs for registry server |
+| `skills/cloudflare/worker/` | Registry worker (vibes-registry, has KV namespace IDs and secrets) |
+| `skills/upload-dmg/` | DMG upload skill (depends on desktop pipeline + install worker) |
 | `vibes-desktop/` | ElectroBun desktop app |
-| `.env`, `.env.backup` | Secrets |
+| `.env`, `.env.backup`, `.env.example` | Secrets and env templates |
 | `.connect` | Legacy Connect config |
 | `wrangler.jsonc`, `wrangler.jsonc.bak` | Root wrangler configs |
 
@@ -76,6 +79,7 @@ Internal development and quality tooling:
 | `eval/` | Eval data/results |
 | `eval-results-playground.html` | Eval results viewer |
 | `eval-test.html` | Eval test page |
+| `skills/autoresearch/` | Autoresearch skill (references eval scripts) |
 | `.claude/agents/autoresearch-*.md` | Autoresearch agent definitions |
 
 ### VibesOS keeps:
@@ -83,7 +87,9 @@ Internal development and quality tooling:
 | Path | Description |
 |------|-------------|
 | `.claude-plugin/` | Plugin manifest |
-| `skills/` | All skills (vibes, cloudflare, sell, launch, riff, etc.) |
+| `skills/` | User-facing skills (vibes, cloudflare, sell, launch, riff, design, test, vibes-brainstorm). Note: `skills/autoresearch/` moves to dev-tools, `skills/upload-dmg/` and `skills/cloudflare/worker/` move to infra. |
+| `plugins/` | Sub-plugins (julian) |
+| `assets/` | Static assets (images, favicon, vendor JS) |
 | `scripts/assemble.js`, `assemble-all.js`, `assemble-sell.js` | Template assembly |
 | `scripts/deploy-cloudflare.js` | CLI deploy client |
 | `scripts/merge-templates.js` | Template merge |
@@ -174,12 +180,13 @@ Sections removed from VibesOS's `CLAUDE.md` are not discarded — they seed the 
 - TinyBase API Reference
 - Environment Variables in SKILL.md
 - Critical Rules (React singleton, import map, skills are atomic)
+- Package Versions
 - Architecture: JSX + Babel
 - Local Development
 - Restarting the Preview Server
 - Testing (updated to remove eval references)
 - Non-Obvious Files (updated to remove infra files)
-- Cloudflare Deployment (client-side: the deploy script, auth flow, how apps deploy — not the server-side internals)
+- Cloudflare Deployment (client-side: the deploy script, auth flow, how apps deploy — remove `dispatch-worker/` internal reference)
 - App-Level Static Assets
 - Resetting App Sync State (user-facing troubleshooting)
 - Adding or Removing Skills
@@ -201,6 +208,7 @@ All paths listed in the vibes-infra and vibes-dev-tools manifests.
 - Remove: Non-Obvious Files entries for infra code (deploy-api/, dispatch-worker/, scripts/install-worker/)
 - Update: Agent Quick Reference table (remove infra/eval rows)
 - Update: Testing section (remove eval commands)
+- Update: Deploy Workflow section — remove `dispatch-worker/` internal reference, keep client-side flow description
 
 ### Update .gitignore
 Remove entries for: `alchemy/.alchemy/`, `.env`, `.connect`, `.env.backup`, `eval/`, `dist/`, `.mcp.json`, `eval-results-playground.html`, `eval-test.html`, `wrangler.jsonc.bak`, `VIBES-SYSTEM-PROMPT-ANALYSIS.md`, `.git-backup/`, `.vibes-tmp/`.
@@ -208,23 +216,48 @@ Remove entries for: `alchemy/.alchemy/`, `.env`, `.connect`, `.env.backup`, `eva
 ### Update README.md
 Remove references to backend workers, update architecture description.
 
-### Remove .env.example
-No env vars needed in the public repo.
-
 ### Remove stale root files (verify not tracked)
 `wrangler.jsonc`, `wrangler.jsonc.bak`, `.connect`, `.env`, `.env.backup`, `.env.example`, root `package.json` (59-byte one), `VIBES-SYSTEM-PROMPT-ANALYSIS.md`.
 
 ### Move .claude/agents/autoresearch-*.md to vibes-dev-tools
 Keep other `.claude/agents/` and all `.claude/rules/`.
 
+### Remove skills that moved
+- `skills/autoresearch/` — moved to vibes-dev-tools
+- `skills/upload-dmg/` — moved to vibes-infra
+- `skills/cloudflare/worker/` — moved to vibes-infra (keep `skills/cloudflare/SKILL.md` and `skills/cloudflare/templates/`)
+
 ### Rename local directory
 `vibes-skill` → `VibesOS`
+
+### Docs disposition
+Design specs in `docs/superpowers/specs/` that relate to infrastructure (desktop, WfP migration) or eval (eval-v2, autoresearch) stay in VibesOS as historical record. They document design decisions even if the code has moved. New infra/eval specs going forward are written in their respective repos.
 
 ## Execution Order
 
 ### Step 1: Create vibes-infra
 1. Clone current repo to a working directory
-2. Run `git filter-repo --path deploy-api/ --path dispatch-worker/ --path ai-worker/ --path alchemy/ --path scripts/install-worker/ --path scripts/install.sh --path scripts/build-desktop.sh --path vibes-desktop/ --path .env --path .env.backup --path .connect --path wrangler.jsonc --path wrangler.jsonc.bak`
+2. Run `git filter-repo` with infra paths:
+   ```
+   git filter-repo \
+     --path deploy-api/ \
+     --path dispatch-worker/ \
+     --path ai-worker/ \
+     --path alchemy/ \
+     --path scripts/install-worker/ \
+     --path scripts/install.sh \
+     --path scripts/build-desktop.sh \
+     --path scripts/templates/ \
+     --path skills/cloudflare/worker/ \
+     --path skills/upload-dmg/ \
+     --path vibes-desktop/ \
+     --path .env \
+     --path .env.backup \
+     --path .env.example \
+     --path .connect \
+     --path wrangler.jsonc \
+     --path wrangler.jsonc.bak
+   ```
 3. Create `CLAUDE.md` from migrated sections
 4. Add `scripts/setup-deps.sh` for VibesOS checkout
 5. Update `scripts/build-desktop.sh` to use `VIBES_PLUGIN_DIR`
@@ -232,9 +265,26 @@ Keep other `.claude/agents/` and all `.claude/rules/`.
 
 ### Step 2: Create vibes-dev-tools
 1. Clone current repo to a working directory
-2. Run `git filter-repo` with eval/autoresearch paths
+2. Run `git filter-repo` with eval/autoresearch paths:
+   ```
+   git filter-repo \
+     --path scripts/eval-harness.ts \
+     --path scripts/eval-parallel.ts \
+     --path scripts/eval-report.ts \
+     --path scripts/eval-scoring.ts \
+     --path scripts/eval-ssr-check.ts \
+     --path scripts/eval-static-check.js \
+     --path scripts/verify-tinybase-fixtures.mjs \
+     --path scripts/verify-tinybase-fixtures.sh \
+     --path skills/autoresearch/ \
+     --path autoresearch-vibes/ \
+     --path eval/ \
+     --path eval-results-playground.html \
+     --path eval-test.html
+   ```
 3. Create `CLAUDE.md` from migrated sections
-4. Create private GitHub repo, push
+4. Create own `scripts/package.json` with eval-specific dependencies
+5. Create private GitHub repo, push
 
 ### Step 3: Clean up VibesOS
 1. Delete extracted files from the repo
@@ -263,3 +313,16 @@ Update memory files that reference the old monolithic structure.
 | Dev-tools scripts have hardcoded paths | Update paths to accept `VIBES_ROOT` env var pointing to VibesOS checkout |
 | Missing files discovered after split | The original repo's history is the backup — files can be recovered |
 | CI/CD needs access to multiple repos | vibes-infra CI can clone public VibesOS. Dev-tools CI can do the same. No cross-private-repo dependency. |
+| `skills/cloudflare/` partially split | Keep `SKILL.md` and `templates/` in VibesOS, move `worker/` to infra. Update `SKILL.md` to remove worker deployment instructions. |
+| vibes-dev-tools needs its own dependencies | Create a `scripts/package.json` in dev-tools with eval-specific deps extracted from the current scripts `package.json`. |
+
+## Notes
+
+### Gitignored directories
+`.netlify-deploy/`, `dist/`, `.git-backup/`, `.vibes-tmp/`, `.worktrees/`, `superpowers/`, `scripts/coverage/`, `test-vibes/`, `scripts/test-app/` are local artifacts and do not appear in any manifest. They are not tracked in git and do not migrate.
+
+### Per-developer state
+`.claude/settings.local.json`, `.claude/agent-memory/`, `.claude/worktrees/` are per-developer and do not migrate. Each repo starts fresh.
+
+### OpenRouter API key
+All OpenRouter usage goes through the `ai-worker/` proxy (vibes-infra). Users do not configure API keys client-side. The `.env.example` removal from VibesOS is correct.
