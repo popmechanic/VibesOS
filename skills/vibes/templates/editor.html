@@ -1078,11 +1078,12 @@
     /* === PHASE 3: EDIT === */
     .edit-phase { flex-direction: row; }
 
-    /* Preview Panel */
+    /* Preview Panel — fixed 960×720 (4:3, maps to 1920×1440 on Retina) */
     .preview-panel {
-      flex: 0 0 72%;
+      flex: 0 0 960px;
+      width: 960px;
       position: relative;
-      background: #fff;
+      background: var(--vibes-near-black);
       overflow: hidden;
       border-right: 2px solid var(--vibes-near-black);
     }

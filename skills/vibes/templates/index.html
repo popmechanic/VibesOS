@@ -3359,15 +3359,44 @@ if (typeof window !== 'undefined') {
           }
 
           function handlePublicLinkRequest() {
+            // Return cached link immediately if available
             if (joinLinkRef.current) {
               document.dispatchEvent(new CustomEvent('vibes-public-link-success', {
                 detail: { link: joinLinkRef.current }
               }));
-            } else {
-              document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
-                detail: { error: { message: 'No invite link available. Redeploy the app to generate one.' } }
-              }));
+              return;
             }
+            // Live fetch — the mount-time fetch may have missed the token
+            var ctx = getContext();
+            if (!ctx) {
+              document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
+                detail: { error: { message: 'Not signed in. Please sign in and try again.' } }
+              }));
+              return;
+            }
+            fetch(ctx.deployApiUrl + '/status/' + encodeURIComponent(ctx.appName), {
+                headers: { 'Authorization': 'Bearer ' + ctx.accessToken }
+              })
+              .then(function(r) { return r.ok ? r.json() : null; })
+              .then(function(data) {
+                var token = data && data.publicInvite && data.publicInvite.token;
+                if (typeof token === 'string' && token.length > 0) {
+                  joinLinkRef.current = ctx.deployApiUrl + '/join/' +
+                    encodeURIComponent(ctx.appName) + '/' + token;
+                  document.dispatchEvent(new CustomEvent('vibes-public-link-success', {
+                    detail: { link: joinLinkRef.current }
+                  }));
+                } else {
+                  document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
+                    detail: { error: { message: 'No invite link available. Redeploy the app to generate one.' } }
+                  }));
+                }
+              })
+              .catch(function() {
+                document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
+                  detail: { error: { message: 'Could not fetch invite link. Check your connection.' } }
+                }));
+              });
           }
 
           document.addEventListener('vibes-share-request', handleShareRequest);

@@ -46,6 +46,24 @@ fi
 #    clips only transparent pixels.
 echo "[3/5] Pre-masking app icon..."
 ICONSET_DIR="$DESKTOP_DIR/icon.iconset"
+ICON_MASK_STAMP="$DESKTOP_DIR/icon.iconset/.mask-stamp"
+
+# Skip masking if no icon PNG is newer than the stamp file
+ICONS_CHANGED=false
+if [ ! -f "$ICON_MASK_STAMP" ]; then
+  ICONS_CHANGED=true
+else
+  for png in "$ICONSET_DIR"/*.png; do
+    if [ "$png" -nt "$ICON_MASK_STAMP" ]; then
+      ICONS_CHANGED=true
+      break
+    fi
+  done
+fi
+
+if [ "$ICONS_CHANGED" = false ]; then
+  echo "  Icons up to date, skipping mask."
+else
 swift -e '
 import AppKit
 import CoreGraphics
@@ -97,6 +115,8 @@ for file in files {
 }
 print("  Masked \(files.count) icon PNGs")
 '
+touch "$ICON_MASK_STAMP"
+fi
 
 # 4. Build ElectroBun app (clean build — ElectroBun caches compiled TS)
 echo "[4/5] Building ElectroBun app (includes plugin bundling)..."

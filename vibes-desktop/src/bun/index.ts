@@ -211,7 +211,7 @@ async function main() {
 		},
 		// Start with setup page or loading splash — server URL loaded after ready
 		html: needsSetup ? makeSetupHtml(getSetupSessionToken()) : LOADING_HTML,
-		frame: { width: 1280, height: 820 },
+		frame: { width: 1310, height: 804 },
 	});
 
 	// Hide native zoom + miniaturize buttons as early as possible.
