@@ -1830,6 +1830,7 @@
     .preview-overlay.hidden { opacity: 0; pointer-events: none; }
     .preview-overlay .preview-progress-label {
       font-size: 0.8125rem; color: #999; margin-bottom: 0.5rem; font-weight: 600;
+      position: relative; z-index: 1; text-shadow: 0 0 8px rgba(0,0,0,0.8), 0 0 16px rgba(0,0,0,0.6);
     }
     .preview-overlay .preview-progress-bar {
       width: 60%; max-width: 240px; height: 4px; background: #333;
@@ -1842,10 +1843,17 @@
     .preview-overlay .vibes-logo-loader {
       width: 64px; height: 64px; margin-bottom: 1rem;
       opacity: 0.6; animation: vibesLogoPulse 2s ease-in-out infinite;
+      position: relative; z-index: 1;
     }
     @keyframes vibesLogoPulse {
       0%, 100% { opacity: 0.4; transform: scale(0.95); }
       50% { opacity: 0.8; transform: scale(1.05); }
+    }
+    .preview-overlay #asciiCanvas {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      display: none;
     }
 
     /* Animation category bar */
@@ -3057,6 +3065,7 @@
     <!-- Preview -->
     <div class="preview-panel" id="previewPanel" style="position:relative;">
       <div class="preview-overlay hidden" id="previewOverlay">
+        <canvas id="asciiCanvas"></canvas>
         <svg class="vibes-logo-loader" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 133 28.7" style="width:120px;">
           <path fill="#231f20" d="M15.1,5.9c2.8-.7,2.3,1.6,1.4,3.4-.8,1.9-1.8,4.3-2.6,6.2-.5,1.1-.9,2.1-1.4,3.3-.9,2.1-1.5,4.2-3.6,4.3-3.6.1-4.2-5.3-5.8-8.3-.9-2.2-2-4.6-2.8-6.7-.2-.5-.3-1.2-.1-1.6.3-.9,1.9-.8,2.7-.2,2.2,2.1,3,6,4.4,8.6.4,1,1.3,3,2.1,1.4,1-1.9,2.3-5.4,3.5-7.9.5-1,1.1-2,2.1-2.5h.2Z"/>
           <path fill="#231f20" d="M20.1,22.9c-.2,0-.3-.2-.3-.3-.1-2.2,0-6.1,0-9,0-3.2,0-6.2,0-7.3,0-.7.8-.6,1.4-.6.9,0,2.1-.2,2,1.1,0,3,0,12.8,0,15.4.1,1.3-2.3.8-3,.8h0Z"/>
