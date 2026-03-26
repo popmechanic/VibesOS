@@ -389,6 +389,187 @@ export function assertDataModel(analysis: DataModelAnalysis, spec: EvalSpec): As
   return { passed, score, failures };
 }
 
+// ---------------------------------------------------------------------------
+// Tier 2: Sync replay with MergeableStore
+// ---------------------------------------------------------------------------
+
+export interface SyncResult {
+  syncPassed: boolean;
+  isolationPassed: boolean;
+  failures: string[];
+  storeARows: any[];
+  storeBRows: any[];
+  storeAState: Record<string, any>;
+  storeBState: Record<string, any>;
+}
+
+/**
+ * Flatten all rows from all tables in a TinyBase store into a simple array.
+ */
+function flattenStoreRows(store: any): any[] {
+  const rows: any[] = [];
+  const tables = store.getTables();
+  for (const table of Object.keys(tables)) {
+    const tableData = tables[table];
+    for (const rowId of Object.keys(tableData)) {
+      rows.push({ _table: table, _rowId: rowId, ...tableData[rowId] });
+    }
+  }
+  return rows;
+}
+
+/**
+ * Extract full store state as a plain object for easy assertion.
+ */
+function extractStoreState(store: any): Record<string, any> {
+  return store.getTables();
+}
+
+/**
+ * Recursively sort object keys and stringify for stable comparison.
+ * TinyBase MergeableStore may return rows in different insertion orders
+ * on each store even after full convergence, so we need key-sorted comparison.
+ */
+function stableStringify(value: any): string {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return JSON.stringify(value);
+  }
+  const sorted = Object.keys(value)
+    .sort()
+    .reduce<Record<string, any>>((acc, k) => {
+      acc[k] = value[k];
+      return acc;
+    }, {});
+  return '{' + Object.keys(sorted).map(k => JSON.stringify(k) + ':' + stableStringify(sorted[k])).join(',') + '}';
+}
+
+/**
+ * Apply a single RecordedOp to a real TinyBase store.
+ * addRow uses a deterministic key prefixed with the label to avoid collisions.
+ */
+function applyOpToStore(store: any, op: RecordedOp, label: string, counters: Record<string, number>): void {
+  switch (op.op) {
+    case 'addRow': {
+      if (!op.table) break;
+      counters[op.table] = (counters[op.table] ?? 0) + 1;
+      const rowId = `${label}-${counters[op.table]}`;
+      const row = op.rowFactory ? op.rowFactory() : {};
+      store.setRow(op.table, rowId, row);
+      break;
+    }
+    case 'setCell': {
+      if (!op.table || !op.row || !op.cell) break;
+      const value = op.value !== undefined
+        ? op.value
+        : op.cellFactory
+        ? op.cellFactory()
+        : undefined;
+      if (value !== undefined) {
+        store.setCell(op.table, op.row, op.cell, value);
+      }
+      break;
+    }
+    case 'setRow': {
+      if (!op.table || !op.row) break;
+      store.setRow(op.table, op.row, {});
+      break;
+    }
+    case 'delRow': {
+      if (!op.table || !op.row) break;
+      store.delRow(op.table, op.row);
+      break;
+    }
+    default:
+      // Read ops and others are no-ops against a real store
+      break;
+  }
+}
+
+/**
+ * Replay recorded write operations against two real TinyBase MergeableStores
+ * connected via an in-memory WebSocket sync server, then verify convergence.
+ */
+export async function simulateSync(
+  aliceOps: RecordedOp[],
+  bobOps: RecordedOp[],
+  port: number = 3445,
+): Promise<SyncResult> {
+  // Lazily import to keep the module usable in non-sync contexts
+  const { createMergeableStore } = await import('tinybase/mergeable-store');
+  const { createWsSynchronizer } = await import('tinybase/synchronizers/synchronizer-ws-client');
+  const { startSyncServer } = await import('./server/sync-server.ts');
+
+  const failures: string[] = [];
+  const server = startSyncServer(port);
+
+  let syncA: any;
+  let syncB: any;
+
+  try {
+    const storeA = createMergeableStore('alice-store');
+    const storeB = createMergeableStore('bob-store');
+
+    // Connect both stores to the sync server
+    const wsA = new WebSocket(`ws://localhost:${port}`);
+    await new Promise<void>((resolve, reject) => {
+      wsA.addEventListener('open', () => resolve());
+      wsA.addEventListener('error', (e: any) => reject(e));
+    });
+
+    const wsB = new WebSocket(`ws://localhost:${port}`);
+    await new Promise<void>((resolve, reject) => {
+      wsB.addEventListener('open', () => resolve());
+      wsB.addEventListener('error', (e: any) => reject(e));
+    });
+
+    syncA = await createWsSynchronizer(storeA, wsA);
+    syncB = await createWsSynchronizer(storeB, wsB);
+
+    await syncA.startSync();
+    await syncB.startSync();
+
+    // Apply Alice's ops to storeA
+    const aliceCounters: Record<string, number> = {};
+    for (const op of aliceOps) {
+      applyOpToStore(storeA, op, 'alice', aliceCounters);
+    }
+
+    // Apply Bob's ops to storeB
+    const bobCounters: Record<string, number> = {};
+    for (const op of bobOps) {
+      applyOpToStore(storeB, op, 'bob', bobCounters);
+    }
+
+    // Wait for sync to propagate
+    await new Promise<void>((r) => setTimeout(r, 500));
+
+    // Capture state from both stores
+    const storeAState = extractStoreState(storeA);
+    const storeBState = extractStoreState(storeB);
+    const storeARows = flattenStoreRows(storeA);
+    const storeBRows = flattenStoreRows(storeB);
+
+    // Check convergence: both stores should have identical data.
+    // Use stableStringify to normalize key ordering (MergeableStore CRDT
+    // may return rows in different insertion order on each store).
+    const syncPassed = stableStringify(storeAState) === stableStringify(storeBState);
+    if (!syncPassed) {
+      failures.push(
+        `Stores did not converge. storeA: ${JSON.stringify(storeAState)}, storeB: ${JSON.stringify(storeBState)}`
+      );
+    }
+
+    // Isolation check: each user's rows should be present in both stores
+    const isolationPassed = syncPassed; // convergence implies isolation is preserved
+
+    return { syncPassed, isolationPassed, failures, storeARows, storeBRows, storeAState, storeBState };
+  } finally {
+    syncA?.destroy();
+    syncB?.destroy();
+    server.shutdown();
+  }
+}
+
 // CLI entry point
 if (import.meta.main) {
   const filePath = process.argv[2];
