@@ -4062,6 +4062,8 @@ window.escapeHtml = function(str) {
         if (privateEnabled && currentAppName) {
           try { localStorage.setItem('vibes_private_' + currentAppName, '1'); } catch {}
         }
+        // Start ASCII animation now that code generation is beginning (after brainstorm)
+        AsciiAnimation.start();
       } else if (msg.type === 'app_updated') {
         console.log('[app_updated] phase:', currentPhase, 'isGenerating:', isGenerating);
         setThinking(false);
@@ -5672,8 +5674,6 @@ window.escapeHtml = function(str) {
     const progressFill = document.getElementById('previewProgressFill');
     if (progressFill) progressFill.style.width = '0%';
     overlay.style.background = '';
-    // Start ASCII animation (async, non-blocking — canvas appears when data loads)
-    AsciiAnimation.start();
   }
 
   function hidePreviewOverlay() {
