@@ -1,0 +1,166 @@
+# Contributing to VibesOS
+
+This guide covers how to develop, test, and contribute to the VibesOS plugin.
+
+## Development Setup
+
+### Prerequisites
+
+- Node.js 18+ (uses native fetch)
+- Claude Code CLI installed
+- Git
+
+### Clone and Install
+
+```bash
+git clone https://github.com/popmechanic/VibesOS.git
+cd VibesOS
+cd scripts && npm install
+```
+
+### Local Development
+
+For testing changes locally without publishing:
+
+```bash
+# Load plugin from local directory (no install needed)
+claude --plugin .
+```
+
+This loads skills and commands from your local checkout, so you can test changes without publishing.
+
+## Project Structure
+
+```
+VibesOS/
+├── .claude-plugin/          # Plugin manifest
+│   ├── plugin.json          # Main config (version here)
+│   └── marketplace.json     # Marketplace metadata (version here too)
+├── skills/                  # Model-invoked skills
+│   ├── vibes/SKILL.md       # Core app generation
+│   ├── riff/SKILL.md        # Parallel variations
+│   ├── sell/SKILL.md        # SaaS transformation
+│   ├── cloudflare/SKILL.md  # Cloudflare Workers deployment
+│   └── launch/SKILL.md      # End-to-end SaaS pipeline
+├── scripts/                 # Node.js utilities
+│   ├── assemble.js          # JSX → HTML assembly
+│   └── __tests__/           # Test suite
+├── build/                   # Build output (gitignored)
+└── skills/vibes/defaults/   # Shipped defaults (git-tracked)
+```
+
+## Running Tests
+
+```bash
+cd scripts
+
+# All tests
+npm test
+
+# Unit tests only (fastest)
+npm run test:unit
+
+# Integration tests (with mocks)
+npm run test:integration
+
+# E2E local server
+npm run test:e2e:server
+```
+
+### Test Structure
+
+- **Unit tests** (`__tests__/unit/`): Pure functions, no I/O
+- **Integration tests** (`__tests__/integration/`): Use mocks from `mocks/`
+- **E2E tests** (`__tests__/e2e/`): Local server for manual testing
+
+## Adding a New Skill
+
+1. Create `skills/yourskill/SKILL.md` with YAML frontmatter:
+   ```yaml
+   ---
+   name: yourskill
+   description: What triggers this skill
+   ---
+   ```
+
+2. Write the skill instructions in Markdown
+
+3. If the skill needs templates, create `skills/yourskill/templates/`
+
+4. Update CLAUDE.md with the new skill in the File Reference table
+
+## Adding a New Command
+
+1. Create `commands/yourcommand.md` with YAML frontmatter:
+   ```yaml
+   ---
+   name: yourcommand
+   description: What this command does
+   ---
+   ```
+
+2. Write usage instructions in Markdown
+
+3. If the command needs a script, add it to `scripts/`
+
+4. Update CLAUDE.md with the new command
+
+## Version Bumping
+
+When releasing a new version, update **both** files:
+
+1. `.claude-plugin/plugin.json`
+2. `.claude-plugin/marketplace.json` (in the `plugins` array)
+
+Both must have matching version numbers.
+
+```bash
+# Example: bump to 0.1.18
+# Edit plugin.json line 4: "version": "0.1.18"
+# Edit marketplace.json plugins array: "version": "0.1.18"
+```
+
+## Pull Request Guidelines
+
+1. **One feature per PR**: Keep changes focused
+
+2. **Update documentation**: If you change behavior, update CLAUDE.md
+
+3. **Test your changes**: Run the test suite
+
+4. **Version bump**: Only maintainers bump versions
+
+5. **Commit messages**: Be descriptive, no Claude Code credits
+
+## Code Style
+
+- ES modules (`type: "module"` in package.json)
+- Use `async/await` over callbacks
+- Error messages should be actionable
+
+## Common Tasks
+
+### Rebuild Templates
+
+```bash
+cd scripts
+node build-components.js --force
+node merge-templates.js --force
+```
+
+### Test a Generated App
+
+```bash
+# Generate an app
+# (use /vibes:vibes in Claude Code)
+
+# Open in browser
+open index.html
+
+# Check console for errors
+```
+
+## Questions?
+
+- [Discord](https://discord.gg/vnpWycj4Ta) - Join the community
+- [GitHub Issues](https://github.com/popmechanic/VibesOS/issues) - Report bugs

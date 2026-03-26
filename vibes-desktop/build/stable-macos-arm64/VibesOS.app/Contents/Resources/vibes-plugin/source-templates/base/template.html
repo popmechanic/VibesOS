@@ -1,0 +1,576 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>__TITLE__</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/vibes-favicon/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/assets/vibes-favicon/favicon-96x96.png" />
+    <link rel="icon" type="image/x-icon" href="/assets/vibes-favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/vibes-favicon/apple-touch-icon.png" />
+    <link rel="manifest" href="/assets/vibes-favicon/site.webmanifest" />
+    <script>globalThis.process = { env: { NODE_ENV: "production" } };</script>
+    <script>
+      // Console capture ring buffer — feeds error context to AppErrorBoundary
+      (function() {
+        var MAX = 20;
+        var buf = window.__VIBES_CONSOLE_LOG__ = [];
+        var _log = console.log, _warn = console.warn, _err = console.error;
+        function capture(level, origFn, args) {
+          if (buf.length >= MAX) buf.shift();
+          buf.push({ level: level, message: [].slice.call(args).map(String).join(' '), timestamp: Date.now() });
+          origFn.apply(console, args);
+        }
+        console.log = function() { capture('log', _log, arguments); };
+        console.warn = function() { capture('warn', _warn, arguments); };
+        console.error = function() { capture('error', _err, arguments); };
+      })();
+    </script>
+    <script src="https://unpkg.com/@babel/standalone@7.26.0/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+      /* === DESIGN_TOKENS_PLACEHOLDER === */
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --vibes-button-bg-dark-aware: #2a2a2a;
+          --vibes-button-text-dark-aware: var(--vibes-gray-ultralight);
+          --vibes-button-border-dark-aware: var(--vibes-gray-mid);
+          --vibes-button-icon-bg-dark-aware: #404040;
+        }
+      }
+
+      /* Admin menu overrides - scoped to VibesPanel in HiddenMenuWrapper */
+      #hidden-menu {
+        /* Gray scale needed by components */
+        --vibes-gray-lighter: #cccccc;
+        --vibes-gray-pale: #e5e5e5;
+        --vibes-gray-dark: #333333;
+
+        /* Variant colors (fix yellow being red) */
+        --vibes-variant-blue: #3b82f6;
+        --vibes-variant-red: #ef4444;
+        --vibes-variant-yellow: #eab308;
+
+        /* Button styling */
+        --vibes-button-bg: var(--vibes-cream);
+        --vibes-button-text: var(--vibes-near-black);
+        --vibes-button-border: var(--vibes-near-black);
+        --vibes-button-icon-bg: #2a2a2a;
+        --vibes-button-icon-fill: var(--vibes-white);
+
+        /* Dark-aware variants (used when ignoreDarkMode=false) */
+        --vibes-button-bg-dark-aware: var(--vibes-cream);
+        --vibes-button-text-dark-aware: var(--vibes-near-black);
+        --vibes-button-border-dark-aware: var(--vibes-near-black);
+        --vibes-button-icon-bg-dark-aware: var(--vibes-white);
+
+        /* Card styling */
+        --vibes-card-bg: var(--vibes-gray-pale);
+        --vibes-card-text: var(--vibes-near-black);
+        --vibes-card-border: var(--vibes-near-black);
+
+        /* Text */
+        --vibes-text-primary: var(--vibes-gray-dark);
+
+        /* Shadows */
+        --vibes-shadow-color: var(--vibes-near-black);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        #hidden-menu {
+          --vibes-button-bg-dark-aware: #2a2a2a;
+          --vibes-button-text-dark-aware: var(--vibes-gray-ultralight);
+          --vibes-button-border-dark-aware: var(--vibes-gray-mid);
+          --vibes-button-icon-bg-dark-aware: #404040;
+          --vibes-card-bg: var(--vibes-near-black);
+          --vibes-card-text: var(--vibes-white);
+          --vibes-card-border: var(--vibes-gray-mid);
+        }
+      }
+
+      /* VibesSwitch toggle button - override app-level button styling */
+      button[aria-controls="hidden-menu"] {
+        background: transparent !important;
+        background-color: transparent !important;
+        padding: 0 !important;
+        border: none !important;
+      }
+
+      /* Sync status indicator animations */
+      @keyframes vibes-sync-pulse {
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+        100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+      }
+      @keyframes vibesDelayedFadeIn { to { opacity: 1 } }
+
+      /* Full-viewport background wrapper — picks up app's --color-background */
+      #container {
+        min-height: 100vh;
+        background: var(--color-background, #1a1a1a);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container"></div>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/stable/react@19.2.4",
+          "react/jsx-runtime": "https://esm.sh/stable/react@19.2.4/jsx-runtime",
+          "react/jsx-dev-runtime": "https://esm.sh/stable/react@19.2.4/jsx-dev-runtime",
+          "react-dom": "https://esm.sh/stable/react-dom@19.2.4",
+          "react-dom/client": "https://esm.sh/stable/react-dom@19.2.4/client",
+          "tinybase": "https://esm.sh/tinybase@8?external=react,react-dom",
+          "tinybase/mergeable-store": "https://esm.sh/tinybase@8/mergeable-store?external=react,react-dom",
+          "tinybase/ui-react": "https://esm.sh/tinybase@8/ui-react?external=react,react-dom",
+          "tinybase/persisters/persister-browser": "https://esm.sh/tinybase@8/persisters/persister-browser?external=react,react-dom",
+          "tinybase/synchronizers/synchronizer-ws-client": "https://esm.sh/tinybase@8/synchronizers/synchronizer-ws-client?external=react,react-dom",
+          "oauth4webapi": "https://esm.sh/stable/oauth4webapi@3.3.0"
+        }
+      }
+    </script>
+    <script>
+      window.__APP_CONFIG__ = {
+        appName: "__APP_NAME__",
+        wsUrl: "__WS_URL__",
+        public: __APP_PUBLIC__,
+        oidcAuthority: "__OIDC_AUTHORITY__",
+        oidcClientId: "__OIDC_CLIENT_ID__",
+        deployApiUrl: "__DEPLOY_API_URL__",
+        aiProxyUrl: "__AI_PROXY_URL__"
+      };
+      // Default: single theme hides the Design button in VibesPanel.
+      // Apps with multiple themes override this before menu loads.
+      window.__VIBES_THEMES__ = [{ id: "default", name: "Default" }];
+    </script>
+    <!-- Load React globally for menu components -->
+    <script type="module">
+      import * as React from "react";
+      window.React = React;
+
+      // === COMPONENTS_PLACEHOLDER ===
+
+      // === Shared Error Components ===
+      function ConfigError({ message }) {
+        // Use AuthScreen if available, fallback to simple div
+        if (window.AuthScreen) {
+          return React.createElement(window.AuthScreen, {
+            title: 'Configuration Error',
+            message: message,
+            showCard: false,
+            isError: true,
+            errorDetails: 'Run Connect setup to configure OIDC credentials.'
+          },
+            React.createElement('p', { style: { color: 'var(--comp-accent-red, #7f1d1d)', fontSize: '0.875rem' } },
+              'Check your .env file for missing OIDC credentials.'
+            )
+          );
+        }
+        // Fallback for when AuthScreen hasn't loaded
+        return React.createElement('div', { className: 'min-h-screen flex items-center justify-center bg-gray-50' },
+          React.createElement('div', { className: 'text-center p-8 bg-white rounded-xl shadow-lg max-w-md border border-red-200' },
+            React.createElement('div', { className: 'text-red-500 text-4xl mb-4' }, '⚠️'),
+            React.createElement('h1', { className: 'text-xl font-bold text-red-700 mb-4' }, 'Configuration Error'),
+            React.createElement('p', { className: 'text-gray-600 mb-4' }, message),
+            React.createElement('p', { className: 'text-sm text-gray-500' }, 'Run Connect setup to configure OIDC credentials.')
+          )
+        );
+      }
+      window.ConfigError = ConfigError;
+
+      function LoadingError({ error }) {
+        // Use AuthScreen if available, fallback to simple div
+        if (window.AuthScreen) {
+          return React.createElement(window.AuthScreen, {
+            title: 'Loading Failed',
+            message: 'Failed to load authentication components. Check your network connection and try refreshing the page.',
+            showCard: false,
+            isError: true,
+            errorDetails: error
+          },
+            React.createElement('button', {
+              onClick: function() { window.location.reload(); },
+              style: {
+                padding: '0.75rem 1.5rem',
+                backgroundColor: 'var(--comp-accent-red, #ef4444)',
+                color: 'var(--comp-accent-text, white)',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '500'
+              }
+            }, 'Retry')
+          );
+        }
+        // Fallback for when AuthScreen hasn't loaded
+        return React.createElement('div', { className: 'min-h-screen flex items-center justify-center bg-gray-50' },
+          React.createElement('div', { className: 'text-center p-8 bg-white rounded-xl shadow-lg max-w-md border border-amber-200' },
+            React.createElement('div', { className: 'text-amber-500 text-4xl mb-4' }, '⚡'),
+            React.createElement('h1', { className: 'text-xl font-bold text-amber-700 mb-4' }, 'Loading Failed'),
+            React.createElement('p', { className: 'text-gray-600 mb-4' }, 'Failed to load authentication components.'),
+            React.createElement('p', { className: 'text-sm text-gray-500 mb-4' }, 'Check your network connection and try refreshing the page.'),
+            React.createElement('details', { className: 'text-left text-xs text-gray-400' },
+              React.createElement('summary', { className: 'cursor-pointer' }, 'Technical details'),
+              React.createElement('pre', { className: 'mt-2 p-2 bg-gray-100 rounded overflow-auto' }, error)
+            )
+          )
+        );
+      }
+      window.LoadingError = LoadingError;
+
+      // === SyncStatusDot ===
+      // Renders a fixed-position sync status indicator in the top-right corner.
+      // Reads status from window.__VIBES_SYNC_STATUS__ via a custom event bridge.
+      // Activates automatically when the app connects to the sync server.
+      var SYNC_STATUS_COLORS = {
+        idle: '#94a3b8',
+        connecting: '#eab308',
+        synced: '#22c55e',
+        reconnecting: '#eab308',
+        error: '#ef4444'
+      };
+      var SYNC_STATUS_LABELS = {
+        idle: '',
+        connecting: 'connecting',
+        synced: 'synced',
+        reconnecting: 'reconnecting',
+        error: 'offline'
+      };
+
+      function SyncStatusDot() {
+        var statusRef = React.useRef(window.__VIBES_SYNC_STATUS__ || 'idle');
+        var errorRef = React.useRef(window.__VIBES_SYNC_ERROR__ || null);
+        var _s = React.useState(0);
+        var forceUpdate = _s[1];
+
+        React.useEffect(function() {
+          function onStatusChange() {
+            var next = window.__VIBES_SYNC_STATUS__ || 'idle';
+            statusRef.current = next;
+            errorRef.current = window.__VIBES_SYNC_ERROR__ || null;
+            forceUpdate(function(n) { return n + 1; });
+          }
+          window.addEventListener('vibes-sync-status-change', onStatusChange);
+          return function() {
+            window.removeEventListener('vibes-sync-status-change', onStatusChange);
+          };
+        }, []);
+
+        var status = statusRef.current;
+        var syncError = errorRef.current;
+        var color = SYNC_STATUS_COLORS[status] || '#94a3b8';
+        var label = SYNC_STATUS_LABELS[status] || '';
+        // Append truncated error detail for error state
+        if (status === 'error' && syncError) {
+          var shortErr = syncError.length > 60 ? syncError.slice(0, 60) + '\u2026' : syncError;
+          label = label + ' \u2014 ' + shortErr;
+        }
+        var isIdle = status === 'idle';
+        var isSynced = status === 'synced';
+
+        // Pill container — fixed top-right, frosted glass
+        var containerStyle = {
+          position: 'fixed',
+          top: '12px',
+          right: '12px',
+          zIndex: 50,
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          background: 'color-mix(in srgb, var(--comp-bg, rgb(245, 245, 244)) 60%, transparent)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          padding: '6px 12px',
+          borderRadius: '100px',
+          border: '1px solid color-mix(in srgb, var(--comp-border, black) 3%, transparent)',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontSize: '12px',
+          fontWeight: '500',
+          letterSpacing: '0.01em',
+          userSelect: 'none',
+          opacity: isIdle ? 0.4 : 1,
+          transition: 'opacity 0.3s ease'
+        };
+
+        // Status light wrapper — relative for positioning pulse ring
+        var lightWrapperStyle = {
+          position: 'relative',
+          width: '8px',
+          height: '8px'
+        };
+
+        // Pulse ring — only rendered when synced
+        var pulseRingStyle = {
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '100%',
+          height: '100%',
+          borderRadius: '50%',
+          backgroundColor: color,
+          animation: 'vibes-sync-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1)'
+        };
+
+        // Status light — 8px solid dot
+        var dotStyle = {
+          width: '8px',
+          height: '8px',
+          borderRadius: '50%',
+          backgroundColor: color,
+          position: 'relative',
+          transition: 'background-color 0.4s ease'
+        };
+
+        // Label text
+        var labelStyle = {
+          color: 'var(--comp-text, #111111)',
+          paddingTop: '1px',
+          letterSpacing: '0.01em'
+        };
+
+        return React.createElement('div', {
+          style: containerStyle,
+          'aria-hidden': 'true',
+          title: 'Sync: ' + status + (syncError ? ' \u2014 ' + syncError : '')
+        },
+          React.createElement('div', { style: lightWrapperStyle },
+            isSynced ? React.createElement('div', { style: pulseRingStyle }) : null,
+            React.createElement('div', { style: dotStyle })
+          ),
+          label ? React.createElement('span', { style: labelStyle }, label) : null
+        );
+      }
+      window.SyncStatusDot = SyncStatusDot;
+
+      // === SharingBridge ===
+      // Listens for VibesPanel DOM events and calls Deploy API endpoints.
+      // Event listeners are ALWAYS registered — state is resolved at event time,
+      // not render time, to avoid timing issues with React context and OIDC.
+      function SharingBridge() {
+        var joinLinkRef = React.useRef(null);
+
+        // Helper: read current auth + config at call time (not render time).
+        // Does NOT call React hooks — safe to use in event handlers.
+        function getContext() {
+          var config = window.__APP_CONFIG__ || {};
+          var appName = config.appName;
+          var deployApiUrl = config.deployApiUrl;
+          if (!appName || appName === '__APP' + '_NAME__' || !deployApiUrl || deployApiUrl.startsWith('__')) {
+            return null;
+          }
+          var accessToken = window.__VIBES_OIDC_TOKEN__;
+          if (!accessToken) return null;
+          return { appName: appName, deployApiUrl: deployApiUrl, accessToken: accessToken };
+        }
+
+        // Fetch existing public link on mount
+        React.useEffect(function() {
+          var ctx = getContext();
+          if (!ctx) return;
+          fetch(ctx.deployApiUrl + '/status/' + encodeURIComponent(ctx.appName), {
+              headers: { 'Authorization': 'Bearer ' + ctx.accessToken }
+            })
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(data) {
+              var token = data && data.publicInvite && data.publicInvite.token;
+              if (typeof token === 'string' && token.length > 0) {
+                joinLinkRef.current = ctx.deployApiUrl + '/join/' +
+                  encodeURIComponent(ctx.appName) + '/' + token;
+                console.debug('[SharingBridge] Cached public link');
+              }
+            })
+            .catch(function(err) {
+              console.warn('[SharingBridge] Failed to fetch public link:', err);
+            });
+        }, []);
+
+        // Always register event listeners — resolve state at event time
+        React.useEffect(function() {
+          function handleShareRequest(e) {
+            var ctx = getContext();
+            if (!ctx) {
+              console.warn('[SharingBridge] share-request but no auth context');
+              document.dispatchEvent(new CustomEvent('vibes-share-error', {
+                detail: { error: { message: 'Not signed in. Please sign in and try again.' } }
+              }));
+              return;
+            }
+            var detail = e.detail || {};
+            var email = detail.email;
+            if (!email) return;
+            console.debug('[SharingBridge] Inviting ' + email);
+            fetch(ctx.deployApiUrl + '/apps/' + encodeURIComponent(ctx.appName) + '/invite', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer ' + ctx.accessToken,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ email: email })
+            })
+            .then(function(r) {
+              if (!r.ok) return r.text().then(function(t) {
+                try { var err = JSON.parse(t); throw new Error(err.error || 'Invite failed'); }
+                catch(e) { if (e instanceof SyntaxError) throw new Error('Invite failed (server error)'); throw e; }
+              });
+              return r.json();
+            })
+            .then(function(data) {
+              document.dispatchEvent(new CustomEvent('vibes-share-success', {
+                detail: {
+                  email: email,
+                  message: 'Invitation sent to ' + email + '!',
+                  link: data.inviteUrl || ''
+                }
+              }));
+            })
+            .catch(function(err) {
+              document.dispatchEvent(new CustomEvent('vibes-share-error', {
+                detail: { error: { message: err.message || 'Failed to send invitation.' } }
+              }));
+            });
+          }
+
+          function handlePublicLinkRequest() {
+            // Return cached link immediately if available
+            if (joinLinkRef.current) {
+              document.dispatchEvent(new CustomEvent('vibes-public-link-success', {
+                detail: { link: joinLinkRef.current }
+              }));
+              return;
+            }
+            // Live fetch — the mount-time fetch may have missed the token
+            var ctx = getContext();
+            if (!ctx) {
+              document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
+                detail: { error: { message: 'Not signed in. Please sign in and try again.' } }
+              }));
+              return;
+            }
+            fetch(ctx.deployApiUrl + '/status/' + encodeURIComponent(ctx.appName), {
+                headers: { 'Authorization': 'Bearer ' + ctx.accessToken }
+              })
+              .then(function(r) { return r.ok ? r.json() : null; })
+              .then(function(data) {
+                var token = data && data.publicInvite && data.publicInvite.token;
+                if (typeof token === 'string' && token.length > 0) {
+                  joinLinkRef.current = ctx.deployApiUrl + '/join/' +
+                    encodeURIComponent(ctx.appName) + '/' + token;
+                  document.dispatchEvent(new CustomEvent('vibes-public-link-success', {
+                    detail: { link: joinLinkRef.current }
+                  }));
+                } else {
+                  document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
+                    detail: { error: { message: 'No invite link available. Redeploy the app to generate one.' } }
+                  }));
+                }
+              })
+              .catch(function() {
+                document.dispatchEvent(new CustomEvent('vibes-public-link-error', {
+                  detail: { error: { message: 'Could not fetch invite link. Check your connection.' } }
+                }));
+              });
+          }
+
+          document.addEventListener('vibes-share-request', handleShareRequest);
+          document.addEventListener('vibes-public-link-request', handlePublicLinkRequest);
+          return function() {
+            document.removeEventListener('vibes-share-request', handleShareRequest);
+            document.removeEventListener('vibes-public-link-request', handlePublicLinkRequest);
+          };
+        }, []);
+
+        return null;
+      }
+      window.SharingBridge = SharingBridge;
+
+      // === VibesPanel Event Handler Hook ===
+      function useVibesPanelEvents(logPrefix) {
+        React.useEffect(() => {
+          const handleLogout = () => {
+            if (window.__vibes_oidc_signOut) window.__vibes_oidc_signOut();
+          };
+          const handleSyncDisable = () => {
+            console.log('[' + logPrefix + '] Sync disabled');
+          };
+
+          document.addEventListener('vibes-logout-request', handleLogout);
+          document.addEventListener('vibes-sync-disable', handleSyncDisable);
+          return () => {
+            document.removeEventListener('vibes-logout-request', handleLogout);
+            document.removeEventListener('vibes-sync-disable', handleSyncDisable);
+          };
+        }, []);
+      }
+      window.useVibesPanelEvents = useVibesPanelEvents;
+
+      // === Theme Switching ===
+      // Listens for vibes-design-request events from VibesPanel theme buttons.
+      // Overrides --comp-* CSS variables on :root to retheme all components.
+      var VIBES_THEME_PRESETS = {
+        default: {
+          '--comp-bg': 'var(--vibes-cream)',
+          '--comp-text': 'var(--vibes-near-black)',
+          '--comp-border': 'var(--vibes-near-black)',
+          '--comp-accent': 'var(--vibes-variant-blue)',
+          '--comp-accent-text': 'var(--vibes-white)',
+          '--comp-muted': 'var(--vibes-gray-mid)',
+          '--color-background': '#1a1a1a',
+          '--grid-color': 'rgba(255, 255, 240, 0.08)',
+        },
+        archive: {
+          '--comp-bg': 'oklch(0.95 0.03 80)',
+          '--comp-text': 'oklch(0.20 0.02 50)',
+          '--comp-border': 'oklch(0.35 0.04 60)',
+          '--comp-accent': 'oklch(0.55 0.12 50)',
+          '--comp-accent-text': 'oklch(0.97 0.01 90)',
+          '--comp-muted': 'oklch(0.50 0.03 60)',
+          '--color-background': 'oklch(0.92 0.03 80)',
+          '--grid-color': 'oklch(0.35 0.04 60 / 0.06)',
+        },
+        industrial: {
+          '--comp-bg': 'oklch(0.88 0.01 90)',
+          '--comp-text': 'oklch(0.05 0.01 0)',
+          '--comp-border': 'oklch(0.05 0.01 0)',
+          '--comp-accent': 'oklch(0.90 0.20 110)',
+          '--comp-accent-text': 'oklch(0.05 0.01 0)',
+          '--comp-muted': 'oklch(0.40 0.01 0)',
+          '--color-background': 'oklch(0.85 0.01 90)',
+          '--grid-color': 'oklch(0.05 0.01 0 / 0.05)',
+        }
+      };
+
+      function applyVibesTheme(themeId) {
+        var preset = VIBES_THEME_PRESETS[themeId];
+        if (!preset) return;
+        var root = document.documentElement;
+        Object.keys(preset).forEach(function(key) {
+          root.style.setProperty(key, preset[key]);
+        });
+        try { localStorage.setItem('vibes-theme', themeId); } catch(e) {}
+      }
+
+      // Apply saved theme on load
+      try {
+        var savedTheme = localStorage.getItem('vibes-theme');
+        if (savedTheme && VIBES_THEME_PRESETS[savedTheme]) {
+          applyVibesTheme(savedTheme);
+        }
+      } catch(e) {}
+
+      // Listen for theme change events from VibesPanel
+      document.addEventListener('vibes-design-request', function(e) {
+        var themeId = e.detail && e.detail.theme;
+        if (themeId) applyVibesTheme(themeId);
+      });
+
+      // Also expose for apps that want to set themes programmatically
+      window.__VIBES_THEME_PRESETS__ = VIBES_THEME_PRESETS;
+      window.applyVibesTheme = applyVibesTheme;
+    </script>
+    <script type="module" src="/vibes-ai.js"></script>
+    <!-- === DELTA_PLACEHOLDER === -->
+  </body>
+</html>

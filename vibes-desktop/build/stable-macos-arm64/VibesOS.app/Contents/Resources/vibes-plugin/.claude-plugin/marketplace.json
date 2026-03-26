@@ -1,0 +1,30 @@
+{
+  "name": "VibesOS",
+  "description": "Vibes is for people who use Claude Code, but don't know how to code.",
+  "owner": {
+    "name": "Marcus Estes",
+    "email": "marcus@vibes.diy"
+  },
+  "plugins": [
+    {
+      "name": "vibes",
+      "source": "./",
+      "description": "Vibes is for people who use Claude Code, but don't know how to code.",
+      "version": "0.1.98",
+      "author": {
+        "name": "Marcus Estes",
+        "email": "marcus@vibes.diy"
+      }
+    },
+    {
+      "name": "julian",
+      "source": "./plugins/julian",
+      "description": "Julian project tools — deploy, manage, and interact with Julian instances",
+      "version": "0.1.1",
+      "author": {
+        "name": "Marcus Estes",
+        "email": "marcus@vibes.diy"
+      }
+    }
+  ]
+}

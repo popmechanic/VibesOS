@@ -1,0 +1,28 @@
+{
+  "name": "vibes-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Build and deploy scripts for VibesOS plugin",
+  "scripts": {
+    "start": "bun run server.ts",
+    "test": "vitest",
+    "test:unit": "vitest run __tests__/unit",
+    "test:integration": "vitest run __tests__/integration",
+    "test:e2e:server": "bun __tests__/e2e/local-server.js",
+    "test:fixtures": "vitest run __tests__/integration/assembly-pipeline.test.js",
+    "preview": "bun run server.ts"
+  },
+  "dependencies": {
+    "@babel/standalone": "^7.26.0",
+    "esbuild": "^0.24.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tinybase": "^8.0.2",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "playwright": "^1.58.2",
+    "vitest": "^3.0.0"
+  }
+}
