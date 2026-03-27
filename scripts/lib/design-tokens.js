@@ -74,8 +74,6 @@ export const TOKEN_CATALOG = {
   },
 
   'vibes-grid': {
-    '--grid-size': '32px',
-    '--grid-color': 'rgba(255, 255, 240, 0.08)',
     '--content-grid-bg': '#2a2a2a',
     '--content-grid-color': 'rgba(255, 255, 255, 0.3)',
     '--content-grid-size': '32px',
@@ -189,38 +187,13 @@ export const TOKEN_CATALOG = {
 };
 
 /**
- * VIBES_THEME_CSS — page frame, grid background, neo-brutalist buttons
+ * VIBES_THEME_CSS — minimal structural styles + component defaults
  * These are structural styles that use the tokens above.
  */
 export const VIBES_THEME_CSS = `
       body {
         margin: 0;
         padding: 0;
-        background: var(--vibes-black);
-        font-family: var(--font-sans);
-        color: var(--color-text);
-      }
-      /* Dark rounded frame */
-      body::before {
-        content: '';
-        position: fixed;
-        top: 10px; left: 10px; right: 10px; bottom: 10px;
-        border-radius: 10px;
-        background-color: var(--color-background);
-        z-index: 0;
-      }
-      /* Grid overlay */
-      body::after {
-        content: '';
-        position: fixed;
-        top: 10px; left: 10px; right: 10px; bottom: 10px;
-        border-radius: 10px;
-        background-size: var(--grid-size) var(--grid-size);
-        background-image:
-          linear-gradient(var(--grid-color) 1px, transparent 1px),
-          linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-        pointer-events: none;
-        z-index: 1;
       }
       #container {
         position: relative;
@@ -230,16 +203,7 @@ export const VIBES_THEME_CSS = `
         padding: 20px;
       }
 
-      /* Content grid background — applied to vibes-content wrapper by default */
-      .vibes-content, .grid-background {
-        background-color: var(--content-grid-bg);
-        background-image:
-          linear-gradient(var(--content-grid-color) 1px, transparent 1px),
-          linear-gradient(90deg, var(--content-grid-color) 1px, transparent 1px);
-        background-size: var(--content-grid-size) var(--content-grid-size);
-      }
-
-      /* Neo-Brutalist Button — uses --comp-* tokens so LLM overrides don't affect wrapper buttons */
+      /* Button — uses --comp-* tokens so LLM overrides don't affect wrapper buttons */
       .btn {
         display: inline-block;
         padding: 1rem 2rem;
