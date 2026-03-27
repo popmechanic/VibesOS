@@ -48,9 +48,9 @@ describe('Vibes error screen redesign', () => {
     expect(delta()).toContain('componentDidCatch');
   });
 
-  it('error screen has vibes grid background', () => {
-    expect(delta()).toContain('#CCCDC8');
-    expect(delta()).toContain('32px 32px');
+  it('error screen uses theme tokens for background', () => {
+    expect(delta()).toContain('var(--color-background');
+    expect(delta()).toContain('var(--comp-bg');
   });
 
   it('error screen has "Fix in VibesOS" button', () => {
