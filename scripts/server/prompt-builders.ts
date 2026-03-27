@@ -242,21 +242,16 @@ export function buildGeneratePrompt(
       writeFileSync(refPath, htmlContent, 'utf-8');
       const inlined = htmlContent;
 
-      referenceBlock = `=== DESIGN REFERENCE (HTML: "${reference.name}") ===
+      referenceBlock = `=== SOURCE HTML (${reference.name}) ===
 
-Study this HTML file's design — colors, typography, spacing, layout, surfaces, effects — and use it as your design spec.
+This HTML file is your starting point. Your job is to convert it into a working React app while preserving its design, content, and structure as faithfully as possible.
 
-\`\`\`html
+<document>
+<source>${reference.name}</source>
+<document_content>
 ${inlined}
-\`\`\`
-
-Extract the visual design from this HTML:
-- COLOR PALETTE: map every color to oklch() values for the --comp-* tokens
-- TYPOGRAPHY: font families, weights, sizing hierarchy
-- SURFACES: border styles, shadows, gradients, glass effects
-- LAYOUT PATTERNS: spatial organization, card styles, grid/flex structure
-- MOTION/EFFECTS: animations, transitions, hover states
-- --color-background MUST match the HTML's background. Never transparent.
+</document_content>
+</document>
 
 `;
     } else {
@@ -325,11 +320,29 @@ The goal: the generated app should look like the image was its design spec.
 
     const referenceGuides = detectReferences(ctx, userPrompt, { alwaysIncludeBugPrevention: true });
 
-    const refPrompt = `${referenceBlock}You are an expert React app designer. Generate an app that faithfully reproduces the design reference above.
+    const refPrompt = `${referenceBlock}You are converting an HTML document into a React app. The source HTML above is your blueprint — preserve its design, content, layout, and structure as closely as possible.
 
 === NON-NEGOTIABLE DATA RULES ===${RECENCY_REMINDER}
 ${referenceGuides}
 USER REQUEST: "${userPrompt}"
+
+=== CONVERSION APPROACH ===
+
+Think in a <design> block. Before writing any code:
+1. Quote the source HTML's <style> block (or the key CSS rules if very large)
+2. Quote the major structural elements of the <body>
+3. Identify what needs to change: converting static HTML to React components, adding the requested functionality, wiring up TinyBase for any stateful/multiplayer features
+4. Identify what must NOT change: colors, fonts, spacing, layout, visual identity, content
+
+=== CONVERSION RULES ===
+
+- **Copy the CSS** — Transfer the source HTML's styles directly into your <style> tag. Copy color values, font declarations, spacing, shadows, gradients, animations verbatim. Do not reinterpret or "improve" them.
+- **Copy the markup structure** — Convert HTML elements to JSX equivalents. Keep class names, nesting, and layout structure intact.
+- **Copy the content** — Preserve all text, headings, sections, and visual content from the source.
+- **Add only what's requested** — Implement the functionality from the user's text prompt (e.g., "add a comment section"). Style new elements to match the existing design language.
+- **Do not redecorate** — Do not add SVG illustrations, Canvas backgrounds, particle effects, or visual elements that aren't in the source HTML. The source IS the design.
+
+=== REACT BOILERPLATE ===
 
 Your app.jsx MUST start with these EXACT lines (copy-paste, do not modify):
 
@@ -347,40 +360,18 @@ function useVibesTheme() {
 }
 \`\`\`
 
-Derive ALL :root CSS tokens from the design reference above — do NOT use any predefined theme.
-
-=== CRITICAL: MATCH THE REFERENCE DESIGN ===
-
-The HTML reference IS the design spec. Your generated app must look like it was built by the same designer.
-- Reproduce the reference's colors, typography, spacing, surfaces, and layout faithfully
-- Do NOT add visual elements that aren't in the reference (no extra SVG illustrations, no Canvas backgrounds, no particle effects)
-- Do NOT override the reference's aesthetic with a different style — if the reference is minimal, be minimal; if it's decorative, be decorative
-- Copy the reference's CSS patterns directly where possible (fonts, color values, gradients, shadows, border-radius)
-
-=== STRUCTURAL RULES ===
-
-- ALWAYS wrap the entire app in a full-page div with min-height: 100vh and an explicit background-color
-- NEVER let content overflow its container — use overflow: hidden/auto, text-overflow: ellipsis, word-break: break-word
-- Use max-width: 100% on images, SVGs, and media
-- Responsive layout (mobile-first with Tailwind)
-
-=== DESIGN REASONING ===
-
-Think in a <design> block:
-- What exact colors, fonts, and spacing does the reference use?
-- How will you map them to --comp-* tokens?
-- What is the reference's visual identity and how do you preserve it?
-
 === WRITE app.jsx ===
 
-Write the complete app to app.jsx. Rules:
+Write the complete app to app.jsx:
 - FIRST: the exact __VIBES_THEMES__ + useVibesTheme code shown above
-- THEN: <style> tag with reference-derived CSS organized into marked sections (see below), plus component styles
+- THEN: <style> tag — copy the source HTML's CSS, organize into marked sections (see below), add styles for new functionality matching the existing design
+- THEN: React components that reproduce the source HTML's structure, with the requested functionality added
 - JSX with React hooks (useState, useEffect, useRef, useCallback, useMemo)
 - NO import statements — runs in Babel script block with globals
 - NO TypeScript. End with: export default App
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
-- className="btn" for buttons
+- className="btn" for interactive buttons
+- Wrap app in a full-page div with min-height: 100vh and the source HTML's background color
 
 ${THEME_SECTION_MARKERS}
 ${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
