@@ -5,6 +5,7 @@
  */
 
 export const APP_PLACEHOLDER = '// __VIBES_APP_CODE__';
+export const AUTH_INJECT_MARKER = '// <!-- AUTH:INJECT -->';
 
 /**
  * Load a template file and validate it contains the placeholder.

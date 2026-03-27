@@ -16,7 +16,7 @@ import { resolve } from 'path';
 import { TEMPLATES } from './lib/paths.js';
 import { createBackup } from './lib/backup.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID, DEPLOY_API_URL, AI_PROXY_URL } from './lib/auth-constants.js';
-import { APP_PLACEHOLDER, validateAssembly, loadAndValidateTemplate, checkForbiddenPatterns, stripOidcImportBlock } from './lib/assembly-utils.js';
+import { APP_PLACEHOLDER, AUTH_INJECT_MARKER, validateAssembly, loadAndValidateTemplate, checkForbiddenPatterns, stripOidcImportBlock } from './lib/assembly-utils.js';
 import { stripForTemplate } from './lib/strip-code.js';
 
 
@@ -25,6 +25,7 @@ async function main() {
   const appPath = process.argv[2];
   const outputPath = process.argv[3] || 'index.html';
   const evalMode = process.argv.includes('--eval-mode');
+  const privateMode = process.argv.includes('--private');
 
   if (!appPath) {
     throw new Error('Usage: bun scripts/assemble.js <app.jsx> [output.html]');
@@ -67,6 +68,20 @@ async function main() {
   output = output.replaceAll('__OIDC_CLIENT_ID__', OIDC_CLIENT_ID);
   output = output.replaceAll('__DEPLOY_API_URL__', DEPLOY_API_URL);
   output = output.replaceAll('__AI_PROXY_URL__', AI_PROXY_URL);
+
+  // Inject auth gate for private apps
+  if (privateMode && output.includes(AUTH_INJECT_MARKER)) {
+    const authGatePath = resolve(import.meta.dirname, '../source-templates/auth/auth-gate.html');
+    if (!existsSync(authGatePath)) {
+      throw new Error(`Auth gate template not found: ${authGatePath}`);
+    }
+    const authGateCode = readFileSync(authGatePath, 'utf8');
+    output = output.replace(AUTH_INJECT_MARKER, authGateCode);
+    console.log('[private] Auth gate injected');
+  } else if (!privateMode && output.includes(AUTH_INJECT_MARKER)) {
+    // Public app — strip the marker
+    output = output.replace(AUTH_INJECT_MARKER, '');
+  }
 
   if (evalMode) {
     // 1. Strip OIDC dynamic import to prevent 404 on /oidc-bridge.js
