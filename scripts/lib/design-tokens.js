@@ -210,48 +210,34 @@ export const VIBES_THEME_CSS = `
         border-radius: 12px;
         font-size: 1rem;
         font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         cursor: pointer;
         transition: all 0.15s ease;
         position: relative;
         background: var(--comp-bg);
         color: var(--comp-text);
         border: 2px solid var(--comp-border);
-        transform: translate(0px, 0px);
-        box-shadow: var(--shadow-brutalist-blue);
-        font-family: var(--font-sans);
         text-decoration: none;
       }
       .btn:hover {
-        transform: translate(2px, 2px);
-        box-shadow: 2px 3px 0px 0px var(--comp-accent), 2px 3px 0px 2px var(--comp-border);
+        opacity: 0.9;
       }
       .btn:active {
-        transform: translate(4px, 5px);
-        box-shadow: none;
+        opacity: 0.8;
       }
-      .btn.btn-red { box-shadow: var(--shadow-brutalist-red); }
-      .btn.btn-red:hover { box-shadow: 2px 3px 0px 0px var(--comp-accent-red), 2px 3px 0px 2px var(--comp-border); }
-      .btn.btn-red:active { box-shadow: none; }
-      .btn.btn-yellow { box-shadow: var(--shadow-brutalist-yellow); }
-      .btn.btn-yellow:hover { box-shadow: 2px 3px 0px 0px var(--comp-accent-yellow), 2px 3px 0px 2px var(--comp-border); }
-      .btn.btn-yellow:active { box-shadow: none; }
-      .btn.btn-gray { box-shadow: var(--shadow-brutalist-gray); }
-      .btn.btn-gray:hover { box-shadow: 2px 3px 0px 0px var(--comp-accent-gray), 2px 3px 0px 2px var(--comp-border); }
-      .btn.btn-gray:active { box-shadow: none; }
+      .btn.btn-red { background: var(--comp-accent-red); color: var(--comp-accent-text); }
+      .btn.btn-yellow { background: var(--comp-accent-yellow); color: var(--comp-text); }
+      .btn.btn-gray { background: var(--comp-accent-gray); color: var(--comp-accent-text); }
 
-      /* ===== Neo-Brutalist Component Defaults ===== */
+      /* ===== Component Defaults ===== */
       /* These use --comp-* tokens so LLM overrides don't affect wrapper components */
 
-      /* Card — colored title bar accent, cream content, brutalist shadow */
+      /* Card — colored title bar accent, token-based content */
       .card {
         background: var(--comp-bg);
         color: var(--comp-text);
         border: 2px solid var(--comp-border);
         border-radius: 12px;
         overflow: hidden;
-        box-shadow: 4px 4px 0px 0px var(--comp-border);
       }
       .card-header {
         padding: var(--spacing-4) var(--spacing-6);
@@ -263,8 +249,6 @@ export const VIBES_THEME_CSS = `
         font-weight: var(--font-weight-bold);
         color: var(--comp-accent-text);
         margin: 0;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
       }
       .card-description {
         font-size: var(--text-sm);
@@ -293,7 +277,6 @@ export const VIBES_THEME_CSS = `
         width: 100%;
         padding: var(--spacing-3) var(--spacing-4);
         font-size: var(--text-base);
-        font-family: var(--font-sans);
         background: var(--comp-bg);
         color: var(--comp-text);
         border: 2px solid var(--comp-border);
@@ -303,7 +286,7 @@ export const VIBES_THEME_CSS = `
         box-sizing: border-box;
       }
       .input:focus {
-        box-shadow: 4px 4px 0px 0px var(--comp-accent);
+        box-shadow: 0 0 0 2px var(--comp-accent);
       }
       .input::placeholder {
         color: var(--comp-muted);
@@ -315,8 +298,6 @@ export const VIBES_THEME_CSS = `
         font-size: var(--text-sm);
         font-weight: var(--font-weight-bold);
         color: var(--comp-text);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         margin-bottom: var(--spacing-1);
       }
 
@@ -326,7 +307,6 @@ export const VIBES_THEME_CSS = `
         width: 100%;
         padding: var(--spacing-3) var(--spacing-4);
         font-size: var(--text-base);
-        font-family: var(--font-sans);
         background: var(--comp-bg);
         color: var(--comp-text);
         border: 2px solid var(--comp-border);
@@ -338,7 +318,7 @@ export const VIBES_THEME_CSS = `
         box-sizing: border-box;
       }
       .textarea:focus {
-        box-shadow: 4px 4px 0px 0px var(--comp-accent);
+        box-shadow: 0 0 0 2px var(--comp-accent);
       }
       .textarea::placeholder {
         color: var(--comp-muted);
@@ -351,8 +331,6 @@ export const VIBES_THEME_CSS = `
         padding: var(--spacing-1) var(--spacing-3);
         font-size: var(--text-xs);
         font-weight: var(--font-weight-bold);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         background: var(--comp-bg);
         color: var(--comp-text);
         border: 2px solid var(--comp-border);
@@ -377,13 +355,10 @@ export const VIBES_THEME_CSS = `
         border: 2px solid var(--comp-border);
         border-radius: 12px;
         padding: var(--spacing-4) var(--spacing-6);
-        border-left: 8px solid var(--comp-accent);
       }
       .alert-title {
         font-size: var(--text-base);
         font-weight: var(--font-weight-bold);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         margin: 0 0 var(--spacing-1) 0;
       }
       .alert-description {
@@ -414,10 +389,6 @@ export const VIBES_THEME_CSS = `
         height: 100%;
         object-fit: cover;
       }
-      .avatar-fallback {
-        text-transform: uppercase;
-      }
-
       /* Switch */
       .switch {
         position: relative;
@@ -463,7 +434,6 @@ export const VIBES_THEME_CSS = `
         width: 100%;
         padding: var(--spacing-3) var(--spacing-4);
         font-size: var(--text-base);
-        font-family: var(--font-sans);
         background: var(--comp-bg);
         color: var(--comp-text);
         border: 2px solid var(--comp-border);
@@ -479,7 +449,7 @@ export const VIBES_THEME_CSS = `
         box-sizing: border-box;
       }
       .select:focus {
-        box-shadow: 4px 4px 0px 0px var(--comp-accent);
+        box-shadow: 0 0 0 2px var(--comp-accent);
       }
 
       /* Table */
@@ -500,8 +470,6 @@ export const VIBES_THEME_CSS = `
         padding: var(--spacing-3) var(--spacing-4);
         font-size: var(--text-sm);
         font-weight: var(--font-weight-bold);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         text-align: left;
         color: var(--comp-bg);
       }
@@ -531,14 +499,11 @@ export const VIBES_THEME_CSS = `
         padding: var(--spacing-3) var(--spacing-4);
         font-size: var(--text-sm);
         font-weight: var(--font-weight-bold);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         background: transparent;
         color: var(--comp-bg);
         border: none;
         cursor: pointer;
         transition: background 0.15s ease;
-        font-family: var(--font-sans);
       }
       .tabs-trigger[aria-selected="true"] {
         background: var(--comp-accent);
@@ -575,12 +540,9 @@ export const VIBES_THEME_CSS = `
         padding: var(--spacing-4) var(--spacing-6);
         font-size: var(--text-base);
         font-weight: var(--font-weight-bold);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         cursor: pointer;
         color: var(--comp-text);
         list-style: none;
-        font-family: var(--font-sans);
       }
       .accordion-trigger::-webkit-details-marker { display: none; }
       .accordion-trigger::after {
@@ -608,7 +570,6 @@ export const VIBES_THEME_CSS = `
         color: var(--comp-text);
         border: 2px solid var(--comp-border);
         border-radius: 12px;
-        box-shadow: 8px 8px 0px 0px var(--comp-border);
         padding: 0;
         max-width: 480px;
         width: 90%;
@@ -626,8 +587,6 @@ export const VIBES_THEME_CSS = `
         font-size: var(--text-lg);
         font-weight: var(--font-weight-bold);
         color: var(--comp-accent-text);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         margin: 0;
       }
       .dialog-description {
@@ -705,8 +664,6 @@ export const VIBES_THEME_CSS = `
         padding: var(--spacing-2) var(--spacing-4);
         font-size: var(--text-sm);
         font-weight: var(--font-weight-bold);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         color: var(--comp-text);
         text-decoration: none;
         border-radius: 8px;
@@ -727,14 +684,11 @@ export const VIBES_THEME_CSS = `
         padding: var(--spacing-3) var(--spacing-4);
         font-size: var(--text-sm);
         font-weight: var(--font-weight-bold);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         background: var(--comp-bg);
         color: var(--comp-text);
         border: 2px solid var(--comp-border);
         border-radius: 8px;
         cursor: pointer;
-        font-family: var(--font-sans);
       }
       .dropdown-content {
         position: absolute;
@@ -744,7 +698,6 @@ export const VIBES_THEME_CSS = `
         background: var(--comp-bg);
         border: 2px solid var(--comp-border);
         border-radius: 12px;
-        box-shadow: 4px 4px 0px 0px var(--comp-border);
         padding: var(--spacing-2) 0;
         z-index: 50;
       }
@@ -759,7 +712,6 @@ export const VIBES_THEME_CSS = `
         color: var(--comp-text);
         text-align: left;
         cursor: pointer;
-        font-family: var(--font-sans);
         transition: background 0.1s ease;
       }
       .dropdown-item:hover {
@@ -786,7 +738,6 @@ export const VIBES_THEME_CSS = `
         color: var(--comp-text);
         border: none;
         border-left: 2px solid var(--comp-border);
-        box-shadow: -8px 0px 0px 0px var(--comp-border);
         padding: 0;
         margin: 0;
       }
@@ -802,8 +753,6 @@ export const VIBES_THEME_CSS = `
         font-size: var(--text-lg);
         font-weight: var(--font-weight-bold);
         color: var(--comp-accent-text);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         margin: 0;
       }
       .sheet-description {
