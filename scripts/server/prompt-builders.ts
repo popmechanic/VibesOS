@@ -325,7 +325,7 @@ The goal: the generated app should look like the image was its design spec.
 
     const referenceGuides = detectReferences(ctx, userPrompt, { alwaysIncludeBugPrevention: true });
 
-    const refPrompt = `${referenceBlock}You are an expert React app designer. Generate a beautiful, creative app.
+    const refPrompt = `${referenceBlock}You are an expert React app designer. Generate an app that faithfully reproduces the design reference above.
 
 === NON-NEGOTIABLE DATA RULES ===${RECENCY_REMINDER}
 ${referenceGuides}
@@ -349,29 +349,38 @@ function useVibesTheme() {
 
 Derive ALL :root CSS tokens from the design reference above — do NOT use any predefined theme.
 
-=== DESIGN GUIDANCE ===
+=== CRITICAL: MATCH THE REFERENCE DESIGN ===
 
-${styleGuide}
+The HTML reference IS the design spec. Your generated app must look like it was built by the same designer.
+- Reproduce the reference's colors, typography, spacing, surfaces, and layout faithfully
+- Do NOT add visual elements that aren't in the reference (no extra SVG illustrations, no Canvas backgrounds, no particle effects)
+- Do NOT override the reference's aesthetic with a different style — if the reference is minimal, be minimal; if it's decorative, be decorative
+- Copy the reference's CSS patterns directly where possible (fonts, color values, gradients, shadows, border-radius)
+
+=== STRUCTURAL RULES ===
+
+- ALWAYS wrap the entire app in a full-page div with min-height: 100vh and an explicit background-color
+- NEVER let content overflow its container — use overflow: hidden/auto, text-overflow: ellipsis, word-break: break-word
+- Use max-width: 100% on images, SVGs, and media
+- Responsive layout (mobile-first with Tailwind)
 
 === DESIGN REASONING ===
 
 Think in a <design> block:
-- What colors, typography, and surfaces did you extract from the reference?
+- What exact colors, fonts, and spacing does the reference use?
 - How will you map them to --comp-* tokens?
-- What custom SVG illustrations fit this app?
-- What animations and effects match the reference mood? (Canvas particles, animated SVG, scroll reveals, card tilt, cursor glow)
+- What is the reference's visual identity and how do you preserve it?
 
 === WRITE app.jsx ===
 
 Write the complete app to app.jsx. Rules:
 - FIRST: the exact __VIBES_THEMES__ + useVibesTheme code shown above
 - THEN: <style> tag with reference-derived CSS organized into marked sections (see below), plus component styles
-- Add rich visual effects: Canvas 2D backgrounds, animated SVG illustrations, CSS @property animations, hover effects
 - JSX with React hooks (useState, useEffect, useRef, useCallback, useMemo)
 - NO import statements — runs in Babel script block with globals
 - NO TypeScript. End with: export default App
 - Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
-- Responsive (mobile-first with Tailwind). className="btn" for buttons, "grid-background" on root
+- className="btn" for buttons
 
 ${THEME_SECTION_MARKERS}
 ${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
