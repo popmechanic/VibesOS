@@ -57,8 +57,6 @@ Example: `<button className="btn">Click Me</button>` or `<button className="btn 
 ### vibes-grid
 
 ```css
---grid-size: 32px;
---grid-color: rgba(255, 255, 240, 0.08);
 --content-grid-bg: #2a2a2a;
 --content-grid-color: rgba(255, 255, 255, 0.3);
 --content-grid-size: 32px;
@@ -181,83 +179,17 @@ Semantic color system. Use these for all app UI surfaces, text, and interactive 
 
 ## VIBES THEME CSS
 
-Include these CSS rules for the vibes theme (grid background, page frame, neo-brutalist buttons):
+The template provides minimal structural styles. All visual design (backgrounds, shadows, typography treatment) is defined by the app's theme.
+
+Include these minimal structural CSS rules:
 
 ```css
-/* === VIBES THEME: Page Frame & Grid Background === */
-html, body {
-  margin: 0; padding: 0;
-  background: var(--vibes-black);
-  font-family: var(--font-sans);
-  color: var(--color-text);
-}
-/* Dark rounded frame */
-body::before {
-  content: '';
-  position: fixed;
-  top: 10px; left: 10px; right: 10px; bottom: 10px;
-  border-radius: 10px;
-  background-color: var(--color-background);
-  z-index: 0;
-}
-/* Grid overlay */
-body::after {
-  content: '';
-  position: fixed;
-  top: 10px; left: 10px; right: 10px; bottom: 10px;
-  border-radius: 10px;
-  background-size: var(--grid-size) var(--grid-size);
-  background-image:
-    linear-gradient(var(--grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-  pointer-events: none;
-  z-index: 1;
-}
-#app {
-  position: relative;
-  z-index: 2;
-  min-height: 100vh;
-  padding: 20px;
-}
-
-/* === VIBES BUTTON: Neo-Brutalist Style === */
-.btn {
-  display: inline-block;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  position: relative;
-  background: var(--vibes-button-bg);
-  color: var(--vibes-button-text);
-  border: 2px solid var(--vibes-button-border);
-  transform: translate(0px, 0px);
-  box-shadow: var(--shadow-brutalist-blue);
-  font-family: var(--font-sans);
-  text-decoration: none;
-}
-.btn:hover {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 3px 0px 0px var(--vibes-variant-blue), 2px 3px 0px 2px var(--vibes-button-border);
-}
-.btn:active {
-  transform: translate(4px, 5px);
-  box-shadow: none;
-}
-.btn.btn-red { box-shadow: var(--shadow-brutalist-red); }
-.btn.btn-red:hover { box-shadow: 2px 3px 0px 0px var(--vibes-variant-red), 2px 3px 0px 2px var(--vibes-button-border); }
-.btn.btn-red:active { box-shadow: none; }
-.btn.btn-yellow { box-shadow: var(--shadow-brutalist-yellow); }
-.btn.btn-yellow:hover { box-shadow: 2px 3px 0px 0px var(--vibes-variant-yellow), 2px 3px 0px 2px var(--vibes-button-border); }
-.btn.btn-yellow:active { box-shadow: none; }
-.btn.btn-gray { box-shadow: var(--shadow-brutalist-gray); }
-.btn.btn-gray:hover { box-shadow: 2px 3px 0px 0px var(--vibes-variant-gray), 2px 3px 0px 2px var(--vibes-button-border); }
-.btn.btn-gray:active { box-shadow: none; }
+body { margin: 0; padding: 0; }
+#container { position: relative; z-index: 2; width: 100%; min-height: 100vh; padding: 20px; }
 ```
+
+**Buttons:** Use `className="btn"` for structurally styled buttons. Variants: `btn-red`, `btn-yellow`, `btn-gray`.
+Example: `<button className="btn">Click Me</button>`
 
 ---
 
@@ -272,8 +204,8 @@ body::after {
 7. **Override `--color-*` tokens** in a `:root` style block for per-app theming (light/dark, custom palette).
 8. **Don't redefine `--vibes-*` tokens** — those are system-level. Override `--color-*` tokens instead.
 9. **Tailwind is still available** for layout utilities (flex, grid, responsive breakpoints). Tokens and Tailwind complement each other.
-10. **Use `className="grid-background"`** on your app's root container for the default content grid background.
-11. **Components are pre-styled** with neo-brutalist defaults (cream bg, dark borders, colored accents). Override with `var(--token-name)` for custom themes.
+10. **Define your app's background** in a `:root` style block or on your root container div — the template provides no background.
+11. **Components are structurally styled** with token-based colors and layout. Add visual flair (shadows, text-transform, animations) in your theme CSS.
 
 
 ---
