@@ -91,8 +91,10 @@ function MessageRow({ id }) {
 ## useAI API
 
 ```jsx
-const { callAI, streamAI, loading, error, clearError } = useAI();
+const { callAI, streamAI, loading, error, clearError, isReady } = useAI();
 ```
+
+- **`isReady`** — `boolean` that becomes `true` once the AI proxy and auth token are available. Use this to show a loading state or disable AI buttons until the hook is ready. It updates reactively when the user signs in.
 
 ### callAI — Non-Streaming (One-Shot Requests)
 
