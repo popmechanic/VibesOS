@@ -3359,6 +3359,7 @@ window.escapeHtml = function(str) {
   let clientTimerInterval = null;
   let clientElapsedSec = 0;
   let lastServerMessageTime = 0;
+  let clientTimerStopTimeout = null;
   let themes = [];
   let currentPhase = 'loading';
   let deployTargets = { cloudflare: false };
@@ -4726,6 +4727,7 @@ window.escapeHtml = function(str) {
     isGenerating = true;
     setPhase('edit');
     addMessage('user', prompt);
+    resetClientTimer();
     setThinking(true, 0, 'Starting Claude...', 0);
     showPreviewOverlay();
   }
@@ -5142,6 +5144,7 @@ window.escapeHtml = function(str) {
     if (activeAnimationId) EditorAnimations.clear();
     if (activeSkillId) EditorSkills.clear();
     if (referenceFile) EditorReference.clear('edit');
+    resetClientTimer();
     setThinking(true, null, 'Thinking...');
   }
 
@@ -5154,6 +5157,7 @@ window.escapeHtml = function(str) {
       app: currentAppName,
     }));
     addMessage('user', text);
+    resetClientTimer();
     setThinking(true, null, 'Thinking...');
   }
 
@@ -5495,9 +5499,18 @@ window.escapeHtml = function(str) {
     return m > 0 ? `${m}m ${s}s` : `${s}s`;
   }
 
-  function startClientTimer() {
+  function resetClientTimer() {
     stopClientTimer();
     clientElapsedSec = 0;
+  }
+
+  function startClientTimer() {
+    // Cancel any pending delayed stop
+    if (clientTimerStopTimeout) {
+      clearTimeout(clientTimerStopTimeout);
+      clientTimerStopTimeout = null;
+    }
+    if (clientTimerInterval) return; // already running
     lastServerMessageTime = Date.now();
     clientTimerInterval = setInterval(() => {
       clientElapsedSec++;
@@ -5518,10 +5531,23 @@ window.escapeHtml = function(str) {
   }
 
   function stopClientTimer() {
+    if (clientTimerStopTimeout) {
+      clearTimeout(clientTimerStopTimeout);
+      clientTimerStopTimeout = null;
+    }
     if (clientTimerInterval) {
       clearInterval(clientTimerInterval);
       clientTimerInterval = null;
     }
+  }
+
+  function stopClientTimerDelayed() {
+    // Don't stop immediately — wait 3s in case thinking resumes (multi-turn)
+    if (clientTimerStopTimeout) return; // already scheduled
+    clientTimerStopTimeout = setTimeout(() => {
+      clientTimerStopTimeout = null;
+      stopClientTimer();
+    }, 3000);
   }
 
   function updateStageText(text) {
@@ -5792,7 +5818,7 @@ window.escapeHtml = function(str) {
             <span class="thinking-stage">${stage || 'Working...'}</span>
           </div>
           <div class="thinking-footer">
-            <span class="thinking-timer">${formatElapsed(elapsed || 0)}</span>
+            <span class="thinking-timer">${formatElapsed(clientElapsedSec)}</span>
             <div class="thinking-actions">
               <button class="thinking-reset" onclick="resetSession()">Reset</button>
               <button class="thinking-cancel" onclick="interruptRequest()">Interrupt</button>
@@ -5802,7 +5828,7 @@ window.escapeHtml = function(str) {
       }
       container.scrollTop = container.scrollHeight;
     } else {
-      stopClientTimer();
+      stopClientTimerDelayed();
       if (panel) {
         panel.classList.remove('thinking');
         panel.classList.add('updated');
