@@ -2340,6 +2340,40 @@
       transform: translate(2px, 2px);
       box-shadow: 2px 2px 0px 0px var(--vibes-blue), 2px 2px 0px 2px var(--vibes-near-black);
     }
+    .theme-card.selected {
+      border-color: var(--vibes-green);
+      box-shadow: 4px 4px 0px 0px var(--vibes-green), 4px 4px 0px 2px var(--vibes-near-black);
+    }
+    .theme-apply-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.25rem;
+      border-top: 2px solid var(--vibes-near-black);
+      background: var(--vibes-cream);
+    }
+    .theme-apply-name {
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: var(--vibes-near-black);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .theme-apply-btn {
+      background: var(--vibes-green);
+      color: white;
+      border: 2px solid var(--vibes-near-black);
+      border-radius: 8px;
+      padding: 0.5rem 1.25rem;
+      font-weight: 800;
+      font-size: 0.8125rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .theme-apply-btn:hover {
+      transform: translate(1px, 1px);
+    }
     .theme-card-name {
       font-size: 0.8125rem;
       font-weight: 700;
@@ -3288,6 +3322,10 @@
         </div>
         <input type="text" class="theme-search" id="themeSearch" placeholder="Search themes..." oninput="EditorThemes.filterThemes(this.value)" />
         <div id="themeGrid"></div>
+      </div>
+      <div class="theme-apply-bar" id="themeApplyBar" style="display:none;">
+        <span class="theme-apply-name"></span>
+        <button class="theme-apply-btn" onclick="EditorThemes.applySelected()">Apply Theme</button>
       </div>
     </div>
   </div>

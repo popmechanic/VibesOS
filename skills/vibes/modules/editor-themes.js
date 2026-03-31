@@ -172,9 +172,31 @@
   // Theme Selection & Deletion
   // ===========================
 
+  let pendingThemeSelection = null;
+
   function select(themeId) {
+    // Highlight the selected card without applying
+    pendingThemeSelection = themeId;
+    const grid = elements.themeGrid;
+    if (grid) {
+      grid.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+      const card = grid.querySelector(`[data-theme-id="${themeId}"]`);
+      if (card) card.classList.add('selected');
+    }
+    // Show the apply bar
+    const applyBar = document.getElementById('themeApplyBar');
+    const theme = themes.find(t => t.id === themeId);
+    if (applyBar) {
+      applyBar.querySelector('.theme-apply-name').textContent = theme ? theme.name : themeId;
+      applyBar.style.display = 'flex';
+    }
+  }
+
+  function applySelected() {
+    if (!pendingThemeSelection) return;
     if (callbacks.isThinking && callbacks.isThinking()) return;
     if (!callbacks.isWsOpen || !callbacks.isWsOpen()) return;
+    const themeId = pendingThemeSelection;
     const theme = themes.find(t => t.id === themeId);
     if (callbacks.onAddMessage) callbacks.onAddMessage('user', `Switch to theme: ${theme ? theme.name : themeId}`);
     currentThemeId = themeId;
@@ -187,6 +209,7 @@
         app: callbacks.getCurrentAppName ? callbacks.getCurrentAppName() : undefined
       });
     }
+    pendingThemeSelection = null;
     close();
   }
 
@@ -265,6 +288,13 @@
 
   function close() {
     if (elements.themeModal) elements.themeModal.classList.remove('open');
+    pendingThemeSelection = null;
+    const applyBar = document.getElementById('themeApplyBar');
+    if (applyBar) applyBar.style.display = 'none';
+    // Clear selection highlights
+    if (elements.themeGrid) {
+      elements.themeGrid.querySelectorAll('.theme-card.selected').forEach(c => c.classList.remove('selected'));
+    }
   }
 
   // ===========================
@@ -722,6 +752,7 @@
     open,
     close,
     select,
+    applySelected,
     confirmDelete,
     delete: deleteTheme,
     onDeleted,
