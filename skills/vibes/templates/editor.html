@@ -3354,8 +3354,8 @@ window.escapeHtml = function(str) {
   const WS_MAX_RETRIES = 20;
   const WS_BASE_DELAY = 2000;
   const WS_MAX_DELAY = 30000;
-  let isThinking = false;
-  let isGenerating = false;
+  let isThinking = window.isThinking = false;
+  let isGenerating = window.isGenerating = false;
   let clientTimerInterval = null;
   let clientElapsedSec = 0;
   let lastServerMessageTime = 0;
@@ -4080,7 +4080,7 @@ window.escapeHtml = function(str) {
         finalizeStreaming();
         if (!isVersionNav) versionPush();
         if (isGenerating) {
-          isGenerating = false;
+          isGenerating = window.isGenerating = false;
           hidePreviewOverlay();
           reloadPreview();
           autoSaveApp();
@@ -4095,7 +4095,7 @@ window.escapeHtml = function(str) {
         setThinking(false);
         finalizeStreaming();
         if (isGenerating) {
-          isGenerating = false;
+          isGenerating = window.isGenerating = false;
           hidePreviewOverlay();
         }
         if (currentPhase === 'generate') {
@@ -4111,7 +4111,7 @@ window.escapeHtml = function(str) {
         setThinking(false);
         finalizeStreaming();
         if (isGenerating) {
-          isGenerating = false;
+          isGenerating = window.isGenerating = false;
           hidePreviewOverlay();
         }
         if (currentPhase === 'generate') {
@@ -4724,7 +4724,7 @@ window.escapeHtml = function(str) {
     EditorReference.clear('generate');
 
     // Immediately transition to edit view
-    isGenerating = true;
+    isGenerating = window.isGenerating = true;
     setPhase('edit');
     addMessage('user', prompt);
     resetClientTimer();
@@ -5791,7 +5791,7 @@ window.escapeHtml = function(str) {
   }
 
   function setThinking(thinking, progress, stage, elapsed) {
-    isThinking = thinking;
+    isThinking = window.isThinking = thinking;
     const panel = document.getElementById('previewPanel');
     const sendBtn = document.getElementById('sendBtn');
     const container = document.getElementById('chatMessages');

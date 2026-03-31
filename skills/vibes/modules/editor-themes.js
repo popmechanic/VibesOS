@@ -243,6 +243,8 @@
   // ===========================
 
   function open() {
+    // Block theme selection while Claude is generating to avoid race conditions
+    if (window.isThinking || window.isGenerating) return;
     if (elements.themeModal) elements.themeModal.classList.add('open');
     if (elements.themeSearch) elements.themeSearch.value = '';
     renderThemeGrid();
