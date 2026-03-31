@@ -5397,7 +5397,7 @@ window.escapeHtml = function(str) {
     block.innerHTML = `
       <div class="tool-header">
         <div class="tool-spinner"></div>
-        <span class="tool-name">${escapeHtml(toolName)}</span>
+        <span class="tool-name">${escapeHtml(TOOL_LABELS[toolName]?.replace('...', '') || toolName)}</span>
         <span class="tool-target"></span>
       </div>
       <div class="tool-result" onclick="this.classList.toggle('expanded')">
