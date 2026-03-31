@@ -2756,7 +2756,7 @@
         <button class="window-dot window-dot--minimize" onclick="windowControl('minimize')"></button>
         <button class="window-dot window-dot--zoom" onclick="windowControl('zoom')"></button>
       </div>
-      <div class="vibes-pill-wrap" onclick="setPhase('generate')" data-tooltip="Back to prompt">
+      <div class="vibes-pill-wrap" onclick="goHome()" data-tooltip="Back to prompt">
         <svg class="vibes-pill" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 133 28.7">
           <path fill="#FFFFF0" d="M15.1,5.9c2.8-.7,2.3,1.6,1.4,3.4-.8,1.9-1.8,4.3-2.6,6.2-.5,1.1-.9,2.1-1.4,3.3-.9,2.1-1.5,4.2-3.6,4.3-3.6.1-4.2-5.3-5.8-8.3-.9-2.2-2-4.6-2.8-6.7-.2-.5-.3-1.2-.1-1.6.3-.9,1.9-.8,2.7-.2,2.2,2.1,3,6,4.4,8.6.4,1,1.3,3,2.1,1.4,1-1.9,2.3-5.4,3.5-7.9.5-1,1.1-2,2.1-2.5h.2Z"/>
           <path fill="#FFFFF0" d="M20.1,22.9c-.2,0-.3-.2-.3-.3-.1-2.2,0-6.1,0-9,0-3.2,0-6.2,0-7.3,0-.7.8-.6,1.4-.6.9,0,2.1-.2,2,1.1,0,3,0,12.8,0,15.4.1,1.3-2.3.8-3,.8h0Z"/>
@@ -3356,6 +3356,9 @@ window.escapeHtml = function(str) {
   const WS_MAX_DELAY = 30000;
   let isThinking = false;
   let isGenerating = false;
+  let clientTimerInterval = null;
+  let clientElapsedSec = 0;
+  let lastServerMessageTime = 0;
   let themes = [];
   let currentPhase = 'loading';
   let deployTargets = { cloudflare: false };
@@ -3979,6 +3982,9 @@ window.escapeHtml = function(str) {
       }
 
       if (msg.type === 'status') {
+        // Sync client timer with server elapsed and reset stall detector
+        lastServerMessageTime = Date.now();
+        if (msg.elapsed != null) clientElapsedSec = msg.elapsed;
         if (msg.status === 'saving_theme') {
           EditorThemes.updateSaveProgress(msg.progress, msg.stage, msg.elapsed);
         } else if (msg.status === 'rate_limited') {
@@ -5136,6 +5142,7 @@ window.escapeHtml = function(str) {
     if (activeAnimationId) EditorAnimations.clear();
     if (activeSkillId) EditorSkills.clear();
     if (referenceFile) EditorReference.clear('edit');
+    setThinking(true, null, 'Thinking...');
   }
 
   // === Choice Button Helpers ===
@@ -5488,6 +5495,42 @@ window.escapeHtml = function(str) {
     return m > 0 ? `${m}m ${s}s` : `${s}s`;
   }
 
+  function startClientTimer() {
+    stopClientTimer();
+    clientElapsedSec = 0;
+    lastServerMessageTime = Date.now();
+    clientTimerInterval = setInterval(() => {
+      clientElapsedSec++;
+      const formatted = formatElapsed(clientElapsedSec);
+      // Update all visible timer elements
+      const genTimer = document.getElementById('genTimer');
+      if (genTimer) genTimer.textContent = formatted;
+      const thinkingTimer = document.querySelector('.thinking-timer');
+      if (thinkingTimer) thinkingTimer.textContent = formatted;
+      // Stall detection: if no server message for 15s+, show helpful stage info
+      const silenceSec = Math.round((Date.now() - lastServerMessageTime) / 1000);
+      if (silenceSec >= 30) {
+        updateStageText('Still waiting for response — try resetting if stuck');
+      } else if (silenceSec >= 15) {
+        updateStageText('Connecting to Claude...');
+      }
+    }, 1000);
+  }
+
+  function stopClientTimer() {
+    if (clientTimerInterval) {
+      clearInterval(clientTimerInterval);
+      clientTimerInterval = null;
+    }
+  }
+
+  function updateStageText(text) {
+    const genStage = document.getElementById('genStage');
+    if (genStage) genStage.textContent = text;
+    const thinkingStage = document.querySelector('.thinking-stage');
+    if (thinkingStage) thinkingStage.textContent = text;
+  }
+
   function cancelRequest() {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'cancel' }));
@@ -5728,6 +5771,7 @@ window.escapeHtml = function(str) {
     const container = document.getElementById('chatMessages');
 
     if (thinking) {
+      if (!clientTimerInterval) startClientTimer();
       if (panel) panel.classList.add('thinking');
       if (sendBtn) sendBtn.disabled = true;
 
@@ -5758,6 +5802,7 @@ window.escapeHtml = function(str) {
       }
       container.scrollTop = container.scrollHeight;
     } else {
+      stopClientTimer();
       if (panel) {
         panel.classList.remove('thinking');
         panel.classList.add('updated');
