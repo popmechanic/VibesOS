@@ -82,7 +82,12 @@ export default function App() {
 function MessageRow({ id }) {
   const role = useCell('messages', id, 'role');
   const content = useCell('messages', id, 'content');
-  return <p><b>{role}:</b> {content}</p>;
+  return (
+    <div>
+      <b>{role}:</b>
+      <Markdown text={content} />
+    </div>
+  );
 }
 ```
 
