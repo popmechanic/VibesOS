@@ -77,9 +77,12 @@ export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, t
     }
   }
 
+  const assembleArgs = [appJsxPath, indexHtmlPath];
+  if (isPrivate) assembleArgs.push('--private');
+
   const assembleResult = await runBunScript(
     join(ctx.projectRoot, 'scripts/assemble.js'),
-    [appJsxPath, indexHtmlPath],
+    assembleArgs,
     { cwd: ctx.projectRoot },
   );
 
