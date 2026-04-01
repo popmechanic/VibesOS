@@ -122,7 +122,7 @@ Present Editor as the first/recommended option.
 - Tokens are cached at `~/.vibes/auth.json` for subsequent deploys
 - Sync infrastructure deploys automatically on first app deploy — no manual setup needed
 
-Read `${CLAUDE_SKILL_DIR}/references/generation-rules.md` for platform constraints, core rules, what generated code must/must not contain, generation process, and assembly workflow.
+Read `${CLAUDE_SKILL_DIR}/references/generation-rules.md` for platform constraints, core rules, what generated code must/must not contain, generation process, assembly workflow, and the `<Markdown>` component for rendering formatted text.
 
 ---
 
