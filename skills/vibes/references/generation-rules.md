@@ -203,6 +203,26 @@ export default function App() {
 - `@theme:decoration` — SVG elements, atmospheric backgrounds (in JSX)
 - **Outside markers:** ONLY pure-layout classes (display, grid, gap, padding, margin, position, width/height, flex, overflow). If a class has ANY visual property, it goes in `@theme:surfaces`.
 
+**Markdown Content**
+
+The template provides a `<Markdown text={...} />` component that renders markdown as styled HTML (GitHub-Flavored Markdown via `marked`, sanitized with `DOMPurify`). Use it for any text that may contain formatting:
+
+```jsx
+// ✅ Content that may contain markdown — use <Markdown>
+<Markdown text={useCell('notes', id, 'body')} />
+<Markdown text={aiResponse} />
+
+// ✅ Short labels, titles, single-line display text — plain React children
+<h1>{useCell('notes', id, 'title')}</h1>
+<span>{status}</span>
+
+// ❌ Wrong — content with potential markdown rendered raw
+<p>{useCell('notes', id, 'body')}</p>
+<div>{aiResponse}</div>
+```
+
+**Heuristic:** if the text could be more than one line or comes from AI, use `<Markdown>`. Plain labels, titles, and single-line text stay as direct React children.
+
 **TinyBase Hook Pattern**
 
 All TinyBase hooks are globals provided by the template — no imports needed. The template creates the store, sets up persistence, and manages sync. Generated app code only needs to call hooks:
