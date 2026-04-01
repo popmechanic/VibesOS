@@ -5276,6 +5276,10 @@ window.escapeHtml = function(str) {
     // Extract ▸ prefixed lines from the bubble and render as separate choice bubbles
     const choices = [];
 
+    console.log('[choice-debug] isHtml:', bubble.style.whiteSpace === 'normal',
+      'textContent has ▸:', (bubble.textContent || '').includes('\u25b8'),
+      'innerHTML snippet:', bubble.innerHTML.slice(0, 200));
+
     const isHtml = bubble.style.whiteSpace === 'normal';
     if (isHtml) {
       // Streamed/markdown bubble: check <p> elements for ▸ markers
@@ -5283,12 +5287,8 @@ window.escapeHtml = function(str) {
       const toRemove = [];
       paragraphs.forEach(p => {
         const txt = p.textContent.trim();
-        if (txt.startsWith('\u25b8 ')) {
-          choices.push(txt.slice(2).trim());
-          toRemove.push(p);
-        } else if (txt.includes('\u25b8')) {
-          // ▸ markers mixed into the same <p> (marked wraps consecutive lines in one <p>)
-          // Split on ▸ character — more robust than splitting on \n since HTML may normalize newlines
+        if (txt.includes('\u25b8')) {
+          // Split on ▸ character — handles both single and multiple markers per <p>
           const parts = txt.split('\u25b8');
           const preamble = parts[0].trim();
           for (let i = 1; i < parts.length; i++) {
