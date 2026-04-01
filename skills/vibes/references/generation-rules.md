@@ -223,6 +223,22 @@ The template provides a `<Markdown text={...} />` component that renders markdow
 
 **Heuristic:** if the text could be more than one line or comes from AI, use `<Markdown>`. Plain labels, titles, and single-line text stay as direct React children.
 
+**File References**
+
+Users can upload files as context. The `intent` field tells you how to use them:
+
+| Intent | Meaning | What to do |
+|--------|---------|------------|
+| `seed` | Populate the database | Parse the data, design a TinyBase table schema, seed rows on first load |
+| `content` | Display in the app | Use `<Markdown>` for text, design appropriate UI for structured data |
+| `context` | Background info only | Inform design decisions, do NOT include content in the app |
+| `mood` | Visual mood (image) | Extract colors/typography/surfaces, preserve layout |
+| `match` | Match layout (image) | Extract complete visual theme + layout structure |
+
+For `seed` intent, guard seeding with a check (e.g., `if (useRowIds('tableName').length === 0)`) so data isn't duplicated on reload.
+
+**Large assets (R2):** When an app needs assets larger than ~100 KB (photos, audio, large SVGs), the deploy system automatically uploads them to cloud storage and serves them at `/assets/filename.ext`. Reference them with absolute paths in JSX: `<img src="/assets/photo.jpg" />`. This works identically in preview and production.
+
 **TinyBase Hook Pattern**
 
 All TinyBase hooks are globals provided by the template — no imports needed. The template creates the store, sets up persistence, and manages sync. Generated app code only needs to call hooks:
