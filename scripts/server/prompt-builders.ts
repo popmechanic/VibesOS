@@ -737,7 +737,22 @@ ${textContent.length > 50000 ? '\n(Content truncated — full file at ' + refPat
 `;
     }
 
-    // intent === 'context' (default for text files)
+    if (intent === 'auto') {
+      return `FILE REFERENCE: "${reference.name}"
+
+The user uploaded this file without specifying how to use it. Decide based on the content:
+- If it looks like structured data (CSV, TSV, JSON) — parse it and populate TinyBase tables. Guard seeding with a check so data isn't duplicated on reload.
+- If it looks like prose, documentation, or markdown — build an app that displays the content. Use the <Markdown> component for rendering.
+- Otherwise — use it as background context to inform your design decisions.
+
+\`\`\`
+${textContent.slice(0, 50000)}
+\`\`\`
+${textContent.length > 50000 ? '\n(Content truncated — full file at ' + refPath + ')\n' : ''}
+`;
+    }
+
+    // intent === 'context'
     return `FILE REFERENCE: "${reference.name}" (intent: Context)
 
 The user uploaded this file as background context. Use it to inform your design decisions, but do NOT include this content directly in the app.

@@ -16,6 +16,7 @@
   const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
   const TEXT_EXTS = /\.(txt|md|csv|tsv|json|xml|rtf)$/i;
   const INTENT_PLACEHOLDERS = {
+    auto: 'Describe what to build, or just hit send \u2014 the AI will decide how to use the file...',
     seed: 'Build an app using this data, or describe what to do with it...',
     content: 'Describe how to display this content, or just hit send...',
     context: 'Describe what to build \u2014 the file will inform the design...',
@@ -106,7 +107,8 @@
 
     reader.onload = () => {
       if (isText) {
-        ctx.file = { name: file.name, type: file.type, dataUrl: null, textContent: reader.result, intent: 'content' };
+        ctx.file = { name: file.name, type: file.type, dataUrl: null, textContent: reader.result, intent: 'auto' };
+        _setPlaceholder(contextName, 'auto');
         showTextIntentPicker(contextName, file);
       } else {
         ctx.file = { name: file.name, type: file.type, dataUrl: reader.result, textContent: null, intent: 'match' };
@@ -220,7 +222,7 @@
     const ctx = contexts[contextName];
     if (!ctx || !ctx.file) return;
     ctx.file.intent = intent;
-    const intentLabels = { none: '', mood: ' (Mood)', match: ' (Match)', seed: ' (Seed Data)', content: ' (Content)', context: ' (Context)' };
+    const intentLabels = { auto: '', none: '', mood: ' (Mood)', match: ' (Match)', seed: ' (Seed Data)', content: ' (Content)', context: ' (Context)' };
     _showBadge(contextName, ctx.file.name, intentLabels[intent] || '');
     _setPlaceholder(contextName, intent);
 
