@@ -100,25 +100,25 @@ const React = typeof window !== "undefined" ? window.React : undefined;
 if (React) {
   /**
    * Check if AI proxy and auth token are available.
-   * Returns { proxyUrl, token } on success, or null.
+   * Returns { proxyUrl, token } on success, or { error, message } on failure.
    */
   function checkReady() {
     const config = window.__APP_CONFIG__ || {};
     const proxyUrl = config.aiProxyUrl;
-    if (!proxyUrl) return null;
+    if (!proxyUrl) return { error: "NOT_CONFIGURED", message: "This app was not deployed with AI enabled. Redeploy with the 'Use AI' option to use AI features." };
     const token = window.__VIBES_OIDC_TOKEN__;
-    if (!token) return null;
+    if (!token) return { error: "NOT_AUTHENTICATED", message: "Waiting for sign-in — AI will be available after you log in." };
     return { proxyUrl, token };
   }
 
   function useAI() {
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState(null);
-    const [isReady, setIsReady] = React.useState(function () { return !!checkReady(); });
+    const [isReady, setIsReady] = React.useState(function () { const r = checkReady(); return !!(r && r.proxyUrl); });
 
     // Listen for OIDC token availability
     React.useEffect(function () {
-      function onReady() { setIsReady(!!checkReady()); }
+      function onReady() { const r = checkReady(); setIsReady(!!(r && r.proxyUrl)); }
       window.addEventListener('vibes-oidc-ready', onReady);
       // Re-check in case token arrived before this effect ran
       onReady();
@@ -127,8 +127,8 @@ if (React) {
 
     const callAI = React.useCallback(async (options) => {
       const env = checkReady();
-      if (!env) {
-        setError({ code: "NOT_READY", message: "AI is not available yet — try again in a moment" });
+      if (env.error) {
+        setError({ code: env.error, message: env.message });
         return null;
       }
 
@@ -164,8 +164,8 @@ if (React) {
 
     const streamAI = React.useCallback((options) => {
       const env = checkReady();
-      if (!env) {
-        setError({ code: "NOT_READY", message: "AI is not available yet — try again in a moment" });
+      if (env.error) {
+        setError({ code: env.error, message: env.message });
         return null;
       }
 
