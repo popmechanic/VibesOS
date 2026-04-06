@@ -92,5 +92,14 @@ export function sanitizeAppJsx(projectRoot: string): void {
     .replace(/<(\/?)script\b/gi, (m, slash) => `<${slash}\\x73cript`);
   if (scriptClean !== code) { code = scriptClean; changed = true; console.log('[PostProcess] Escaped <script> literals'); }
 
+  // Fix escaped backticks on lines that look like template literal boundaries.
+  // The model sometimes outputs `const STYLE = \`...` or ends blocks with `\`;`
+  // These break Babel. Only fix backticks that appear to be template literal
+  // delimiters (preceded by = or at start of expression, or followed by ; or end).
+  const backtickClean = code
+    .replace(/=\s*\\`/g, '= `')
+    .replace(/\\`\s*;/g, '`;');
+  if (backtickClean !== code) { code = backtickClean; changed = true; console.log('[PostProcess] Fixed escaped template literal backticks'); }
+
   if (changed) writeFileSync(appPath, code, 'utf-8');
 }

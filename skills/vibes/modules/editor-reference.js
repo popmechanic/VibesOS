@@ -13,7 +13,6 @@
   const intentAbortControllers = {};
   let escapeHtml = function(s) { return s; };
 
-  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
   const TEXT_EXTS = /\.(txt|md|csv|tsv|json|xml|rtf)$/i;
   const INTENT_PLACEHOLDERS = {
     auto: 'Describe what to build, or just hit send \u2014 the AI will decide how to use the file...',
@@ -85,62 +84,59 @@
     ctx.elements.inputEl.placeholder = intent ? (INTENT_PLACEHOLDERS[intent] || DEFAULT_PLACEHOLDER) : DEFAULT_PLACEHOLDER;
   }
 
-  /** Read a File and show intent picker or badge. */
-  function attachFromFile(contextName, file) {
+  /** Upload a File via HTTP POST, then show intent picker or badge. */
+  async function attachFromFile(contextName, file) {
     const ctx = contexts[contextName];
     if (!ctx) return;
 
-    // Size limit
-    if (file.size > MAX_FILE_SIZE) {
-      const row = ctx.elements.refBadgeRow;
+    const isHtml = /\.html?$/i.test(file.name);
+    const isText = TEXT_EXTS.test(file.name);
+    const row = ctx.elements.refBadgeRow;
+
+    // Upload via HTTP POST to local server
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/editor/upload', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+        if (row) {
+          row.innerHTML = `<span class="ref-badge" style="background:var(--vibes-red);color:white;">${escapeHtml(err.error || 'Upload failed')}</span>`;
+          row.classList.add('visible');
+          setTimeout(() => clear(contextName), 3000);
+        }
+        return;
+      }
+      const result = await res.json();
+
+      // Store server-side path instead of base64 data
+      ctx.file = {
+        name: result.name,
+        type: result.type || file.type,
+        serverPath: result.path,
+        dataUrl: null,
+        textContent: null,
+        intent: isText ? 'auto' : 'match',
+      };
+
+      if (isHtml) {
+        _showBadge(contextName, file.name, ' (HTML Design)');
+        if (ctx.callbacks.onRefAttached) {
+          ctx.callbacks.onRefAttached(null);
+        }
+      } else if (file.type.startsWith('image/')) {
+        showIntentPicker(contextName, file);
+      } else {
+        // Text, PDF, and other document files — show intent picker
+        _setPlaceholder(contextName, 'auto');
+        showTextIntentPicker(contextName, file);
+      }
+    } catch (err) {
       if (row) {
-        row.innerHTML = '<span class="ref-badge" style="background:var(--vibes-red);color:white;">File too large (max 50 MB)</span>';
+        row.innerHTML = `<span class="ref-badge" style="background:var(--vibes-red);color:white;">Upload failed: ${escapeHtml(err.message || 'Network error')}</span>`;
         row.classList.add('visible');
         setTimeout(() => clear(contextName), 3000);
       }
-      return;
-    }
-
-    const isHtml = /\.html?$/i.test(file.name);
-    const isText = TEXT_EXTS.test(file.name);
-
-    // Show loading indicator immediately
-    const display = file.name.length > 20
-      ? file.name.slice(0, 8) + '...' + file.name.slice(-8)
-      : file.name;
-    const row = ctx.elements.refBadgeRow;
-    if (row) {
-      row.innerHTML = `<span class="ref-badge"><span class="ref-badge-icon" style="animation:spin 1s linear infinite;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4m-3.93 7.07l-2.83-2.83M7.76 7.76L4.93 4.93"/></svg></span> Loading ${escapeHtml(display)}...</span>`;
-      row.classList.add('visible');
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      if (isText) {
-        ctx.file = { name: file.name, type: file.type, dataUrl: null, textContent: reader.result, intent: 'auto' };
-        _setPlaceholder(contextName, 'auto');
-        showTextIntentPicker(contextName, file);
-      } else {
-        ctx.file = { name: file.name, type: file.type, dataUrl: reader.result, textContent: null, intent: 'match' };
-        if (isHtml) {
-          _showBadge(contextName, file.name, ' (HTML Design)');
-          if (ctx.callbacks.onRefAttached) {
-            ctx.callbacks.onRefAttached(reader.result);
-          }
-        } else if (file.type.startsWith('image/')) {
-          showIntentPicker(contextName, file);
-        } else {
-          // Binary files (PDF, DOCX, etc.) — show badge directly
-          _showBadge(contextName, file.name, '');
-        }
-      }
-    };
-
-    if (isText) {
-      reader.readAsText(file);
-    } else {
-      reader.readAsDataURL(file);
     }
   }
 

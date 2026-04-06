@@ -234,7 +234,7 @@ function switchApp(ctx: ServerContext, newAppDir: string): void {
 
 export function createWsHandler(ctx: ServerContext) {
   return {
-    maxPayloadLength: 50 * 1024 * 1024, // 50MB for image refs
+    maxPayloadLength: 5 * 1024 * 1024, // 5MB — files now upload via HTTP POST
     idleTimeout: 255,
 
     open(ws: ServerWebSocket<WsData>) {

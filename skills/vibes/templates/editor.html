@@ -4863,8 +4863,7 @@ window.escapeHtml = function(str) {
       payload.reference = {
         name: genRefFile.name,
         type: genRefFile.type,
-        dataUrl: genRefFile.dataUrl,
-        textContent: genRefFile.textContent,
+        serverPath: genRefFile.serverPath,
         intent: genRefFile.intent || 'content'
       };
     }
@@ -5328,8 +5327,7 @@ window.escapeHtml = function(str) {
       payload.reference = {
         name: referenceFile.name,
         type: referenceFile.type,
-        dataUrl: referenceFile.dataUrl,
-        textContent: referenceFile.textContent,
+        serverPath: referenceFile.serverPath,
         intent: refIntent
       };
     }
@@ -6208,7 +6206,10 @@ window.escapeHtml = function(str) {
   checkExistingApps();
 
   // Check auth → decide welcome vs generate/edit
-  fetch('/editor/status').then(r => r.json()).then(status => {
+  // Timeout prevents blank screen if token refresh hangs (e.g., cold network on wake)
+  const statusController = new AbortController();
+  const statusTimeout = setTimeout(() => statusController.abort(), 8000);
+  fetch('/editor/status', { signal: statusController.signal }).then(r => { clearTimeout(statusTimeout); return r.json(); }).then(status => {
     if (status.auth?.state === 'valid') {
       currentUser = status.auth.user;
       // Authenticated — always start at the prompt

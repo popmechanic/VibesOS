@@ -162,8 +162,8 @@ EFFECT RULES:
     }
   }
 
-  // Reference file — image or HTML the user wants the app styled after
-  if (reference && reference.name && reference.dataUrl) {
+  // Reference file — image, HTML, text, or data file
+  if (reference && reference.name && (reference.serverPath || reference.dataUrl || reference.textContent)) {
     referenceBlock = buildReferenceBlock(ctx, reference);
   }
 
@@ -226,20 +226,16 @@ export function buildGeneratePrompt(
   }
 
   // Design reference path — skip theme resolution, let the reference guide design
-  const hasRef = reference && reference.name && reference.dataUrl;
+  const hasRef = reference && reference.name && (reference.serverPath || reference.dataUrl || reference.textContent);
   if (hasRef) {
     const isHtmlRef = /\.html?$/i.test(reference.name);
     const intent = reference.intent || 'match';
-    const base64 = reference.dataUrl.split(',')[1];
-    const tmpDir = join(ctx.projectRoot, '.vibes-tmp');
-    mkdirSync(tmpDir, { recursive: true });
-    const refPath = join(tmpDir, reference.name);
+    const refPath = resolveRefPath(ctx, reference);
 
     let referenceBlock = '';
 
     if (isHtmlRef) {
-      const htmlContent = Buffer.from(base64, 'base64').toString('utf-8');
-      writeFileSync(refPath, htmlContent, 'utf-8');
+      const htmlContent = readFileSync(refPath, 'utf-8');
       const inlined = htmlContent;
 
       console.log(`[prompt-builders] HTML reference: ${reference.name}, ${htmlContent.length} chars, FULL INLINE (no truncation)`);
@@ -260,10 +256,11 @@ Before extracting, quote the key CSS rules from the HTML above — the :root var
 - --color-background MUST match the HTML's background. Never transparent.
 
 `;
+    } else if (reference.textContent || (existsSync(refPath) && /\.(txt|md|csv|tsv|json|xml|rtf)$/i.test(reference.name))) {
+      // Text file reference in generate path — delegate to buildReferenceBlock
+      referenceBlock = buildReferenceBlock(ctx, reference);
     } else {
-      // Image reference
-      writeFileSync(refPath, Buffer.from(base64, 'base64'));
-
+      // Image/binary reference — file already on disk from upload
       if (intent === 'mood') {
         referenceBlock = `MANDATORY FIRST STEP: Read the image at ${refPath} using the Read tool.
 
@@ -677,19 +674,37 @@ KEEP UNCHANGED:
 // --- Internal helpers ---
 
 /**
- * Build the reference block for chat prompts (image or HTML reference).
+ * Resolve the on-disk path for a reference file.
+ * New flow: file already at serverPath from HTTP upload.
+ * Legacy flow: decode base64 dataUrl and write to .vibes-tmp/.
+ */
+function resolveRefPath(ctx: ServerContext, reference: any): string {
+  if (reference.serverPath && existsSync(reference.serverPath)) {
+    return reference.serverPath;
+  }
+  // Legacy: decode base64 dataUrl to .vibes-tmp/
+  const tmpDir = join(ctx.projectRoot, '.vibes-tmp');
+  mkdirSync(tmpDir, { recursive: true });
+  const refPath = join(tmpDir, reference.name);
+  if (reference.dataUrl) {
+    const base64 = reference.dataUrl.split(',')[1];
+    writeFileSync(refPath, Buffer.from(base64, 'base64'));
+  } else if (reference.textContent) {
+    writeFileSync(refPath, reference.textContent, 'utf-8');
+  }
+  return refPath;
+}
+
+/**
+ * Build the reference block for chat prompts (image, HTML, or text reference).
  */
 function buildReferenceBlock(ctx: ServerContext, reference: any): string {
   const isHtml = /\.html?$/i.test(reference.name);
   const intent = reference.intent || 'match';
-  const base64 = reference.dataUrl ? reference.dataUrl.split(',')[1] : null;
-  const tmpDir = join(ctx.projectRoot, '.vibes-tmp');
-  mkdirSync(tmpDir, { recursive: true });
-  const refPath = join(tmpDir, reference.name);
+  const refPath = resolveRefPath(ctx, reference);
 
   if (isHtml) {
-    const htmlContent = Buffer.from(base64, 'base64').toString('utf-8');
-    writeFileSync(refPath, htmlContent, 'utf-8');
+    const htmlContent = readFileSync(refPath, 'utf-8');
     return `DESIGN REFERENCE (HTML file: "${reference.name}"):
 You MUST match this HTML file's design language — colors, typography, spacing, layout patterns, and overall aesthetic — when styling the app. Study the CSS and structure carefully and apply the same visual treatment.
 
@@ -708,10 +723,10 @@ Now update the app's CSS token system to match this HTML:
 `;
   }
 
-  // Text files — sent as plain text, not base64
-  if (reference.textContent) {
-    const textContent = reference.textContent;
-    writeFileSync(refPath, textContent, 'utf-8');
+  // Text files — read from disk (uploaded via HTTP POST or written by resolveRefPath)
+  const isText = /\.(txt|md|csv|tsv|json|xml|rtf)$/i.test(reference.name);
+  if (isText && existsSync(refPath)) {
+    const textContent = readFileSync(refPath, 'utf-8');
 
     if (intent === 'seed') {
       return `FILE REFERENCE: "${reference.name}" (intent: Seed Data)
@@ -764,11 +779,10 @@ ${textContent.length > 50000 ? '\n(Content truncated — full file at ' + refPat
 `;
   }
 
-  // Save image/binary to disk so Claude can read it visually
-  if (!base64) {
-    return `The user attached a file: ${reference.name}. No content was provided.\n\n`;
+  // Image/binary file — already on disk from upload
+  if (!existsSync(refPath)) {
+    return `The user attached a file: ${reference.name}. The file could not be found on disk.\n\n`;
   }
-  writeFileSync(refPath, Buffer.from(base64, 'base64'));
 
   if (intent === 'none') {
     return `The user attached an image: ${refPath}. Read it with the Read tool if relevant to their message.

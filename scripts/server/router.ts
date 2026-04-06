@@ -583,6 +583,54 @@ async function editorWriteApp(ctx: ServerContext, req: Request, url: URL): Promi
   }
 }
 
+const MAX_UPLOAD_SIZE = 500 * 1024 * 1024; // 500MB for reference file uploads
+
+async function editorUploadFile(ctx: ServerContext, req: Request): Promise<Response> {
+  try {
+    const tmpDir = join(ctx.projectRoot, '.vibes-tmp');
+    mkdirSync(tmpDir, { recursive: true });
+
+    const contentType = req.headers.get('content-type') || '';
+    if (!contentType.includes('multipart/form-data')) {
+      return json({ error: 'Expected multipart/form-data' }, 400);
+    }
+
+    const formData = await req.formData();
+    const file = formData.get('file') as File | null;
+    if (!file || !file.name) {
+      return json({ error: 'No file provided' }, 400);
+    }
+
+    // Enforce size limit
+    if (file.size > MAX_UPLOAD_SIZE) {
+      return json({ error: `File too large (max ${MAX_UPLOAD_SIZE / 1024 / 1024}MB)` }, 413);
+    }
+
+    // Sanitize filename — keep extension, strip path separators
+    const safeName = file.name.replace(/[\/\\]/g, '_');
+    const destPath = join(tmpDir, safeName);
+
+    const buf = Buffer.from(await file.arrayBuffer());
+    writeFileSync(destPath, buf);
+
+    // Determine if this is a text file and read content for prompt inlining
+    const textExts = /\.(txt|md|csv|tsv|json|xml|rtf)$/i;
+    const isText = textExts.test(safeName);
+    const isHtml = /\.html?$/i.test(safeName);
+
+    return json({
+      ok: true,
+      name: safeName,
+      path: destPath,
+      size: file.size,
+      type: file.type,
+      isText: isText || isHtml,
+    });
+  } catch (err: any) {
+    return json({ error: err.message }, err.status || 500);
+  }
+}
+
 function editorListDeployments(ctx: ServerContext): Response {
   try {
     const reg = loadRegistry();
@@ -651,6 +699,7 @@ export function createRouter(ctx: ServerContext) {
       case 'POST /editor/apps/rename':     return editorRenameApp(ctx, url);
       case 'POST /editor/apps/screenshot':  return editorSaveScreenshot(ctx, req, url);
       case 'POST /editor/apps/write':       return editorWriteApp(ctx, req, url);
+      case 'POST /editor/upload':           return editorUploadFile(ctx, req);
       case 'GET /editor/deployments':       return editorListDeployments(ctx);
     }
 
