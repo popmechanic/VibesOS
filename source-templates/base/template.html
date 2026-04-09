@@ -608,20 +608,28 @@
       function applyVibesTheme(themeId) {
         var preset = VIBES_THEME_PRESETS[themeId];
         if (!preset) return;
-        var root = document.documentElement;
+        // Instant visual preview while Claude regenerates the actual app code.
+        // Uses a <style> tag (not inline styles) so the app's own :root can
+        // override in the cascade once the regenerated code loads.
+        var styleEl = document.getElementById('vibes-theme-override');
+        if (!styleEl) {
+          styleEl = document.createElement('style');
+          styleEl.id = 'vibes-theme-override';
+          document.head.appendChild(styleEl);
+        }
+        var css = ':root {';
         Object.keys(preset).forEach(function(key) {
-          root.style.setProperty(key, preset[key]);
+          css += key + ':' + preset[key] + ';';
         });
-        try { localStorage.setItem('vibes-theme', themeId); } catch(e) {}
+        css += '}';
+        styleEl.textContent = css;
+        // No localStorage save — theme switching regenerates the app code,
+        // so the app's own CSS is always the source of truth.
       }
 
-      // Apply saved theme on load
-      try {
-        var savedTheme = localStorage.getItem('vibes-theme');
-        if (savedTheme && VIBES_THEME_PRESETS[savedTheme]) {
-          applyVibesTheme(savedTheme);
-        }
-      } catch(e) {}
+      // No localStorage theme restore — all apps share the same origin in the
+      // desktop app (localhost:3333), so a saved theme from one app would bleed
+      // into the next. The app's own CSS is the source of truth.
 
       // Listen for theme change events from VibesPanel
       document.addEventListener('vibes-design-request', function(e) {
