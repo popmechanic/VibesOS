@@ -459,25 +459,30 @@ export function createWsHandler(ctx: ServerContext) {
               onEvent({ type: 'error', message: 'App name is required' });
               break;
             }
-            // Source: prefer project dir, fall back to legacy
-            let appSrc: string;
             if (ctx.projectDir) {
-              appSrc = join(ctx.projectDir, 'app.jsx');
+              // Project folder mode: files already in place, just acknowledge
+              if (!existsSync(join(ctx.projectDir, 'app.jsx'))) {
+                onEvent({ type: 'error', message: 'No app.jsx to save' });
+                break;
+              }
+              onEvent({ type: 'app_saved', name });
+              console.log(`[Save] Project folder save acknowledged: ${ctx.projectDir}`);
             } else {
+              // Legacy mode: copy to ~/.vibes/apps/
               const sourceApp = msg.app || undefined;
-              appSrc = resolveAppJsxPath(ctx, sourceApp);
+              const appSrc = resolveAppJsxPath(ctx, sourceApp);
+              if (!existsSync(appSrc)) {
+                onEvent({ type: 'error', message: 'No app.jsx to save' });
+                break;
+              }
+              const dest = join(ctx.appsDir, name);
+              mkdirSync(dest, { recursive: true });
+              if (resolve(appSrc) !== resolve(join(dest, 'app.jsx'))) {
+                copyFileSync(appSrc, join(dest, 'app.jsx'));
+              }
+              onEvent({ type: 'app_saved', name });
+              console.log(`[Save] Saved app to ${dest}`);
             }
-            if (!existsSync(appSrc)) {
-              onEvent({ type: 'error', message: 'No app.jsx to save' });
-              break;
-            }
-            const dest = join(ctx.appsDir, name);
-            mkdirSync(dest, { recursive: true });
-            if (resolve(appSrc) !== resolve(join(dest, 'app.jsx'))) {
-              copyFileSync(appSrc, join(dest, 'app.jsx'));
-            }
-            onEvent({ type: 'app_saved', name });
-            console.log(`[Save] Saved app to ${dest}`);
             break;
           }
         }
