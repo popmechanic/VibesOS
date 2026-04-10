@@ -5400,6 +5400,7 @@ window.escapeHtml = function(str) {
   // Disable prompt until project is selected (unless legacy app is loaded)
   function initProjectGate() {
     const textarea = document.getElementById('generatePrompt');
+    if (!textarea) return;
     if (!currentAppName && !currentProjectDir) {
       textarea.disabled = true;
       textarea.placeholder = 'Choose a project folder first...';
