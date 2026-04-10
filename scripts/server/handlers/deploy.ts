@@ -12,6 +12,7 @@ import { getAccessToken } from '../../lib/cli-auth.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID, DEPLOY_API_URL } from '../../lib/auth-constants.js';
 import { provisionInviteLink } from '../../lib/provision-invite-link.js';
 import { getApp, setApp } from '../../lib/registry.js';
+import { writeVibesJson } from '../../lib/vibes-json.js';
 import { runBunScript } from '../claude-bridge.ts';
 import type { EventCallback } from '../claude-bridge.ts';
 import type { ServerContext } from '../config.ts';
@@ -60,7 +61,7 @@ export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, t
 
   onEvent({ type: 'progress', progress: 5, stage: 'Assembling app...', elapsed: 0 });
 
-  const appDir = currentAppDir(ctx, appNameOverride);
+  const appDir = ctx.projectDir || currentAppDir(ctx, appNameOverride);
   if (!appDir) {
     onEvent({ type: 'error', message: 'No app active. Generate or load an app first.' });
     return;
@@ -201,6 +202,17 @@ export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, t
       app: { workerName: appName, url: deployUrl },
       updatedAt: new Date().toISOString(),
     });
+
+    // Write deploy info to vibes.json if in a project folder
+    if (ctx.projectDir && existsSync(join(ctx.projectDir, 'vibes.json'))) {
+      writeVibesJson(ctx.projectDir, {
+        deploy: {
+          url: deployUrl,
+          workerName: `vibes-app-${appName}`,
+          deployedAt: new Date().toISOString(),
+        },
+      });
+    }
   } catch (e: any) {
     console.error('[Deploy] Failed to save app metadata:', e.message);
   }
