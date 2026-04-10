@@ -35,7 +35,7 @@ describe('registry', () => {
   describe('loadRegistry', () => {
     it('returns empty registry when no file exists', () => {
       const reg = registry.loadRegistry();
-      expect(reg.version).toBe(1);
+      expect(reg.version).toBe(2);
       expect(reg.apps).toEqual({});
       expect(reg.cloudflare).toEqual({});
     });
@@ -52,7 +52,7 @@ describe('registry', () => {
       mkdirSync(join(TEST_DIR, '.vibes'), { recursive: true });
       writeFileSync(join(TEST_DIR, '.vibes', 'deployments.json'), 'not json{{{');
       const reg = registry.loadRegistry();
-      expect(reg.version).toBe(1);
+      expect(reg.version).toBe(2);
       expect(reg.apps).toEqual({});
     });
 
@@ -60,7 +60,7 @@ describe('registry', () => {
       mkdirSync(join(TEST_DIR, '.vibes'), { recursive: true });
       writeFileSync(join(TEST_DIR, '.vibes', 'deployments.json'), JSON.stringify({ random: 'data' }));
       const reg = registry.loadRegistry();
-      expect(reg.version).toBe(1);
+      expect(reg.version).toBe(2);
       expect(reg.apps).toEqual({});
     });
 
@@ -68,7 +68,7 @@ describe('registry', () => {
       mkdirSync(join(TEST_DIR, '.vibes'), { recursive: true });
       writeFileSync(join(TEST_DIR, '.vibes', 'deployments.json'), JSON.stringify({ version: 1, cloudflare: {} }));
       const reg = registry.loadRegistry();
-      expect(reg.version).toBe(1);
+      expect(reg.version).toBe(2);
       expect(reg.apps).toEqual({});
     });
   });

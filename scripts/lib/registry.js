@@ -2,7 +2,7 @@
  * Global deployment registry for Vibes apps
  *
  * Manages ~/.vibes/deployments.json — tracks all app-connect pairings,
- * Cloudflare account info, and per-app OIDC credentials.
+ * Cloudflare account info, per-app OIDC credentials, and recent projects.
  *
  * Schema (v1):
  * {
@@ -23,11 +23,21 @@
  *     }
  *   }
  * }
+ *
+ * Schema (v2 additions):
+ * {
+ *   "version": 2,
+ *   "recentProjects": [
+ *     { "path": "/abs/path/to/project", "name": "project-name", "displayName": "...", "lastOpened": "ISO8601" }
+ *   ]
+ * }
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+
+const MAX_RECENT_PROJECTS = 20;
 
 function getVibesHome() {
   return process.env.VIBES_HOME || homedir();
@@ -38,7 +48,7 @@ function getRegistryPath() {
 }
 
 function emptyRegistry() {
-  return { version: 1, cloudflare: {}, apps: {} };
+  return { version: 2, cloudflare: {}, apps: {}, recentProjects: [] };
 }
 
 /**
@@ -51,6 +61,13 @@ export function loadRegistry() {
   try {
     const data = JSON.parse(readFileSync(path, 'utf8'));
     if (!data.version || !data.apps) return emptyRegistry();
+    // v1→v2 migration: add recentProjects and bump version
+    if (!data.recentProjects) {
+      data.recentProjects = [];
+    }
+    if (!data.version || data.version < 2) {
+      data.version = 2;
+    }
     return data;
   } catch {
     return emptyRegistry();
@@ -152,4 +169,53 @@ export function validateName(name) {
   return name;
 }
 
+/**
+ * Add or update a project in the recent projects list.
+ * Deduplicates by path, moves to front, caps at MAX_RECENT_PROJECTS.
+ *
+ * @param {{ path: string, name: string, displayName?: string }} project
+ */
+export function addRecentProject(project) {
+  const reg = loadRegistry();
+  // Remove existing entry with the same path
+  reg.recentProjects = reg.recentProjects.filter(p => p.path !== project.path);
+  // Add to front with current timestamp
+  reg.recentProjects.unshift({
+    path: project.path,
+    name: project.name,
+    ...(project.displayName !== undefined ? { displayName: project.displayName } : {}),
+    lastOpened: new Date().toISOString(),
+  });
+  // Cap at MAX_RECENT_PROJECTS
+  if (reg.recentProjects.length > MAX_RECENT_PROJECTS) {
+    reg.recentProjects = reg.recentProjects.slice(0, MAX_RECENT_PROJECTS);
+  }
+  saveRegistry(reg);
+}
 
+/**
+ * Get recent projects list, most-recent-first.
+ * Prunes entries whose paths no longer exist on disk.
+ *
+ * @returns {Array<{ path: string, name: string, displayName?: string, lastOpened: string }>}
+ */
+export function getRecentProjects() {
+  const reg = loadRegistry();
+  const before = reg.recentProjects.length;
+  reg.recentProjects = reg.recentProjects.filter(p => existsSync(p.path));
+  if (reg.recentProjects.length !== before) {
+    saveRegistry(reg);
+  }
+  return reg.recentProjects;
+}
+
+/**
+ * Remove a project from the recent projects list by path.
+ *
+ * @param {string} path - Absolute path of the project to remove
+ */
+export function removeRecentProject(path) {
+  const reg = loadRegistry();
+  reg.recentProjects = reg.recentProjects.filter(p => p.path !== path);
+  saveRegistry(reg);
+}
