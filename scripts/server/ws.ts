@@ -373,19 +373,8 @@ export function createWsHandler(ctx: ServerContext) {
           }
 
           case 'switch_app': {
-            let newAppDir: string;
-            if (msg.projectDir) {
-              // Explicit project folder from client
-              newAppDir = msg.projectDir;
-              ctx.projectDir = msg.projectDir;
-            } else if (ctx.projectDir && msg.name === basename(ctx.projectDir)) {
-              // Reconnect to current project (same name, no explicit projectDir)
-              newAppDir = ctx.projectDir;
-            } else {
-              // Legacy app or different app — clear project context
-              ctx.projectDir = null;
-              newAppDir = join(ctx.appsDir, msg.name);
-            }
+            const newAppDir = msg.projectDir || ctx.projectDir || join(ctx.appsDir, msg.name);
+            ctx.projectDir = msg.projectDir || ctx.projectDir || null;
             switchApp(ctx, newAppDir);
             const history = loadHistory(newAppDir);
             onEvent({ type: 'history', messages: history });

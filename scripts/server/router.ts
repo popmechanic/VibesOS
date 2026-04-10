@@ -441,6 +441,7 @@ function editorListApps(ctx: ServerContext): Response {
       userAppNames.add(name);
       apps.push({
         name,
+        path: dir,
         modified: st.mtime.toISOString(),
         themeId: themeMatch ? themeMatch[1] : null,
         themeName: themeMatch ? themeMatch[2] : null,
@@ -461,6 +462,7 @@ function editorListApps(ctx: ServerContext): Response {
         const themeMatch = firstLine.match(/id:\s*"([^"]+)".*?name:\s*"([^"]+)"/);
         apps.push({
           name,
+          path: dir,
           example: true,
           modified: new Date(0).toISOString(),
           themeId: themeMatch ? themeMatch[1] : null,

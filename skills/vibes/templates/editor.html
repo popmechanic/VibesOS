@@ -3842,7 +3842,7 @@ window.escapeHtml = function(str) {
         ? `<img src="/editor/apps/screenshot?name=${encodeURIComponent(app.name)}&t=${Date.now()}" alt="${escapeHtml(app.name)}" loading="eager">`
         : `<img src="/editor/assets/screen-saver.png" alt="App preview" loading="eager">`;
       const isCurrent = highlightCurrent && app.name === currentAppName;
-      const clickAttr = onClick ? onClick(app.name) : (app.isProject ? `openProject('${app.path.replace(/'/g, "\\'")}')` : `loadSavedApp('${escapeHtml(app.name)}')`);
+      const clickAttr = onClick ? onClick(app.name) : `openProject('${(app.path || '').replace(/'/g, "\\'")}')`;
       const displayName = app.displayName || app.name;
       const meta = showMeta ? `<div class="app-card-meta">${app.example ? 'Example' : timeAgo(new Date(app.modified))}${app.themeName ? ' \u00b7 ' + escapeHtml(app.themeName) : ''}</div>` : '';
       gridHtml += `<div class="app-card${isCurrent ? ' current' : ''}" onclick="${clickAttr}">
@@ -3855,7 +3855,7 @@ window.escapeHtml = function(str) {
     }
 
     for (const app of olderApps) {
-      const clickAttr = onClick ? onClick(app.name) : (app.isProject ? `openProject('${app.path.replace(/'/g, "\\'")}')` : `loadSavedApp('${escapeHtml(app.name)}')`);
+      const clickAttr = onClick ? onClick(app.name) : `openProject('${(app.path || '').replace(/'/g, "\\'")}')`;
       const displayName = app.displayName || app.name;
       const meta = showMeta ? `<div class="app-item-meta">${app.example ? 'Example' : timeAgo(new Date(app.modified))}${app.themeName ? ' \u00b7 ' + escapeHtml(app.themeName) : ''}</div>` : '';
       listHtml += `<button class="app-item" onclick="${clickAttr}">
@@ -4582,10 +4582,9 @@ window.escapeHtml = function(str) {
           displayName: p.displayName || p.name,
           path: p.path,
           modified: p.lastOpened,
-          isProject: true,
         }));
 
-      // Combine: recent projects first, then legacy apps
+      // Combine: recent projects first, then all apps
       const allApps = [...projectEntries, ...savedApps];
 
       if (!hasCurrentApp && allApps.length === 0) return;
@@ -4643,28 +4642,6 @@ window.escapeHtml = function(str) {
     if (s < 3600) return Math.floor(s / 60) + 'm ago';
     if (s < 86400) return Math.floor(s / 3600) + 'h ago';
     return Math.floor(s / 86400) + 'd ago';
-  }
-
-  async function loadSavedApp(name) {
-    try {
-      const res = await fetch('/editor/apps/load?name=' + encodeURIComponent(name), { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to load app');
-      clearProjectDir();
-      setCurrentAppName(name);
-      restorePrivateState(name);
-      document.getElementById('chatMessages').innerHTML = '';
-      // Tell the server to switch apps and load chat history
-      if (ws && ws.readyState === 1) {
-        ws.send(JSON.stringify({ type: 'switch_app', name: name }));
-      }
-      setPhase('edit');
-      loadPreview();
-      versionHistory = [];
-      versionIndex = -1;
-      versionPush();
-    } catch (err) {
-      alert('Failed to load app: ' + err.message);
-    }
   }
 
   // Resolves when the server confirms save — used to sequence screenshot after save
