@@ -6,14 +6,16 @@
  */
 
 import { readFileSync, existsSync, readdirSync, mkdirSync, copyFileSync, statSync, writeFileSync, renameSync } from 'fs';
-import { join, extname, resolve } from 'path';
+import { join, extname, resolve, basename } from 'path';
 import { homedir } from 'os';
 import { resolveClaudeBin, cleanEnv } from '../lib/claude-subprocess.js';
 import type { ServerContext } from './config.ts';
 import { getRecommendedThemeIds, loadOpenRouterKey } from './config.ts';
 import { currentAppDir, resolveAppJsxPath } from './app-context.js';
 import { assembleAppFrame } from './handlers/generate.ts';
-import { loadRegistry, saveRegistry, getCloudflareConfig, setCloudflareConfig, getApp, setApp } from '../lib/registry.js';
+import { loadRegistry, saveRegistry, getCloudflareConfig, setCloudflareConfig, getApp, setApp, addRecentProject, getRecentProjects } from '../lib/registry.js';
+import { pickFolder } from '../lib/folder-picker.js';
+import { initVibesJson, readVibesJson } from '../lib/vibes-json.js';
 import { readCachedTokens, isTokenExpired, getAccessToken, startLoginFlow, removeCachedTokens } from '../lib/cli-auth.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID } from '../lib/auth-constants.js';
 import { validateClerkKey, validateClerkSecretKey, validateClerkCredentials, validateCloudflareCredentials } from './validation.ts';
@@ -631,6 +633,57 @@ async function editorUploadFile(ctx: ServerContext, req: Request): Promise<Respo
   }
 }
 
+async function editorPickFolder(ctx: ServerContext): Promise<Response> {
+  const folderPath = pickFolder();
+  if (!folderPath) {
+    return json({ ok: false, error: 'No folder selected' }, 400);
+  }
+
+  initVibesJson(folderPath);
+  const config = readVibesJson(folderPath);
+
+  ctx.projectDir = folderPath;
+
+  addRecentProject({
+    path: folderPath,
+    name: config?.name || basename(folderPath),
+    displayName: config?.displayName || null,
+  });
+
+  return json({ ok: true, projectDir: folderPath, config });
+}
+
+function editorRecentProjects(): Response {
+  const projects = getRecentProjects();
+  return json({ ok: true, projects });
+}
+
+async function editorOpenProject(ctx: ServerContext, req: Request): Promise<Response> {
+  const { path: projectPath } = await parseJsonBody(req);
+  if (!projectPath) {
+    return json({ ok: false, error: 'Missing path' }, 400);
+  }
+
+  if (!existsSync(projectPath)) {
+    return json({ ok: false, error: 'Folder not found' }, 404);
+  }
+
+  initVibesJson(projectPath);
+  const config = readVibesJson(projectPath);
+
+  ctx.projectDir = projectPath;
+
+  addRecentProject({
+    path: projectPath,
+    name: config?.name || basename(projectPath),
+    displayName: config?.displayName || null,
+  });
+
+  const appJsxExists = existsSync(join(projectPath, 'app.jsx'));
+
+  return json({ ok: true, projectDir: projectPath, config, hasApp: appJsxExists });
+}
+
 function editorListDeployments(ctx: ServerContext): Response {
   try {
     const reg = loadRegistry();
@@ -701,6 +754,9 @@ export function createRouter(ctx: ServerContext) {
       case 'POST /editor/apps/write':       return editorWriteApp(ctx, req, url);
       case 'POST /editor/upload':           return editorUploadFile(ctx, req);
       case 'GET /editor/deployments':       return editorListDeployments(ctx);
+      case 'POST /editor/pick-folder':      return editorPickFolder(ctx);
+      case 'GET /editor/recent-projects':   return editorRecentProjects();
+      case 'POST /editor/open-project':     return editorOpenProject(ctx, req);
     }
 
     // Editor module files (extracted JS from editor.html)
