@@ -103,7 +103,7 @@ Present Editor as the first/recommended option.
   Tell the user: "Open http://localhost:3333 — the editor handles everything from here."
   **Your job is done. Stop. Do not read further. Do not proceed to any step below.**
 
-- **If Terminal**: Continue with the pre-flight check and normal generation workflow below.
+- **If Terminal**: Continue with the project folder selection and normal generation workflow below.
 
 ---
 
@@ -111,6 +111,34 @@ Present Editor as the first/recommended option.
 
 **If the user chose Editor above, STOP. Do not read or execute anything below this line.**
 **The editor UI handles setup, generation, preview, and deployment.**
+
+---
+
+## Project Folder
+
+Before generating, ask the user where to save the project:
+
+> "Where should this project live? Enter a path or press Enter for the default (`~/VibesOS/{app-slug}/`)."
+
+- If the user provides a path, use it as the project directory
+- If they press Enter, use `~/VibesOS/{app-slug}/` (the slug is derived from the prompt later — for now just note the preference)
+- Create the directory if it doesn't exist
+
+```bash
+VIBES_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname "$(dirname "${CLAUDE_SKILL_DIR}")")}"
+mkdir -p "$PROJECT_DIR"
+```
+
+After the directory is ready, initialize `vibes.json`:
+
+```bash
+bun -e "
+  const { initVibesJson } = await import('$VIBES_ROOT/scripts/lib/vibes-json.js');
+  initVibesJson('$PROJECT_DIR');
+"
+```
+
+Use `$PROJECT_DIR` as the working directory (`cwd`) for all subsequent code generation. The generated `app.jsx` and assembled `index.html` will be written here.
 
 ---
 
