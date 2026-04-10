@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { getAnimationInstructions, autoSelectTheme, parseThemeColors, extractPass2ThemeContext } from './config.ts';
 import type { ServerContext } from './config.ts';
-import { currentAppDir } from './app-context.js';
+import { resolveProjectDir } from './app-context.js';
 import { AI_INSTRUCTIONS_CHAT, AI_INSTRUCTIONS_GENERATE, THEME_SECTION_MARKERS } from './ai-instructions.ts';
 
 const RECENCY_REMINDER = `
@@ -119,7 +119,7 @@ export function buildChatPrompt(
   const { effects = [], animationId = null, reference = null, skillId = null, appName } = opts;
 
   // Auto-detect useAI from existing app code
-  const appDir = currentAppDir(ctx, appName) || ctx.projectRoot;
+  const appDir = resolveProjectDir(ctx, appName) || ctx.projectRoot;
   const appJsxPath = join(appDir, 'app.jsx');
   const useAI = existsSync(appJsxPath) && readFileSync(appJsxPath, 'utf-8').includes('useAI(');
 

@@ -250,12 +250,23 @@ export function populateLegacyApps(appsDir) {
     }
   }
 
-  // Sort newest first, take up to 20
+  // Sort newest first, take up to MAX_RECENT_PROJECTS
   entries.sort((a, b) => b.mtime - a.mtime);
-  const toAdd = entries.slice(0, 20);
+  const toAdd = entries.slice(0, MAX_RECENT_PROJECTS);
 
-  // Add in reverse order so that addRecentProject's unshift leaves newest at index 0
-  for (let i = toAdd.length - 1; i >= 0; i--) {
-    addRecentProject({ path: toAdd[i].path, name: toAdd[i].name });
+  // Batch insert: add directly to array and save once (not N load/save cycles)
+  const now = new Date().toISOString();
+  for (const entry of toAdd) {
+    reg.recentProjects.push({
+      path: entry.path,
+      name: entry.name,
+      displayName: null,
+      lastOpened: now,
+    });
   }
+  if (reg.recentProjects.length > MAX_RECENT_PROJECTS) {
+    reg.recentProjects = reg.recentProjects.slice(0, MAX_RECENT_PROJECTS);
+  }
+  reg.version = 2;
+  saveRegistry(reg);
 }

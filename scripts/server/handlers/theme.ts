@@ -11,7 +11,7 @@ import { parseThemeColors } from '../config.ts';
 import type { ServerContext } from '../config.ts';
 import { hasThemeMarkers, replaceThemeSection, extractNonThemeSections, moveVisualCSSToSurfaces } from '../../lib/theme-sections.js';
 import { createBackup, restoreFromBackup } from '../../lib/backup.js';
-import { currentAppDir } from '../app-context.js';
+import { resolveProjectDir } from '../app-context.js';
 import { buildThemePromptMultiPass, buildThemePromptLegacy } from '../prompt-builders.ts';
 
 /**
@@ -49,7 +49,7 @@ export async function handleThemeSwitch(ctx: ServerContext, onEvent: EventCallba
 
   onEvent({ type: 'theme_selected', themeId, themeName });
 
-  const appDir = currentAppDir(ctx, appName);
+  const appDir = resolveProjectDir(ctx, appName);
   if (!appDir) {
     onEvent({ type: 'error', message: 'No app active.' });
     return;
@@ -122,7 +122,7 @@ async function handleThemeSwitchMultiPass(ctx, onEvent, themeId, themeName, them
   console.log(`[ThemeSwitch] Pass 2: Claude creative restyle, prompt: ${(prompt.length / 1024).toFixed(1)}KB`);
 
   // Use skipChat in onEvent — the wsAdapter will check event.skipChat
-  const claudeResult = await runOneShot(prompt, { lockType: 'theme', skipChat: true, maxTurns: 5, model, cwd: currentAppDir(ctx, appName), tools: 'Read,Edit' }, onEvent, ctx.projectRoot);
+  const claudeResult = await runOneShot(prompt, { lockType: 'theme', skipChat: true, maxTurns: 5, model, cwd: resolveProjectDir(ctx, appName), tools: 'Read,Edit' }, onEvent, ctx.projectRoot);
 
   if (claudeResult === null) {
     onEvent({ type: 'app_updated' });
@@ -149,7 +149,7 @@ async function handleThemeSwitchMultiPass(ctx, onEvent, themeId, themeName, them
     });
   } else {
     console.log(`[ThemeSwitch] Pass 2 validated — non-theme content unchanged`);
-    sanitizeAppJsx(currentAppDir(ctx, appName) || ctx.projectRoot);
+    sanitizeAppJsx(resolveProjectDir(ctx, appName) || ctx.projectRoot);
   }
 }
 
@@ -157,7 +157,7 @@ async function handleThemeSwitchMultiPass(ctx, onEvent, themeId, themeName, them
  * Legacy theme switch: full-file Claude restyle (no markers).
  */
 async function handleThemeSwitchLegacy(ctx, onEvent, themeId, themeName, themeContent, colors, model, appName: string | undefined = undefined) {
-  const appDir = currentAppDir(ctx, appName);
+  const appDir = resolveProjectDir(ctx, appName);
   if (!appDir) {
     onEvent({ type: 'error', message: 'No app active.' });
     return;
@@ -168,9 +168,9 @@ async function handleThemeSwitchLegacy(ctx, onEvent, themeId, themeName, themeCo
   const prompt = buildThemePromptLegacy(ctx, themeId, themeName, themeContent, appCode, colors);
 
   console.log(`[ThemeSwitch] Legacy mode for "${themeName}" (${themeId}), prompt: ${(prompt.length / 1024).toFixed(1)}KB`);
-  await runOneShot(prompt, { lockType: 'theme', skipChat: true, maxTurns: 8, model, cwd: currentAppDir(ctx, appName), tools: 'Read,Edit' }, onEvent, ctx.projectRoot);
+  await runOneShot(prompt, { lockType: 'theme', skipChat: true, maxTurns: 8, model, cwd: resolveProjectDir(ctx, appName), tools: 'Read,Edit' }, onEvent, ctx.projectRoot);
 
-  sanitizeAppJsx(currentAppDir(ctx, appName) || ctx.projectRoot);
+  sanitizeAppJsx(resolveProjectDir(ctx, appName) || ctx.projectRoot);
 }
 
 /**
@@ -182,7 +182,7 @@ export async function handlePaletteTheme(ctx: ServerContext, onEvent: EventCallb
     return;
   }
 
-  const appDir = currentAppDir(ctx, appName);
+  const appDir = resolveProjectDir(ctx, appName);
   if (!appDir) {
     onEvent({ type: 'error', message: 'No app active.' });
     return;

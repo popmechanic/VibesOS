@@ -11,7 +11,7 @@ import { homedir } from 'os';
 import { resolveClaudeBin, cleanEnv } from '../lib/claude-subprocess.js';
 import type { ServerContext } from './config.ts';
 import { getRecommendedThemeIds, loadOpenRouterKey } from './config.ts';
-import { currentAppDir, resolveAppJsxPath } from './app-context.js';
+import { resolveProjectDir, resolveAppJsxPath } from './app-context.js';
 import { assembleAppFrame } from './handlers/generate.ts';
 import { loadRegistry, saveRegistry, getCloudflareConfig, setCloudflareConfig, getApp, setApp, addRecentProject, getRecentProjects } from '../lib/registry.js';
 import { pickFolder } from '../lib/folder-picker.js';
@@ -209,7 +209,7 @@ function serveSkills(ctx: ServerContext): Response {
 
 function serveAppFrame(ctx: ServerContext, url: URL): Response {
   const appName = sanitizeAppName(url.searchParams.get('app') || '');
-  const appDir = ctx.projectDir || currentAppDir(ctx, appName || undefined);
+  const appDir = resolveProjectDir(ctx, appName || undefined);
   const appPath = appDir ? join(appDir, 'app.jsx') : null;
   if (!appPath || !existsSync(appPath)) {
     return new Response(`<!DOCTYPE html>
@@ -480,8 +480,8 @@ function editorListApps(ctx: ServerContext): Response {
 async function editorGetScreenshot(ctx: ServerContext, url: URL): Promise<Response> {
   const name = sanitizeAppName(url.searchParams.get('name') || '');
   if (!name) return new Response('Missing name', { status: 400, headers: corsHeaders() });
-  // Check user apps first, then examples
-  let imgPath = join(ctx.appsDir, name, 'screenshot.png');
+  // Check project dir, then user apps, then examples
+  let imgPath = ctx.projectDir ? join(ctx.projectDir, '.vibes', 'screenshot.png') : join(ctx.appsDir, name, 'screenshot.png');
   let file = Bun.file(imgPath);
   if (!(await file.exists())) {
     imgPath = join(ctx.examplesDir, name, 'screenshot.png');
@@ -561,11 +561,19 @@ function editorRenameApp(ctx: ServerContext, url: URL): Response {
 async function editorSaveScreenshot(ctx: ServerContext, req: Request, url: URL): Promise<Response> {
   const name = sanitizeAppName(url.searchParams.get('name') || '');
   if (!name) return new Response('Missing name', { status: 400, headers: corsHeaders() });
-  const dest = join(ctx.appsDir, name);
+  let dest: string;
+  let screenshotPath: string;
+  if (ctx.projectDir) {
+    dest = join(ctx.projectDir, '.vibes');
+    screenshotPath = join(dest, 'screenshot.png');
+  } else {
+    dest = join(ctx.appsDir, name);
+    screenshotPath = join(dest, 'screenshot.png');
+  }
   if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
   try {
     const body = await readBodyWithLimit(req, MAX_SCREENSHOT_SIZE);
-    writeFileSync(join(dest, 'screenshot.png'), body);
+    writeFileSync(screenshotPath, body);
     return json({ ok: true });
   } catch (err: any) {
     if (err.status === 413) return json({ error: 'Screenshot too large (max 5MB)' }, 413);
@@ -634,7 +642,7 @@ async function editorUploadFile(ctx: ServerContext, req: Request): Promise<Respo
 }
 
 async function editorPickFolder(ctx: ServerContext): Promise<Response> {
-  const folderPath = pickFolder();
+  const folderPath = await pickFolder();
   if (!folderPath) {
     return json({ ok: false, error: 'No folder selected' }, 400);
   }
@@ -664,24 +672,33 @@ async function editorOpenProject(ctx: ServerContext, req: Request): Promise<Resp
     return json({ ok: false, error: 'Missing path' }, 400);
   }
 
-  if (!existsSync(projectPath)) {
+  // Path safety: must be absolute and under home directory
+  const home = homedir();
+  const resolved = resolve(projectPath);
+  if (!resolved.startsWith(home + '/')) {
+    return json({ ok: false, error: 'Project folder must be under your home directory' }, 400);
+  }
+
+  if (!existsSync(resolved)) {
     return json({ ok: false, error: 'Folder not found' }, 404);
   }
 
-  initVibesJson(projectPath);
-  const config = readVibesJson(projectPath);
+  const projectPathSafe = resolved;
 
-  ctx.projectDir = projectPath;
+  initVibesJson(projectPathSafe);
+  const config = readVibesJson(projectPathSafe);
+
+  ctx.projectDir = projectPathSafe;
 
   addRecentProject({
-    path: projectPath,
-    name: config?.name || basename(projectPath),
+    path: projectPathSafe,
+    name: config?.name || basename(projectPathSafe),
     displayName: config?.displayName || null,
   });
 
-  const appJsxExists = existsSync(join(projectPath, 'app.jsx'));
+  const appJsxExists = existsSync(join(projectPathSafe, 'app.jsx'));
 
-  return json({ ok: true, projectDir: projectPath, config, hasApp: appJsxExists });
+  return json({ ok: true, projectDir: projectPathSafe, config, hasApp: appJsxExists });
 }
 
 function editorListDeployments(ctx: ServerContext): Response {

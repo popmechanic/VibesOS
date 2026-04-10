@@ -16,7 +16,7 @@ import { writeVibesJson } from '../../lib/vibes-json.js';
 import { runBunScript } from '../claude-bridge.ts';
 import type { EventCallback } from '../claude-bridge.ts';
 import type { ServerContext } from '../config.ts';
-import { currentAppDir } from '../app-context.js';
+import { resolveProjectDir } from '../app-context.js';
 
 /**
  * Assemble and deploy an app via the Deploy API.
@@ -61,7 +61,7 @@ export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, t
 
   onEvent({ type: 'progress', progress: 5, stage: 'Assembling app...', elapsed: 0 });
 
-  const appDir = ctx.projectDir || currentAppDir(ctx, appNameOverride);
+  const appDir = resolveProjectDir(ctx, appNameOverride);
   if (!appDir) {
     onEvent({ type: 'error', message: 'No app active. Generate or load an app first.' });
     return;

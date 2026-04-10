@@ -14,7 +14,7 @@ export function currentAppDir(ctx, appName) {
 }
 
 export function resolveAppJsxPath(ctx, appName) {
-  const dir = currentAppDir(ctx, appName);
+  const dir = resolveProjectDir(ctx, appName);
   return join(dir || ctx.projectRoot, 'app.jsx');
 }
 

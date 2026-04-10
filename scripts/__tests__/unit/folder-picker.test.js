@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Top-level mock - vi.mock is hoisted so this runs before imports
 vi.mock('child_process', () => ({
-  execSync: vi.fn(),
+  execFile: vi.fn(),
 }));
 
 beforeEach(() => {
@@ -12,25 +12,9 @@ beforeEach(() => {
 
 describe('pickFolder', () => {
   it('returns selected folder path on macOS', async () => {
-    const { execSync } = await import('child_process');
-    execSync.mockReturnValue('/Users/marcus/Projects/my-app/\n');
-
-    const { pickFolder } = await import('../../lib/folder-picker.js');
-
-    const originalPlatform = process.platform;
-    Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
-
-    const result = pickFolder();
-
-    Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
-
-    expect(result).toBe('/Users/marcus/Projects/my-app');
-  });
-
-  it('returns null when user cancels (osascript exits non-zero)', async () => {
-    const { execSync } = await import('child_process');
-    execSync.mockImplementation(() => {
-      throw new Error('Command failed: osascript -e ...');
+    const { execFile } = await import('child_process');
+    execFile.mockImplementation((cmd, args, opts, cb) => {
+      cb(null, '/Users/marcus/Projects/my-app/\n');
     });
 
     const { pickFolder } = await import('../../lib/folder-picker.js');
@@ -38,7 +22,25 @@ describe('pickFolder', () => {
     const originalPlatform = process.platform;
     Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
 
-    const result = pickFolder();
+    const result = await pickFolder();
+
+    Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
+
+    expect(result).toBe('/Users/marcus/Projects/my-app');
+  });
+
+  it('returns null when user cancels (osascript exits non-zero)', async () => {
+    const { execFile } = await import('child_process');
+    execFile.mockImplementation((cmd, args, opts, cb) => {
+      cb(new Error('Command failed: osascript -e ...'));
+    });
+
+    const { pickFolder } = await import('../../lib/folder-picker.js');
+
+    const originalPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+
+    const result = await pickFolder();
 
     Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
 
@@ -51,7 +53,7 @@ describe('pickFolder', () => {
     const originalPlatform = process.platform;
     Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
 
-    expect(() => pickFolder()).toThrow(/not supported/i);
+    await expect(pickFolder()).rejects.toThrow(/not supported/i);
 
     Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
   });

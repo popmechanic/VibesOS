@@ -39,6 +39,10 @@ export function readVibesJson(projectDir) {
 export function writeVibesJson(projectDir, fields) {
   const existing = readVibesJson(projectDir) ?? {};
   const merged = { ...existing, ...fields };
+  // Deep merge known nested objects so partial updates don't clobber siblings
+  if (fields.deploy && typeof fields.deploy === 'object' && existing.deploy && typeof existing.deploy === 'object') {
+    merged.deploy = { ...existing.deploy, ...fields.deploy };
+  }
   const filePath = join(projectDir, VIBES_JSON);
   writeFileSync(filePath, JSON.stringify(merged, null, 2) + '\n', 'utf-8');
 }

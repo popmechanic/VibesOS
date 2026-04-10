@@ -14,7 +14,7 @@ import { APP_PLACEHOLDER } from '../../lib/assembly-utils.js';
 import { populateConnectConfig } from '../../lib/env-utils.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID, DEPLOY_API_URL, AI_PROXY_URL } from '../../lib/auth-constants.js';
 import { TEMPLATES } from '../../lib/paths.js';
-import { currentAppDir, slugifyPrompt, resolveAppName } from '../app-context.js';
+import { resolveProjectDir, slugifyPrompt, resolveAppName } from '../app-context.js';
 import { buildGeneratePrompt } from '../prompt-builders.ts';
 
 export async function handleGenerate(ctx: ServerContext, onEvent: EventCallback, userPrompt: string, themeId: string | undefined, model: string | undefined, reference: any = null, useAI: boolean = false, previousApp: string | undefined = undefined) {
@@ -28,7 +28,7 @@ export async function handleGenerate(ctx: ServerContext, onEvent: EventCallback,
   // Auto-save previous app before switching
   if (previousApp) {
     try {
-      const prevDir = currentAppDir(ctx, previousApp);
+      const prevDir = resolveProjectDir(ctx, previousApp);
       const prevIndexPath = join(prevDir, 'index.html');
       const assembled = assembleAppFrame(ctx, previousApp);
       writeFileSync(prevIndexPath, assembled);
@@ -86,7 +86,7 @@ export function assembleAppFrame(ctx, appName?: string) {
 
   let template = readFileSync(templatePath, 'utf-8');
 
-  const appDir = currentAppDir(ctx, appName);
+  const appDir = resolveProjectDir(ctx, appName);
   if (!appDir) {
     return `<html><body><h1>No app active</h1></body></html>`;
   }

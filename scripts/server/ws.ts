@@ -18,7 +18,7 @@ import { join, resolve, basename } from 'path';
 import type { ServerWebSocket } from 'bun';
 import type { ServerContext } from './config.ts';
 import { reloadThemes } from './config.ts';
-import { resolveAppJsxPath, currentAppDir, slugifyPrompt, resolveAppName } from './app-context.js';
+import { resolveAppJsxPath, resolveProjectDir, slugifyPrompt, resolveAppName } from './app-context.js';
 import { createBridge, cancelCurrent, type PersistentBridge, type EventCallback } from './claude-bridge.ts';
 import { buildChatPrompt, buildGeneratePrompt, buildBrainstormPrompt } from './prompt-builders.ts';
 import { loadHistory, appendMessage, clearHistory } from './chat-history.ts';
@@ -282,7 +282,7 @@ export function createWsHandler(ctx: ServerContext) {
           // --- Bridge-routed messages ---
 
           case 'chat': {
-            const appDir = ctx.projectDir || currentAppDir(ctx, msg.app) || ctx.projectRoot;
+            const appDir = resolveProjectDir(ctx, msg.app) || ctx.projectRoot;
             const prompt = buildChatPrompt(ctx, msg.message, {
               effects: msg.effects,
               animationId: msg.animationId,

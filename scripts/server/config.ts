@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 import { homedir } from 'os';
 import { parseThemeCatalog } from '../lib/parse-theme-catalog.js';
 import { parseAnimationCatalog } from '../lib/parse-animation-catalog.js';
-import { currentAppDir } from './app-context.js';
+import { resolveProjectDir } from './app-context.js';
 import { getRecentProjects, populateLegacyApps } from '../lib/registry.js';
 
 // --- Types ---
@@ -236,7 +236,7 @@ export function getAnimationInstructions(ctx, animationId) {
  * Recommend themes based on app.jsx content keywords.
  */
 export function getRecommendedThemeIds(ctx, appName?: string) {
-  const appDir = currentAppDir(ctx, appName);
+  const appDir = resolveProjectDir(ctx, appName);
   if (!appDir) return new Set();
   const appPath = join(appDir, 'app.jsx');
   if (!existsSync(appPath)) return new Set();
