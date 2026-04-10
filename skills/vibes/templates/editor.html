@@ -3925,7 +3925,7 @@ window.escapeHtml = function(str) {
       const apps = await fetch('/editor/apps').then(r => r.json());
       const savedApps = Array.isArray(apps) ? apps : [];
       const { gridHtml, listHtml, hasOlder } = renderAppCards(savedApps, {
-        onClick: (name) => `closeEditApps(); loadSavedApp('${escapeHtml(name)}')`,
+        onClick: (name) => { const app = savedApps.find(a => a.name === name); return `closeEditApps(); openProject('${(app?.path || '').replace(/'/g, "\\'")}')`; },
         highlightCurrent: true,
       });
       grid.innerHTML = gridHtml;
@@ -4550,17 +4550,6 @@ window.escapeHtml = function(str) {
     track.style.transform = `translateX(-${offset}px)`;
   }
 
-  async function loadRecentProjects() {
-    try {
-      const res = await fetch('/editor/recent-projects');
-      const data = await res.json();
-      if (!data.ok) return [];
-      return data.projects;
-    } catch {
-      return [];
-    }
-  }
-
   async function checkExistingApps() {
     try {
       const [existsRes, appsRes, projectsRes] = await Promise.all([
@@ -4937,8 +4926,8 @@ window.escapeHtml = function(str) {
   }
 
   function useExistingApp() {
-    if (currentAppName) {
-      loadSavedApp(currentAppName);
+    if (currentProjectDir) {
+      openProject(currentProjectDir);
     } else {
       document.getElementById('chatMessages').innerHTML = '';
       setPhase('edit');
@@ -5412,11 +5401,6 @@ window.escapeHtml = function(str) {
     } catch (err) {
       console.error('Failed to open project:', err);
     }
-  }
-
-  // Disable prompt until project is selected (unless legacy app is loaded)
-  function initProjectGate() {
-    // No-op — prompt is always enabled. Guard is in startGenerate().
   }
 
   // Legacy compat — theme carousel uses this

@@ -528,20 +528,6 @@ function editorLoadApp(ctx: ServerContext, url: URL): Response {
   return json({ ok: true, currentApp: name });
 }
 
-function editorSaveApp(ctx: ServerContext, url: URL): Response {
-  const name = sanitizeAppName(url.searchParams.get('name') || '');
-  if (!name) return new Response('Missing name', { status: 400, headers: corsHeaders() });
-  const appName = sanitizeAppName(url.searchParams.get('app') || '') || undefined;
-  const appSrc = resolveAppJsxPath(ctx, appName);
-  if (!existsSync(appSrc)) return new Response('No app.jsx to save', { status: 404, headers: corsHeaders() });
-  const dest = join(ctx.appsDir, name);
-  mkdirSync(dest, { recursive: true });
-  if (resolve(appSrc) !== resolve(join(dest, 'app.jsx'))) {
-    copyFileSync(appSrc, join(dest, 'app.jsx'));
-  }
-  return json({ ok: true });
-}
-
 function editorRenameApp(ctx: ServerContext, url: URL): Response {
   const from = sanitizeAppName(url.searchParams.get('from') || '');
   const to = sanitizeAppName(url.searchParams.get('to') || '');
@@ -777,7 +763,6 @@ export function createRouter(ctx: ServerContext) {
       case 'POST /editor/credentials/validate-cloudflare': return editorValidateCloudflare(ctx, req);
       case 'POST /editor/credentials/validate-clerk': return editorValidateClerk(ctx, req);
       case 'POST /editor/apps/load':        return editorLoadApp(ctx, url);
-      case 'POST /editor/apps/save':        return editorSaveApp(ctx, url);
       case 'POST /editor/apps/rename':     return editorRenameApp(ctx, url);
       case 'POST /editor/apps/screenshot':  return editorSaveScreenshot(ctx, req, url);
       case 'POST /editor/apps/write':       return editorWriteApp(ctx, req, url);

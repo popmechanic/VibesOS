@@ -2,7 +2,7 @@
  * Generate handler — create a new app from scratch via Claude.
  */
 
-import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { join, basename } from 'path';
 import { readVibesJson } from '../../lib/vibes-json.js';
 import { runOneShot } from '../claude-bridge.ts';
@@ -14,7 +14,7 @@ import { APP_PLACEHOLDER } from '../../lib/assembly-utils.js';
 import { populateConnectConfig } from '../../lib/env-utils.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID, DEPLOY_API_URL, AI_PROXY_URL } from '../../lib/auth-constants.js';
 import { TEMPLATES } from '../../lib/paths.js';
-import { resolveProjectDir, slugifyPrompt, resolveAppName } from '../app-context.js';
+import { resolveProjectDir } from '../app-context.js';
 import { buildGeneratePrompt } from '../prompt-builders.ts';
 
 export async function handleGenerate(ctx: ServerContext, onEvent: EventCallback, userPrompt: string, themeId: string | undefined, model: string | undefined, reference: any = null, useAI: boolean = false, previousApp: string | undefined = undefined) {
@@ -38,23 +38,16 @@ export async function handleGenerate(ctx: ServerContext, onEvent: EventCallback,
     }
   }
 
-  let appDir: string;
-  let appName: string;
-
-  if (ctx.projectDir) {
-    // Project folder mode: use the selected directory directly
-    appDir = ctx.projectDir;
-    const config = readVibesJson(ctx.projectDir);
-    appName = config?.name || basename(ctx.projectDir);
-  } else {
-    // Legacy mode: create slug-based directory under ~/.vibes/apps/
-    const slug = slugifyPrompt(userPrompt);
-    appName = resolveAppName(ctx.appsDir, slug);
-    appDir = join(ctx.appsDir, appName);
-    mkdirSync(appDir, { recursive: true });
+  if (!ctx.projectDir) {
+    onEvent({ type: 'error', message: 'No project folder selected.' });
+    return;
   }
+
+  const appDir = ctx.projectDir;
+  const config = readVibesJson(ctx.projectDir);
+  const appName = config?.name || basename(ctx.projectDir);
   onEvent({ type: 'app_created', name: appName });
-  console.log(`[Generate] ${ctx.projectDir ? 'Using project' : 'Created app'} directory: ${appName}`);
+  console.log(`[Generate] Using project directory: ${appName}`);
 
   // Build the prompt
   const result = buildGeneratePrompt(ctx, userPrompt, { themeId, reference, useAI });
