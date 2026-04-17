@@ -52,6 +52,47 @@ export function mapErrorResponse(status, body) {
   return { code: "API_ERROR", message: msg };
 }
 
+/**
+ * Build URL + headers for an AI request based on factoryMode.
+ * Returns: { url, headers }
+ */
+export function buildRequest(env) {
+  if (env.factoryMode) {
+    const slug = (typeof window !== "undefined")
+      ? (window.location.pathname.replace(/^\//, "").split("/")[0] || "").trim()
+      : "";
+    const headers = {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + env.token,
+    };
+    if (slug) headers["X-Instance-Slug"] = slug;
+    return {
+      url: env.factoryBase + "/ai/" + env.appName + "/chat",
+      headers,
+    };
+  }
+  return {
+    url: env.proxyUrl + "/v1/chat/completions",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + env.token,
+    },
+  };
+}
+
+/**
+ * Side-effect handler for non-2xx responses.
+ * Returns true if the response was handled (e.g. redirect issued); the caller
+ * should NOT proceed to read the body. Returns false for legacy fall-through.
+ */
+export function handleNotOk(response, env) {
+  if (env.factoryMode && response.status === 403 && typeof window !== "undefined") {
+    window.location.href = env.factoryBase + "/checkout/" + env.appName;
+    return true;
+  }
+  return false;
+}
+
 // --- SSE Parser (inlined from sse-parser.js for browser bundle) ---
 
 async function* parseSSEStream(reader) {
@@ -114,47 +155,9 @@ if (React) {
       token,
       factoryMode: !!config.factoryMode,
       appName: config.appName || "app",
+      // TODO(phase-6-cutover): switch this default to https://factory.vibesos.com.
       factoryBase: config.factoryBase || "https://factory-staging.vibesos.com",
     };
-  }
-
-  /**
-   * Build the request URL and headers for an AI call.
-   * - Legacy mode: POST to {proxyUrl}/v1/chat/completions
-   * - Factory mode: POST to {factoryBase}/ai/{appName}/chat with X-Instance-Slug
-   *   (slug = first non-empty path segment of window.location.pathname)
-   */
-  function buildRequest(env) {
-    const headers = {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + env.token,
-    };
-    if (env.factoryMode) {
-      const slug = (window.location.pathname.replace(/^\//, "").split("/")[0] || "").trim();
-      if (slug) headers["X-Instance-Slug"] = slug;
-      return {
-        url: env.factoryBase + "/ai/" + env.appName + "/chat",
-        headers,
-      };
-    }
-    return {
-      url: env.proxyUrl + "/v1/chat/completions",
-      headers,
-    };
-  }
-
-  /**
-   * Handle a non-OK response. In factory mode, a 403 means the instance is
-   * frozen (subscription cancelled) — redirect to checkout. Returns true if
-   * the caller should bail out without further error reporting (redirect in
-   * progress); returns false to let the caller fall through to mapErrorResponse.
-   */
-  function handleNotOk(response, env) {
-    if (env.factoryMode && response.status === 403) {
-      window.location.href = env.factoryBase + "/checkout/" + env.appName;
-      return true;
-    }
-    return false;
   }
 
   function useAI() {
