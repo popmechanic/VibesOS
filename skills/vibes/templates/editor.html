@@ -2894,7 +2894,7 @@
       <div class="claude-account-section" id="claudeAccountSectionOverlay">
         <div class="claude-account-label">Claude Account</div>
         <div class="claude-account-email" id="claudeAccountEmailOverlay">Loading...</div>
-        <button class="claude-account-signout" id="claudeSignOutBtnOverlay" onclick="claudeSignOut()" style="display:none">Sign out</button>
+        <button class="claude-account-signout" id="claudeSignOutBtnOverlay" onclick="claudeSignOut(this)" style="display:none">Sign out</button>
       </div>
       <div class="gallery-title">Deployed Apps</div>
       <div id="accountDeployments"><div style="color:#888;font-size:0.875rem;">Loading...</div></div>
@@ -3143,7 +3143,7 @@
         <div class="claude-account-section" id="claudeAccountSectionInline">
           <div class="claude-account-label">Claude Account</div>
           <div class="claude-account-email" id="claudeAccountEmailInline">Loading...</div>
-          <button class="claude-account-signout" id="claudeSignOutBtnInline" onclick="claudeSignOut()" style="display:none">Sign out</button>
+          <button class="claude-account-signout" id="claudeSignOutBtnInline" onclick="claudeSignOut(this)" style="display:none">Sign out</button>
         </div>
         <div class="gallery-title">Deployed Apps</div>
         <div id="accountDeploymentsInline"><div style="color:#888;font-size:0.875rem;">Loading...</div></div>
@@ -3339,7 +3339,7 @@
     <div class="claude-account-section" id="claudeAccountSection">
       <div class="claude-account-label">Claude Account</div>
       <div class="claude-account-email" id="claudeAccountEmail">Loading...</div>
-      <button class="claude-account-signout" id="claudeSignOutBtn" onclick="claudeSignOut()" style="display:none">Sign out</button>
+      <button class="claude-account-signout" id="claudeSignOutBtn" onclick="claudeSignOut(this)" style="display:none">Sign out</button>
     </div>
     <div class="gallery-title">Deployed Apps</div>
     <div id="accountDeploymentsEdit"><div style="color:#888;font-size:0.875rem;">Loading...</div></div>
@@ -3635,23 +3635,22 @@ window.escapeHtml = function(str) {
     });
   }
 
-  function claudeSignOut() {
-    const btn = document.getElementById('claudeSignOutBtn');
+  function claudeSignOut(btn) {
     btn.disabled = true;
     btn.textContent = 'Signing out...';
     fetch('/editor/claude-logout', { method: 'POST' }).then(r => r.json()).then(data => {
       if (!data.ok) {
-        alert('Failed to sign out: ' + (data.error || 'Unknown error'));
         btn.disabled = false;
         btn.textContent = 'Sign out';
         return;
       }
-      // In desktop mode, the app will show re-auth screen and reload.
-      // In CLI mode (no desktop), update the UI directly.
-      document.getElementById('claudeAccountEmail').textContent = 'Not signed in';
-      btn.style.display = 'none';
+      ['', 'Overlay', 'Inline'].forEach(suffix => {
+        const emailEl = document.getElementById('claudeAccountEmail' + suffix);
+        if (emailEl) emailEl.textContent = 'Not signed in';
+        const btnEl = document.getElementById('claudeSignOutBtn' + suffix);
+        if (btnEl) btnEl.style.display = 'none';
+      });
     }).catch(err => {
-      alert('Failed to sign out: ' + err.message);
       btn.disabled = false;
       btn.textContent = 'Sign out';
     });
@@ -3922,10 +3921,25 @@ window.escapeHtml = function(str) {
     const older = document.getElementById('editAppsOlder');
     const divider = document.getElementById('editAppsDivider');
     try {
-      const apps = await fetch('/editor/apps').then(r => r.json());
-      const savedApps = Array.isArray(apps) ? apps : [];
-      const { gridHtml, listHtml, hasOlder } = renderAppCards(savedApps, {
-        onClick: (name) => { const app = savedApps.find(a => a.name === name); return `closeEditApps(); openProject('${(app?.path || '').replace(/'/g, "\\'")}')`; },
+      const [appsRes, projectsRes] = await Promise.all([
+        fetch('/editor/apps').then(r => r.json()).catch(() => []),
+        fetch('/editor/recent-projects').then(r => r.json()).catch(() => ({ projects: [] })),
+      ]);
+      const savedApps = Array.isArray(appsRes) ? appsRes : [];
+      const recentProjects = (projectsRes.projects || []);
+      const savedNames = new Set(savedApps.map(a => a.name));
+      const projectEntries = recentProjects
+        .filter(p => !savedNames.has(p.name))
+        .map(p => ({
+          name: p.name,
+          displayName: p.displayName || p.name,
+          path: p.path,
+          modified: p.lastOpened,
+          hasScreenshot: p.hasScreenshot || false,
+        }));
+      const allApps = [...projectEntries, ...savedApps];
+      const { gridHtml, listHtml, hasOlder } = renderAppCards(allApps, {
+        onClick: (name) => { const app = allApps.find(a => a.name === name); return `closeEditApps(); openProject('${(app?.path || '').replace(/'/g, "\\'")}')`; },
         highlightCurrent: true,
       });
       grid.innerHTML = gridHtml;

@@ -15,7 +15,7 @@ import { resolveProjectDir, resolveAppJsxPath } from './app-context.js';
 import { assembleAppFrame } from './handlers/generate.ts';
 import { loadRegistry, saveRegistry, getCloudflareConfig, setCloudflareConfig, getApp, setApp, addRecentProject, getRecentProjects } from '../lib/registry.js';
 import { pickFolder } from '../lib/folder-picker.js';
-import { initVibesJson, readVibesJson } from '../lib/vibes-json.js';
+import { initVibesJson, readVibesJson, writeVibesJson } from '../lib/vibes-json.js';
 import { readCachedTokens, isTokenExpired, getAccessToken, startLoginFlow, removeCachedTokens } from '../lib/cli-auth.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID } from '../lib/auth-constants.js';
 import { validateClerkKey, validateClerkSecretKey, validateClerkCredentials, validateCloudflareCredentials } from './validation.ts';
@@ -534,6 +534,29 @@ function editorRenameApp(ctx: ServerContext, url: URL): Response {
   if (!from || !to) return new Response('Missing from/to', { status: 400, headers: corsHeaders() });
   if (from === to) return json({ ok: true, name: to });
 
+  // Project-folder apps: update the name in vibes.json (don't move the folder)
+  if (ctx.projectDir) {
+    writeVibesJson(ctx.projectDir, { name: to });
+    // Update recent projects entry
+    addRecentProject({
+      path: ctx.projectDir,
+      name: to,
+    });
+    // Update deployment registry if this app was deployed
+    try {
+      const reg = loadRegistry();
+      if (reg.apps[from]) {
+        reg.apps[to] = { ...reg.apps[from], name: to };
+        delete reg.apps[from];
+        saveRegistry(reg);
+      }
+    } catch (e: any) {
+      console.warn(`[Rename] Registry update failed: ${e.message}`);
+    }
+    return json({ ok: true, name: to });
+  }
+
+  // ~/.vibes/apps/ apps: rename the directory
   const srcDir = join(ctx.appsDir, from);
   const destDir = join(ctx.appsDir, to);
   if (!existsSync(srcDir)) return new Response('App not found', { status: 404, headers: corsHeaders() });
