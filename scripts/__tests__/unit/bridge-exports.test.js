@@ -67,29 +67,43 @@ describe('TinyBase import map entries', () => {
 
 describe('generated templates contain TinyBase import map entries', () => {
   const templatePaths = [
-    'skills/vibes/templates/index.html',
-    'skills/riff/templates/index.html',
+    { rel: 'skills/vibes/templates/index.html', name: 'vibes' },
+    { rel: 'skills/riff/templates/index.html', name: 'riff' },
+    { rel: 'skills/sell/templates/unified.html', name: 'sell' },
   ];
 
-  for (const relPath of templatePaths) {
-    const name = relPath.split('/')[1]; // vibes, riff
-
+  for (const { rel, name } of templatePaths) {
     it(`${name} template has TinyBase entries`, () => {
-      const html = readFileSync(resolve(ROOT, relPath), 'utf8');
+      const html = readFileSync(resolve(ROOT, rel), 'utf8');
       expect(html).toContain('"tinybase"');
       expect(html).toContain('"tinybase/ui-react"');
     });
 
     it(`${name} template does NOT have Fireproof import map entries`, () => {
-      const html = readFileSync(resolve(ROOT, relPath), 'utf8');
+      const html = readFileSync(resolve(ROOT, rel), 'utf8');
       expect(html).not.toContain('"use-fireproof"');
       expect(html).not.toContain('"@fireproof/core"');
     });
   }
+});
 
-  // sell template still uses old patterns (migration pending)
-  it('sell template exists', () => {
-    const html = readFileSync(resolve(ROOT, 'skills/sell/templates/unified.html'), 'utf8');
-    expect(html).toBeTruthy();
-  });
+describe('OIDC bridge dynamic import uses absolute path', () => {
+  // Guards against the leftover `await import("use-fireproof")` stub that
+  // crashed tenant apps at load. The bridge is served at /oidc-bridge.js
+  // by the Deploy API — see scripts/lib/deploy-files.js.
+  const sources = [
+    'skills/vibes/template.delta.html',
+    'skills/riff/template.delta.html',
+    'skills/sell/template.delta.html',
+    'skills/vibes/templates/index.html',
+    'skills/riff/templates/index.html',
+    'skills/sell/templates/unified.html',
+  ];
+
+  for (const rel of sources) {
+    it(`${rel} imports the OIDC bridge by path, not "use-fireproof"`, () => {
+      const html = readFileSync(resolve(ROOT, rel), 'utf8');
+      expect(html).not.toMatch(/import\(\s*["']use-fireproof["']\s*\)/);
+    });
+  }
 });

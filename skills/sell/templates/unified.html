@@ -912,9 +912,7 @@
         oidcAuthority: "__OIDC_AUTHORITY__",
         oidcClientId: "__OIDC_CLIENT_ID__",
         deployApiUrl: "__DEPLOY_API_URL__",
-        aiProxyUrl: "__AI_PROXY_URL__",
-        factoryMode: __FACTORY_MODE__,
-        factoryBase: "__FACTORY_BASE__"
+        aiProxyUrl: "__AI_PROXY_URL__"
       };
       // Default: single theme hides the Design button in VibesPanel.
       // Apps with multiple themes override this before menu loads.
@@ -5260,8 +5258,8 @@ if (typeof window !== 'undefined') {
       // === Initialize App ===
       async function initApp() {
         try {
-          // Dynamic import of OIDC bridge (mapped via import map to oidc-bridge.js)
-          const oidcModule = await import("use-fireproof");
+          // Dynamic import of OIDC bridge (served at root by Deploy API)
+          const oidcModule = await import("/oidc-bridge.js");
 
           window.OIDCProvider = oidcModule.OIDCProvider;
           window.OIDCComponents = {
