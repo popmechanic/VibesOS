@@ -69,7 +69,7 @@ describe('generated templates contain TinyBase import map entries', () => {
   const templatePaths = [
     { rel: 'skills/vibes/templates/index.html', name: 'vibes' },
     { rel: 'skills/riff/templates/index.html', name: 'riff' },
-    { rel: 'skills/sell/templates/unified.html', name: 'sell' },
+    { rel: 'skills/factory/templates/unified.html', name: 'factory' },
   ];
 
   for (const { rel, name } of templatePaths) {
@@ -94,10 +94,10 @@ describe('OIDC bridge dynamic import uses absolute path', () => {
   const sources = [
     'skills/vibes/template.delta.html',
     'skills/riff/template.delta.html',
-    'skills/sell/template.delta.html',
+    'skills/factory/template.delta.html',
     'skills/vibes/templates/index.html',
     'skills/riff/templates/index.html',
-    'skills/sell/templates/unified.html',
+    'skills/factory/templates/unified.html',
   ];
 
   for (const rel of sources) {
