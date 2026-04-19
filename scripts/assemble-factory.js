@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * Sell App Assembler
+ * Factory App Assembler
  *
- * Assembles a SaaS app from the sell template and user's app code.
+ * Assembles a factory SaaS app from the factory template and user's app code.
  * Creates a client-side only app - no backend server needed.
  *
  * Creates:
  *   - index.html - Unified app handling landing, tenant, and admin routes
  *
  * Usage:
- *   bun scripts/assemble-sell.js <app.jsx> [output.html] [options]
+ *   bun scripts/assemble-factory.js <app.jsx> [output.html] [options]
  *
  * Options:
  *   --app-name <name>     App name for database naming (e.g., "wedding-photos")
@@ -23,7 +23,7 @@
  *   --reserved <csv>      Comma-separated reserved subdomain names
  *
  * Example:
- *   bun scripts/assemble-sell.js app.jsx index.html \
+ *   bun scripts/assemble-factory.js app.jsx index.html \
  *     --app-name wedding-photos \
  *     --app-title "Wedding Photos" \
  *     --domain myapp.exe.xyz \
@@ -31,8 +31,8 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
-import { TEMPLATES } from './lib/paths.js';
+import { resolve, join } from 'path';
+import { PLUGIN_ROOT } from './lib/paths.js';
 import { stripForTemplate, stripImports } from './lib/strip-code.js';
 import { createBackup } from './lib/backup.js';
 import { prompt } from './lib/prompt.js';
@@ -42,7 +42,7 @@ import { APP_PLACEHOLDER } from './lib/assembly-utils.js';
 import { parseArgs as parseCliArgs, formatHelp } from './lib/cli-utils.js';
 
 // Parse command line arguments
-const assembleSellSchema = [
+const assembleFactorySchema = [
   { name: 'appName', flag: '--app-name', type: 'string', description: 'App name for database naming (e.g., "wedding-photos")' },
   { name: 'appTitle', flag: '--app-title', type: 'string', description: 'Display title (e.g., "Wedding Photos")' },
   { name: 'domain', flag: '--domain', type: 'string', description: 'Root domain (e.g., "myapp.exe.xyz")' },
@@ -56,12 +56,12 @@ const assembleSellSchema = [
   { name: 'planQuotas', flag: '--plan-quotas', type: 'string', description: 'JSON map of plan slug to max subdomains (e.g., \'{"starter":1,"growth":3}\')' },
 ];
 
-const assembleSellMeta = {
-  name: 'Sell App Assembler',
-  description: 'Assembles a SaaS app from the sell template and user\'s app code.',
-  usage: 'bun scripts/assemble-sell.js <app.jsx> [output.html] [options]',
+const assembleFactoryMeta = {
+  name: 'Factory App Assembler',
+  description: 'Assembles a factory SaaS app from the factory template and user\'s app code.',
+  usage: 'bun scripts/assemble-factory.js <app.jsx> [output.html] [options]',
   examples: [
-    'bun scripts/assemble-sell.js app.jsx index.html \\',
+    'bun scripts/assemble-factory.js app.jsx index.html \\',
     '  --app-name wedding-photos \\',
     '  --app-title "Wedding Photos" \\',
     '  --domain myapp.exe.xyz \\',
@@ -69,17 +69,17 @@ const assembleSellMeta = {
   ],
 };
 
-function parseSellArgs(argv) {
-  const { args, positionals } = parseCliArgs(assembleSellSchema, argv.slice(2));
+function parseFactoryArgs(argv) {
+  const { args, positionals } = parseCliArgs(assembleFactorySchema, argv.slice(2));
 
   if (args._help) {
-    console.log('\n' + formatHelp(assembleSellMeta, assembleSellSchema));
+    console.log('\n' + formatHelp(assembleFactoryMeta, assembleFactorySchema));
     process.exit(0);
   }
 
   // Build options object for backward compatibility with rest of script
   const options = {};
-  for (const entry of assembleSellSchema) {
+  for (const entry of assembleFactorySchema) {
     if (args[entry.name] != null) {
       options[entry.name] = args[entry.name];
     }
@@ -92,11 +92,11 @@ function parseSellArgs(argv) {
   };
 }
 
-const { appJsxPath, outputPath, options } = parseSellArgs(process.argv);
+const { appJsxPath, outputPath, options } = parseFactoryArgs(process.argv);
 
 // Validate app.jsx path
 if (!appJsxPath) {
-  console.error('Usage: bun scripts/assemble-sell.js <app.jsx> [output.html] [options]');
+  console.error('Usage: bun scripts/assemble-factory.js <app.jsx> [output.html] [options]');
   console.error('\nProvide the path to your app.jsx file.');
   console.error('Run with --help for full usage.');
   process.exit(1);
@@ -112,14 +112,14 @@ if (!existsSync(resolvedAppPath)) {
 const resolvedOutputPath = resolve(outputPath || 'index.html');
 
 // Backup existing index.html if it exists
-const sellBackupPath = createBackup(resolvedOutputPath);
-if (sellBackupPath) {
-  console.log(`Backed up existing file to: ${sellBackupPath}`);
+const factoryBackupPath = createBackup(resolvedOutputPath);
+if (factoryBackupPath) {
+  console.log(`Backed up existing file to: ${factoryBackupPath}`);
 }
 
-// Template paths (centralized in lib/paths.js)
-const templatePath = TEMPLATES.sellUnified;
-const adminComponentPath = TEMPLATES.adminComponent;
+// Template paths — factory skill owns its own templates under skills/factory/
+const templatePath = join(PLUGIN_ROOT, 'skills/factory/templates/unified.html');
+const adminComponentPath = join(PLUGIN_ROOT, 'skills/factory/components/admin-exe.jsx');
 
 // Check templates exist
 const templateChecks = [
@@ -130,7 +130,7 @@ const templateChecks = [
 for (const t of templateChecks) {
   if (!existsSync(t.path)) {
     console.error(`Template not found: ${t.path}`);
-    console.error('Make sure the sell skill templates are installed.');
+    console.error('Make sure the factory skill templates are installed.');
     process.exit(1);
   }
 }
@@ -280,7 +280,7 @@ const SAFE_PLACEHOLDER_PATTERNS = [
 
 // Validate template BEFORE injecting app/admin code
 // This prevents user-generated dunder patterns from triggering false positives
-function validateSellTemplate(html) {
+function validateFactoryTemplate(html) {
   const errors = [];
 
   // Check for unreplaced config placeholders using whitelist approach
@@ -293,9 +293,9 @@ function validateSellTemplate(html) {
   return errors;
 }
 
-const templateErrors = validateSellTemplate(output);
+const templateErrors = validateFactoryTemplate(output);
 if (templateErrors.length > 0) {
-  console.error('Sell assembly failed (template validation):');
+  console.error('Factory assembly failed (template validation):');
   templateErrors.forEach(e => console.error(`  - ${e}`));
   console.error('\nFix: Check your config options');
   process.exit(1);
@@ -334,7 +334,7 @@ if (output.includes(adminPlaceholder)) {
 }
 
 // Validate final output - lightweight check for App component
-function validateSellAssembly(html, app) {
+function validateFactoryAssembly(html, app) {
   const errors = [];
 
   if (!app || app.trim().length === 0) {
@@ -348,9 +348,9 @@ function validateSellAssembly(html, app) {
   return errors;
 }
 
-const validationErrors = validateSellAssembly(output, appCode);
+const validationErrors = validateFactoryAssembly(output, appCode);
 if (validationErrors.length > 0) {
-  console.error('Sell assembly failed:');
+  console.error('Factory assembly failed:');
   validationErrors.forEach(e => console.error(`  - ${e}`));
   console.error('\nFix: Check your app.jsx and admin component for errors');
   process.exit(1);

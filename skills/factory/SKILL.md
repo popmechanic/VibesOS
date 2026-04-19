@@ -41,7 +41,7 @@ metadata:
 
 | Step | Tool | What it does |
 |------|------|--------------|
-| Assembly | `assemble-sell.js` | Generates unified index.html |
+| Assembly | `assemble-factory.js` | Generates unified index.html |
 | Deploy | `deploy-cloudflare.js` | Deploys to Cloudflare Workers |
 | Configure | `POST /app/configure` | Stores billing config in KV |
 | Initialize | `POST /token/:appName/initialize` | Sets up Vibe Token economics |
@@ -284,7 +284,7 @@ curl -s -X POST "https://factory.vibesos.com/app/configure" \
 
 ```bash
 VIBES_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname "$(dirname "${CLAUDE_SKILL_DIR}")")}"
-bun "$VIBES_ROOT/scripts/assemble-sell.js" app.jsx index.html \
+bun "$VIBES_ROOT/scripts/assemble-factory.js" app.jsx index.html \
   --app-name "$APP_NAME" \
   --app-title "$APP_TITLE" \
   --domain "$APP_NAME.vibesos.com" \
