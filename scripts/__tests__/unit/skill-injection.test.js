@@ -51,9 +51,9 @@ describe('extract-import-map.js', () => {
   });
 });
 
-describe('sell import map injection', () => {
-  // Import map section moved from sell/SKILL.md to sell/references/components-and-troubleshooting.md
-  const refPath = join(PLUGIN_ROOT, 'skills', 'sell', 'references', 'components-and-troubleshooting.md');
+describe('factory import map injection', () => {
+  // Import map section moved from factory/SKILL.md to factory/references/components-and-troubleshooting.md
+  const refPath = join(PLUGIN_ROOT, 'skills', 'factory', 'references', 'components-and-troubleshooting.md');
   const content = readFileSync(refPath, 'utf8');
   const importMapSection = content.split('## Import Map')[1]?.split('##')[0] || '';
 
