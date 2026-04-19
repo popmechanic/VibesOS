@@ -5069,8 +5069,8 @@ if (typeof window !== 'undefined') {
       // === Initialize App ===
       async function initApp() {
         try {
-          // Dynamic import of OIDC bridge (mapped via import map to oidc-bridge.js)
-          const oidcModule = await import("use-fireproof");
+          // Dynamic import of OIDC bridge (served at root by Deploy API)
+          const oidcModule = await import("/oidc-bridge.js");
 
           window.OIDCProvider = oidcModule.OIDCProvider;
           window.OIDCComponents = {
