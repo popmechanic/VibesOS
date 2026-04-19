@@ -3692,32 +3692,6 @@ if (typeof window !== 'undefined') {
         );
       }
 
-      // === Subdomain Checker Hook ===
-      function useSubdomainChecker(subdomain) {
-        const [state, setState] = useState({ available: false, checking: false, error: null });
-
-        useEffect(() => {
-          if (!subdomain || subdomain.length < 3) {
-            setState({ available: false, checking: false, error: null });
-            return;
-          }
-
-          setState(prev => ({ ...prev, checking: true, error: null }));
-          const timer = setTimeout(async () => {
-            try {
-              const result = await checkSubdomainAvailability(subdomain);
-              setState({ available: result.available, checking: false, error: null });
-            } catch (e) {
-              setState({ available: false, checking: false, error: 'Check failed' });
-            }
-          }, 300);
-
-          return () => clearTimeout(timer);
-        }, [subdomain]);
-
-        return state;
-      }
-
       // __VIBES_APP_CODE__
 
       // === Module-level gate cache (survives React remounts from OIDCProvider) ===
