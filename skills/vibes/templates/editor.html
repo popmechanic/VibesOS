@@ -3396,6 +3396,25 @@
     </div>
   </div>
 
+  <!-- Folder Browser Modal (cross-platform fallback for non-macOS) -->
+  <div class="modal-overlay" id="folderModal">
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <h2>Choose a Project</h2>
+        <button class="modal-close" onclick="closeFolderModal()">&times;</button>
+      </div>
+      <div style="padding:0.75rem 1.25rem;border-bottom:2px solid var(--vibes-near-black);font-family:ui-monospace,Menlo,monospace;font-size:0.85rem;overflow-x:auto;white-space:nowrap;" id="folderBreadcrumb"></div>
+      <div style="flex:1;overflow-y:auto;max-height:50vh;" id="folderList"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;padding:0.75rem 1.25rem;border-top:2px solid var(--vibes-near-black);">
+        <button class="modal-create-btn" onclick="promptCreateFolder()">+ New folder</button>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="modal-create-btn" onclick="closeFolderModal()">Cancel</button>
+          <button class="modal-create-btn" onclick="selectCurrentFolder()" style="background:var(--vibes-blue);color:#fff;">Open here</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Animation Modal -->
   <div class="anim-modal-overlay" id="animModal">
     <div class="anim-modal">
@@ -5362,41 +5381,149 @@ window.escapeHtml = function(str) {
     try {
       const res = await fetch('/editor/pick-folder', { method: 'POST' });
       if (res.status === 404) {
+        // Old plugin — endpoint doesn't exist yet
         alert('Folder picker is unavailable — your Vibes plugin is out of date. Run /plugin update in Claude Code to get the latest version.');
         return;
       }
-      // Response may not be JSON (older servers returned HTML error pages on 500)
+      // Server may return non-JSON on older versions (Bun default HTML 500)
       let data = null;
       try { data = await res.json(); } catch {}
+
       if (!res.ok) {
         if (data?.unsupported) {
-          const path = prompt(
-            'The native folder picker isn\'t supported on ' + (data.platform || 'your platform') + ' yet.\n\nEnter an absolute folder path under your home directory:'
-          );
-          if (path && path.trim()) {
-            const openRes = await fetch('/editor/open-project', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ path: path.trim() }),
-            });
-            const openData = await openRes.json().catch(() => null);
-            if (openRes.ok && openData?.ok) {
-              openProject(openData.projectDir);
-            } else {
-              alert('Could not open that folder: ' + (openData?.error || `HTTP ${openRes.status}`));
-            }
-          }
+          // Non-macOS server: fall back to the in-editor folder browser modal.
+          openFolderModal(currentProjectDir || null);
           return;
         }
         console.error(`pick-folder failed: HTTP ${res.status}`, data);
-        alert('Folder picker failed: ' + (data?.error || `HTTP ${res.status}`));
+        // Last-resort: try the modal anyway so the user isn't stuck.
+        openFolderModal(currentProjectDir || null);
         return;
       }
       if (!data || !data.ok) return; // user cancelled or server declined
-      // Delegate to openProject — handles existing app detection and phase switching
       openProject(data.projectDir);
     } catch (err) {
       console.error('Failed to pick folder:', err);
+      openFolderModal(currentProjectDir || null);
+    }
+  }
+
+  // --- Folder browser modal (cross-platform fallback) -------------------
+
+  let folderModalPath = null; // currently-displayed directory
+
+  async function openFolderModal(startPath) {
+    document.getElementById('folderModal').classList.add('open');
+    // Start at last-used project dir, else $HOME (resolved server-side)
+    await navigateFolder(startPath || null);
+    document.addEventListener('keydown', folderModalKey);
+  }
+
+  function closeFolderModal() {
+    document.getElementById('folderModal').classList.remove('open');
+    document.removeEventListener('keydown', folderModalKey);
+    folderModalPath = null;
+  }
+
+  function folderModalKey(e) {
+    if (e.key === 'Escape') closeFolderModal();
+  }
+
+  async function navigateFolder(path) {
+    const url = '/editor/list-dir' + (path ? ('?path=' + encodeURIComponent(path)) : '');
+    let data = null;
+    try {
+      const res = await fetch(url);
+      data = await res.json();
+      if (!res.ok || !data.ok) {
+        renderFolderError(data?.error || ('HTTP ' + res.status));
+        return;
+      }
+    } catch (err) {
+      renderFolderError(err && err.message || 'Network error');
+      return;
+    }
+    folderModalPath = data.path;
+    renderBreadcrumb(data.path, data.home);
+    renderFolderList(data);
+  }
+
+  function renderBreadcrumb(path, home) {
+    const el = document.getElementById('folderBreadcrumb');
+    // Build a clickable segment trail. Root segment is "~" for $HOME.
+    const rel = path === home ? '' : path.slice(home.length + 1);
+    const segments = rel ? rel.split('/') : [];
+    const parts = [`<a href="#" onclick="navigateFolder(${JSON.stringify(home)});return false;" style="color:var(--vibes-blue);text-decoration:none;">~</a>`];
+    let accum = home;
+    for (const seg of segments) {
+      accum = accum + '/' + seg;
+      parts.push(`<span style="opacity:0.5;margin:0 0.25rem;">/</span>`);
+      parts.push(`<a href="#" onclick='navigateFolder(${JSON.stringify(accum)});return false;' style="color:var(--vibes-blue);text-decoration:none;">${seg.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</a>`);
+    }
+    el.innerHTML = parts.join('');
+  }
+
+  function renderFolderList(data) {
+    const el = document.getElementById('folderList');
+    const rows = [];
+    if (data.parent) {
+      rows.push(`<div class="folder-row" onclick='navigateFolder(${JSON.stringify(data.parent)})' style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 1.25rem;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.08);"><span>📁</span><span style="opacity:0.7;">..</span></div>`);
+    }
+    for (const d of (data.dirs || [])) {
+      const full = data.path + '/' + d.name;
+      const badge = d.hasVibesJson ? '<span style="margin-left:auto;font-size:0.75rem;color:var(--vibes-blue);">vibes project</span>' : '';
+      rows.push(`<div class="folder-row" onclick='navigateFolder(${JSON.stringify(full)})' style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 1.25rem;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.08);"><span>📁</span><span>${d.name.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</span>${badge}</div>`);
+    }
+    if (rows.length === (data.parent ? 1 : 0)) {
+      rows.push('<div style="padding:1.5rem;opacity:0.6;text-align:center;">(no subfolders)</div>');
+    }
+    el.innerHTML = rows.join('');
+  }
+
+  function renderFolderError(msg) {
+    document.getElementById('folderBreadcrumb').textContent = '';
+    document.getElementById('folderList').innerHTML = `<div style="padding:1.5rem;color:var(--vibes-red);">${msg.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div>`;
+  }
+
+  async function selectCurrentFolder() {
+    if (!folderModalPath) return;
+    try {
+      const res = await fetch('/editor/open-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: folderModalPath }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        renderFolderError(data?.error || ('HTTP ' + res.status));
+        return;
+      }
+      closeFolderModal();
+      openProject(data.projectDir);
+    } catch (err) {
+      renderFolderError(err && err.message || 'Network error');
+    }
+  }
+
+  async function promptCreateFolder() {
+    if (!folderModalPath) return;
+    const name = prompt('New folder name:');
+    if (!name || !name.trim()) return;
+    try {
+      const res = await fetch('/editor/create-dir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parent: folderModalPath, name: name.trim() }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        alert(data?.error || ('Create failed: HTTP ' + res.status));
+        return;
+      }
+      // Navigate into the new folder so the user can immediately Open it.
+      await navigateFolder(data.path);
+    } catch (err) {
+      alert(err && err.message || 'Network error');
     }
   }
 

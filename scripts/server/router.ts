@@ -703,6 +703,84 @@ function editorRecentProjects(): Response {
   return json({ ok: true, projects });
 }
 
+function editorListDir(url: URL): Response {
+  const requested = url.searchParams.get('path') || homedir();
+  const includeHidden = url.searchParams.get('hidden') === '1';
+  const home = homedir();
+  const resolved = resolve(requested);
+
+  // Scope: must be $HOME or a descendant of it
+  if (resolved !== home && !resolved.startsWith(home + '/')) {
+    return json({ ok: false, error: 'Path must be under your home directory' }, 400);
+  }
+
+  if (!existsSync(resolved)) {
+    return json({ ok: false, error: 'Folder not found' }, 404);
+  }
+
+  let entries: string[];
+  try {
+    entries = readdirSync(resolved);
+  } catch (err: any) {
+    return json({ ok: false, error: err?.message || 'Unable to read folder' }, 403);
+  }
+
+  const dirs = entries
+    .filter(name => includeHidden || !name.startsWith('.'))
+    .map(name => {
+      const full = join(resolved, name);
+      try {
+        if (!statSync(full).isDirectory()) return null;
+        const hasVibesJson = existsSync(join(full, '.vibes', 'vibes.json')) || existsSync(join(full, 'vibes.json'));
+        return { name, hasVibesJson };
+      } catch {
+        return null; // skip unreadable entries
+      }
+    })
+    .filter((d): d is { name: string; hasVibesJson: boolean } => d !== null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const parent = resolved === home ? null : resolve(resolved, '..');
+  return json({ ok: true, path: resolved, parent, home, dirs });
+}
+
+async function editorCreateDir(req: Request): Promise<Response> {
+  const body = await parseJsonBody(req);
+  const parent: string | undefined = body?.parent;
+  const name: string | undefined = body?.name;
+
+  if (!parent || !name) {
+    return json({ ok: false, error: 'parent and name are required' }, 400);
+  }
+
+  // Name safety: no slashes, no traversal
+  if (name.includes('/') || name.includes('\\') || name === '.' || name === '..') {
+    return json({ ok: false, error: 'Invalid folder name' }, 400);
+  }
+
+  const home = homedir();
+  const parentResolved = resolve(parent);
+  if (parentResolved !== home && !parentResolved.startsWith(home + '/')) {
+    return json({ ok: false, error: 'Parent must be under your home directory' }, 400);
+  }
+
+  if (!existsSync(parentResolved)) {
+    return json({ ok: false, error: 'Parent folder not found' }, 404);
+  }
+
+  const target = join(parentResolved, name);
+  if (existsSync(target)) {
+    return json({ ok: false, error: 'A folder with that name already exists' }, 409);
+  }
+
+  try {
+    mkdirSync(target);
+  } catch (err: any) {
+    return json({ ok: false, error: err?.message || 'Could not create folder' }, 500);
+  }
+  return json({ ok: true, path: target });
+}
+
 async function editorOpenProject(ctx: ServerContext, req: Request): Promise<Response> {
   const { path: projectPath } = await parseJsonBody(req);
   if (!projectPath) {
@@ -808,6 +886,8 @@ export function createRouter(ctx: ServerContext) {
       case 'POST /editor/upload':           return editorUploadFile(ctx, req);
       case 'GET /editor/deployments':       return editorListDeployments(ctx);
       case 'POST /editor/pick-folder':      return editorPickFolder(ctx);
+      case 'GET /editor/list-dir':          return editorListDir(url);
+      case 'POST /editor/create-dir':       return editorCreateDir(req);
       case 'GET /editor/recent-projects':   return editorRecentProjects();
       case 'POST /editor/open-project':     return editorOpenProject(ctx, req);
     }
