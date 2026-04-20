@@ -68,6 +68,12 @@ async function main() {
   output = output.replaceAll('__OIDC_CLIENT_ID__', OIDC_CLIENT_ID);
   output = output.replaceAll('__DEPLOY_API_URL__', DEPLOY_API_URL);
   output = output.replaceAll('__AI_PROXY_URL__', AI_PROXY_URL);
+  // Non-factory apps have no meaningful factoryMode/factoryBase but the
+  // base template still declares those keys in __APP_CONFIG__. If we don't
+  // substitute, the raw __FACTORY_MODE__ identifier evaluates as undefined
+  // at runtime and crashes the app before mount.
+  output = output.replaceAll('__FACTORY_MODE__', 'false');
+  output = output.replaceAll('__FACTORY_BASE__', '');
 
   // Inject auth gate for private apps
   if (privateMode && output.includes(AUTH_INJECT_MARKER)) {

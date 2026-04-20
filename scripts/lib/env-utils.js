@@ -17,6 +17,13 @@ export const APP_CONFIG_PLACEHOLDERS = {
   '__APP_NAME__': 'preview-app',
   '__WS_URL__': '__WS_URL__',       // left as placeholder = sync skipped (template checks startsWith('__'))
   '__APP_PUBLIC__': 'true',          // preview runs as public (no auth gate)
+  // Factory-mode fields — only the factory assembler sets these to real
+  // values. In preview mode and for non-factory deploys they need safe
+  // defaults; otherwise the template's `factoryMode: __FACTORY_MODE__,`
+  // line evaluates as a reference to an undefined identifier and crashes
+  // the preview with a ReferenceError.
+  '__FACTORY_MODE__': 'false',       // literal `false` — no quotes in the template
+  '__FACTORY_BASE__': '',            // empty string — factoryBase only meaningful in factory-mode apps
 };
 
 

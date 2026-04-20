@@ -54,6 +54,11 @@ const results = await Promise.all(
       output = output.replaceAll('__OIDC_CLIENT_ID__', OIDC_CLIENT_ID);
       output = output.replaceAll('__DEPLOY_API_URL__', DEPLOY_API_URL);
       output = output.replaceAll('__AI_PROXY_URL__', AI_PROXY_URL);
+      // Non-factory riffs still carry factoryMode/factoryBase keys in
+      // __APP_CONFIG__. Substitute with safe defaults so the raw
+      // __FACTORY_MODE__ identifier doesn't blow up at runtime.
+      output = output.replaceAll('__FACTORY_MODE__', 'false');
+      output = output.replaceAll('__FACTORY_BASE__', '');
       writeFileSync(outputPath, output);
       return { dir, success: true };
     } catch (e) {
