@@ -105,7 +105,7 @@ describe('Assembly Pipeline', () => {
   });
 
   describe('sell-ready.jsx', () => {
-    it('assembles with sell assembler', () => {
+    it('assembles with factory assembler', () => {
       const fixture = join(FIXTURES_DIR, 'sell-ready.jsx');
       const appJsx = join(workDir, 'app.jsx');
       const output = join(workDir, 'index.html');
@@ -126,7 +126,7 @@ describe('Assembly Pipeline', () => {
       expect(existsSync(output)).toBe(true);
     });
 
-    it('has getRouteInfo for sell routing', () => {
+    it('has getRouteInfo for factory routing', () => {
       const fixture = join(FIXTURES_DIR, 'sell-ready.jsx');
       const appJsx = join(workDir, 'app.jsx');
       const output = join(workDir, 'index.html');

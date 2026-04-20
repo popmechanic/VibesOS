@@ -85,7 +85,7 @@ AskUserQuestion:
   - Label: "minimal"
     Description: "Template + Babel + import map only — fastest, no data layer"
   - Label: "sell-ready"
-    Description: "useTenant() + multi-tenant routing — tests sell assembly path"
+    Description: "useTenant() + multi-tenant routing — tests factory assembly path"
   - Label: "ai-proxy"
     Description: "/api/ai/chat endpoint + CORS — requires OpenRouter key"
 ```
@@ -114,7 +114,7 @@ If "Skip admin": omit `--admin-ids` in Phase 4. Admin setup will be offered post
 
 **If not found:** No prompt needed. Admin will be set up post-deploy in Phase 5.5 after the user has a chance to sign up on the live app.
 
-### Phase 3.5: Sell Configuration (sell-ready only)
+### Phase 3.5: Factory Configuration (sell-ready only)
 
 **Condition:** Only runs when the user selected `sell-ready` in Phase 3.
 
@@ -122,7 +122,7 @@ If "Skip admin": omit `--admin-ids` in Phase 4. Admin setup will be offered post
 
 ```
 AskUserQuestion:
-  Question: "Which billing mode should this sell test use?"
+  Question: "Which billing mode should this factory test use?"
   Header: "Billing"
   Options:
   - Label: "Free (billing off)"

@@ -147,7 +147,7 @@ If yes: check `grep OPENROUTER_API_KEY ~/.vibes/.env`. If found, offer reuse (ma
 
 ### 0.4 SaaS Config
 
-**Sell config is collected here but applied later by the assembly script.** Do NOT hand-implement SaaS logic — the sell assembly handles tenant routing, auth gating, and billing.
+**Factory config is collected here but applied later by the assembly script.** Do NOT hand-implement SaaS logic — the factory assembly handles tenant routing, auth gating, and billing.
 
 Choose billing mode based on monetization intent:
 - **"off" (free)** — all authenticated users get full access. Good for MVPs and internal tools.
@@ -203,7 +203,7 @@ While the builder generates, SaaS config was already collected in Phase 0. Nothi
 
 ### 2.1 Verify Inputs
 
-Confirm: `app.jsx` exists with valid JSX. All sell config values collected.
+Confirm: `app.jsx` exists with valid JSX. All factory config values collected.
 
 Scan app.jsx for builder mistakes (see LAUNCH-REFERENCE.md "Common Builder Mistakes"). Fix any found before proceeding.
 

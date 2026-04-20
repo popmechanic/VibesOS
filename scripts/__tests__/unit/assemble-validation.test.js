@@ -11,7 +11,7 @@ import { APP_PLACEHOLDER, validateAssembly, checkForbiddenPatterns } from '../..
 const PLACEHOLDER = APP_PLACEHOLDER;
 
 /**
- * Validate sell template BEFORE app code injection
+ * Validate factory template BEFORE app code injection
  * Mirrors the pre-injection validation in assemble-factory.js
  */
 const SAFE_PLACEHOLDER_PATTERNS = [
@@ -27,7 +27,7 @@ const SAFE_PLACEHOLDER_PATTERNS = [
   '__ADMIN_CODE__'
 ];
 
-function validateSellTemplate(html) {
+function validateFactoryTemplate(html) {
   const errors = [];
 
   const allMatches = html.match(/__[A-Z_]+__/g) || [];
@@ -40,10 +40,10 @@ function validateSellTemplate(html) {
 }
 
 /**
- * Validate sell assembly output (post-injection)
+ * Validate factory assembly output (post-injection)
  * Mirrors the post-injection validation in assemble-factory.js
  */
-function validateSellAssembly(html, app) {
+function validateFactoryAssembly(html, app) {
   const errors = [];
 
   if (!app || app.trim().length === 0) {
@@ -136,27 +136,27 @@ export default function App() {
   });
 });
 
-describe('validateSellTemplate (pre-injection)', () => {
+describe('validateFactoryTemplate (pre-injection)', () => {
   it('returns no errors for clean template', () => {
     const html = '<html>// __VIBES_APP_CODE__ __ADMIN_CODE__</html>';
-    expect(validateSellTemplate(html)).toEqual([]);
+    expect(validateFactoryTemplate(html)).toEqual([]);
   });
 
   it('allows safe placeholder patterns', () => {
     const html = '<html>/*#__PURE__*/ __esModule __APP_CONFIG__ __OIDC_LOAD_ERROR__</html>';
-    expect(validateSellTemplate(html)).toEqual([]);
+    expect(validateFactoryTemplate(html)).toEqual([]);
   });
 
   it('detects unreplaced config placeholders', () => {
     const html = '<html>__OIDC_KEY__ and __APP_NAME__</html>';
-    const errors = validateSellTemplate(html);
+    const errors = validateFactoryTemplate(html);
     expect(errors.some(e => e.includes('Unreplaced placeholders'))).toBe(true);
     expect(errors.some(e => e.includes('__OIDC_KEY__'))).toBe(true);
   });
 
   it('deduplicates repeated placeholders', () => {
     const html = '<html>__TEST__ __TEST__ __TEST__</html>';
-    const errors = validateSellTemplate(html);
+    const errors = validateFactoryTemplate(html);
     const placeholderError = errors.find(e => e.includes('Unreplaced'));
     // Should only list __TEST__ once
     expect(placeholderError.match(/__TEST__/g).length).toBe(1);
@@ -166,7 +166,7 @@ describe('validateSellTemplate (pre-injection)', () => {
     // This is the key fix: validation runs on the template BEFORE app code injection,
     // so user code like window.__SELL_HOOKS__ never triggers false positives
     const templateBeforeInjection = '<html>// __VIBES_APP_CODE__</html>';
-    expect(validateSellTemplate(templateBeforeInjection)).toEqual([]);
+    expect(validateFactoryTemplate(templateBeforeInjection)).toEqual([]);
   });
 });
 
@@ -194,34 +194,34 @@ describe('forbidden pattern warnings', () => {
   });
 });
 
-describe('validateSellAssembly (post-injection)', () => {
-  it('returns no errors for valid sell assembly', () => {
+describe('validateFactoryAssembly (post-injection)', () => {
+  it('returns no errors for valid factory assembly', () => {
     const html = '<script>export default function App() { return null; }</script>';
     const app = 'export default function App() {}';
-    expect(validateSellAssembly(html, app)).toEqual([]);
+    expect(validateFactoryAssembly(html, app)).toEqual([]);
   });
 
   it('detects empty app code', () => {
-    const errors = validateSellAssembly('<html></html>', '');
+    const errors = validateFactoryAssembly('<html></html>', '');
     expect(errors).toContain('App code is empty');
   });
 
   it('detects missing App component', () => {
     const html = '<html>const x = 1;</html>';
-    const errors = validateSellAssembly(html, 'const x = 1;');
+    const errors = validateFactoryAssembly(html, 'const x = 1;');
     expect(errors).toContain('No App component found');
   });
 
   it('does not check for unreplaced placeholders (that is pre-injection)', () => {
     // Post-injection validation only checks for app code and App component
     const html = '<html>window.__SELL_HOOKS__ export default function App() {}</html>';
-    const errors = validateSellAssembly(html, 'export default function App() {}');
+    const errors = validateFactoryAssembly(html, 'export default function App() {}');
     expect(errors).toEqual([]);
   });
 
   it('reports multiple errors at once', () => {
     const html = '<html></html>';
-    const errors = validateSellAssembly(html, '');
+    const errors = validateFactoryAssembly(html, '');
     expect(errors).toContain('App code is empty');
     expect(errors).toContain('No App component found');
   });
