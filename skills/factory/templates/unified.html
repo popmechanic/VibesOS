@@ -3647,8 +3647,12 @@ if (typeof window !== 'undefined') {
           return { route: 'landing', subdomain: null };
         }
 
-        // Production: detect subdomain from hostname using APP_DOMAIN
+        // Production: detect tenant from path first (path-based tenancy),
+        // then fall back to subdomain detection for backwards compatibility.
         if (hostname === APP_DOMAIN || hostname === `www.${APP_DOMAIN}`) {
+          const firstSegment = window.location.pathname.split('/').filter(Boolean)[0];
+          if (firstSegment === 'admin') return { route: 'admin', subdomain: null };
+          if (firstSegment) return { route: 'tenant', subdomain: firstSegment };
           return { route: 'landing', subdomain: null };
         }
         if (hostname === `admin.${APP_DOMAIN}`) {
