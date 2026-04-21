@@ -91,4 +91,21 @@ describe('assemble-on-stop hook', () => {
     expect(result.status).toBe(0);
     expect(existsSync(join(dir, 'index.html'))).toBe(true);
   });
+
+  it('walks up from a subdirectory to find the Vibes project root', () => {
+    const projectRoot = makeTempDir();
+    makeVibesProject(projectRoot);
+    const nested = join(projectRoot, 'sub', 'deeper');
+    mkdirSync(nested, { recursive: true });
+
+    const result = spawnSync('bash', [HOOK_SCRIPT], {
+      cwd: nested,
+      env: { ...process.env, CLAUDE_PLUGIN_ROOT: PLUGIN_ROOT, HOME: projectRoot },
+      encoding: 'utf-8',
+    });
+
+    expect(result.status).toBe(0);
+    expect(existsSync(join(projectRoot, 'index.html'))).toBe(true);
+    expect(existsSync(join(nested, 'index.html'))).toBe(false);
+  });
 });
