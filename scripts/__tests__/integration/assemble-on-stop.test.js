@@ -74,5 +74,21 @@ beforeAll(() => {
 });
 
 describe('assemble-on-stop hook', () => {
-  // Tests added in subsequent tasks
+  it('exits 0 silently when cwd is not inside a Vibes project', () => {
+    const dir = makeTempDir();
+    // No vibes.json, no app.jsx anywhere
+    const result = runHook(dir);
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(result.stdout).toBe('');
+    expect(existsSync(join(dir, 'index.html'))).toBe(false);
+  });
+
+  it('runs assembly when cwd contains vibes.json + app.jsx', () => {
+    const dir = makeTempDir();
+    makeVibesProject(dir);
+    const result = runHook(dir);
+    expect(result.status).toBe(0);
+    expect(existsSync(join(dir, 'index.html'))).toBe(true);
+  });
 });
