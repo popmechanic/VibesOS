@@ -8,9 +8,11 @@
 
 set -euo pipefail
 
-# 1. Walk up from cwd to find the nearest Vibes project (vibes.json + app.jsx)
+# 1. Walk up from cwd to find the nearest Vibes project (vibes.json + app.jsx).
+# Stop at $HOME or / to avoid walking out of the user's working area.
 PROJECT_DIR="$(pwd)"
-while [ "$PROJECT_DIR" != "/" ] && [ "$PROJECT_DIR" != "$HOME" ]; do
+HOME_BOUNDARY="${HOME:-/}"
+while [ "$PROJECT_DIR" != "/" ] && [ "$PROJECT_DIR" != "$HOME_BOUNDARY" ]; do
   if [ -f "$PROJECT_DIR/vibes.json" ] && [ -f "$PROJECT_DIR/app.jsx" ]; then
     break
   fi
@@ -20,9 +22,17 @@ done
 # Not in a Vibes project → silent no-op
 [ -f "$PROJECT_DIR/vibes.json" ] && [ -f "$PROJECT_DIR/app.jsx" ] || exit 0
 
+# Plugin root is set by Claude Code at hook invocation time. In dev mode
+# (`claude --plugin .`) it can be missing — exit silently rather than crash,
+# otherwise this hook would fail every turn and re-introduce the gap it closes.
+VIBES_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
+if [ -z "$VIBES_ROOT" ]; then
+  echo "assemble-on-stop: CLAUDE_PLUGIN_ROOT not set, skipping" >&2
+  exit 0
+fi
+
 APP="$PROJECT_DIR/app.jsx"
 HTML="$PROJECT_DIR/index.html"
-VIBES_ROOT="${CLAUDE_PLUGIN_ROOT}"
 
 # 2. Idempotency — skip if index.html is newer than app.jsx
 if [ -f "$HTML" ] && [ "$HTML" -nt "$APP" ]; then

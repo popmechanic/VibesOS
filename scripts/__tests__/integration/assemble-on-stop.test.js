@@ -8,8 +8,8 @@
 
 import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { spawnSync } from 'child_process';
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, mkdirSync, statSync, utimesSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, mkdirSync, utimesSync } from 'fs';
+import { join, resolve } from 'path';
 import { tmpdir } from 'os';
 
 const PLUGIN_ROOT = resolve(import.meta.dirname, '../../..');
@@ -195,5 +195,20 @@ describe('assemble-on-stop hook', () => {
     const second = runHook(dir);
     expect(second.status).toBe(0);
     expect(existsSync(join(dir, '.vibes/assemble-retry'))).toBe(false);
+  });
+
+  it('exits 0 with a warning when CLAUDE_PLUGIN_ROOT is unset (dev mode)', () => {
+    const dir = makeTempDir();
+    makeVibesProject(dir);
+    // Spawn without CLAUDE_PLUGIN_ROOT in env — mimics `claude --plugin .` dev mode
+    const { CLAUDE_PLUGIN_ROOT, ...envWithoutPluginRoot } = process.env;
+    const result = spawnSync('bash', [HOOK_SCRIPT], {
+      cwd: dir,
+      env: { ...envWithoutPluginRoot, HOME: dir },
+      encoding: 'utf-8',
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain('CLAUDE_PLUGIN_ROOT not set');
+    expect(existsSync(join(dir, 'index.html'))).toBe(false);
   });
 });
