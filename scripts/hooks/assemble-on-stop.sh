@@ -32,7 +32,22 @@ fi
 # 3. Run assembly
 cd "$PROJECT_DIR"
 ASSEMBLE_OUTPUT=$(bun "$VIBES_ROOT/scripts/assemble.js" app.jsx index.html 2>&1) || {
+  # Circuit breaker — if same app.jsx content has failed twice in a row, give up
+  RETRY_FILE="$PROJECT_DIR/.vibes/assemble-retry"
+  CURRENT_HASH=$(shasum -a 256 "$APP" | cut -d' ' -f1)
+  LAST_HASH=$(cat "$RETRY_FILE" 2>/dev/null || echo "")
+  if [ "$CURRENT_HASH" = "$LAST_HASH" ]; then
+    rm -f "$RETRY_FILE"
+    echo "Vibes assembly failed twice on identical app.jsx. Allowing turn to end so the user can intervene." >&2
+    echo "$ASSEMBLE_OUTPUT" >&2
+    exit 0
+  fi
+  mkdir -p "$(dirname "$RETRY_FILE")"
+  echo "$CURRENT_HASH" > "$RETRY_FILE"
   echo "Vibes assembly failed. Fix app.jsx — the assembler will re-run when you finish your next turn." >&2
   echo "$ASSEMBLE_OUTPUT" >&2
   exit 2
 }
+
+# Success — clear retry state
+rm -f "$PROJECT_DIR/.vibes/assemble-retry" 2>/dev/null || true

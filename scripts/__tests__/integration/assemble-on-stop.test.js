@@ -149,4 +149,51 @@ describe('assemble-on-stop hook', () => {
     // Assembler's own error surfaces through
     expect(result.stderr.toLowerCase()).toMatch(/assembly|app component|fix/);
   });
+
+  it('exits 0 on second identical-content failure (circuit breaker)', () => {
+    const dir = makeTempDir();
+    writeFileSync(join(dir, 'vibes.json'), JSON.stringify({ name: 'test-app' }) + '\n');
+    writeFileSync(join(dir, 'app.jsx'), ''); // empty → assembler fails on empty-content check
+
+    const first = runHook(dir);
+    expect(first.status).toBe(2);
+
+    const second = runHook(dir);
+    expect(second.status).toBe(0);
+    expect(second.stderr).toContain('Vibes assembly failed twice on identical app.jsx');
+    // Retry file is cleared so a later fix-then-break cycle isn't auto-skipped
+    expect(existsSync(join(dir, '.vibes/assemble-retry'))).toBe(false);
+  });
+
+  it('does not trip circuit breaker when broken content changes between runs', () => {
+    const dir = makeTempDir();
+    writeFileSync(join(dir, 'vibes.json'), JSON.stringify({ name: 'test-app' }) + '\n');
+    writeFileSync(join(dir, 'app.jsx'), ''); // first broken content
+
+    const first = runHook(dir);
+    expect(first.status).toBe(2);
+
+    // Different broken content — both files fail the empty-content check (trim().length === 0)
+    // but they have different SHA-256 hashes, so the circuit breaker should NOT trip.
+    writeFileSync(join(dir, 'app.jsx'), '   \n');
+    const second = runHook(dir);
+    expect(second.status).toBe(2); // still fails, but not circuit-broken
+    expect(second.stderr).not.toContain('twice on identical');
+  });
+
+  it('clears retry state on successful assembly', () => {
+    const dir = makeTempDir();
+    writeFileSync(join(dir, 'vibes.json'), JSON.stringify({ name: 'test-app' }) + '\n');
+    writeFileSync(join(dir, 'app.jsx'), '');
+
+    const first = runHook(dir);
+    expect(first.status).toBe(2);
+    expect(existsSync(join(dir, '.vibes/assemble-retry'))).toBe(true);
+
+    // Fix the app
+    writeFileSync(join(dir, 'app.jsx'), 'function App() { return <div>ok</div>; }\n');
+    const second = runHook(dir);
+    expect(second.status).toBe(0);
+    expect(existsSync(join(dir, '.vibes/assemble-retry'))).toBe(false);
+  });
 });
