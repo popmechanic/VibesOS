@@ -56,12 +56,12 @@ export async function handleGenerate(ctx: ServerContext, onEvent: EventCallback,
   onEvent({ type: 'theme_selected', themeId: result.themeId, themeName: result.themeName, themeBackground: themeColors?.bg || null });
 
   if (result.isReference) {
-    const maxTurns = result.isHtmlRef ? 5 : 8;
+    const maxTurns = result.isHtmlRef ? 10 : 12;
     console.log(`[Generate] Starting (reference path) — ref: ${reference.name} (${result.referenceIntent}), prompt: ${(result.prompt.length / 1024).toFixed(1)}KB`);
-    await runOneShot(result.prompt, { lockType: 'generate', skipChat: true, maxTurns, model, cwd: appDir, tools: result.isHtmlRef ? 'Write' : 'Write,Read' }, onEvent, ctx.projectRoot);
+    await runOneShot(result.prompt, { lockType: 'generate', skipChat: true, maxTurns, model, cwd: appDir, tools: 'Write,Edit,Read' }, onEvent, ctx.projectRoot);
   } else {
     console.log(`[Generate] Starting — theme: ${result.themeId} (${result.themeName}), prompt: ${(result.prompt.length / 1024).toFixed(1)}KB`);
-    await runOneShot(result.prompt, { lockType: 'generate', skipChat: true, maxTurns: 5, model, cwd: appDir, tools: 'Write' }, onEvent, ctx.projectRoot);
+    await runOneShot(result.prompt, { lockType: 'generate', skipChat: true, maxTurns: 10, model, cwd: appDir, tools: 'Write,Edit,Read' }, onEvent, ctx.projectRoot);
   }
 
   sanitizeAppJsx(appDir);
