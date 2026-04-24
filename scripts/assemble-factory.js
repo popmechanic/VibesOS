@@ -238,7 +238,7 @@ output = populateConnectConfig(output, envVars, true);
 output = output.split('__VITE_OIDC_AUTHORITY__').join(OIDC_AUTHORITY);
 output = output.split('__VITE_OIDC_CLIENT_ID__').join(OIDC_CLIENT_ID);
 output = output.split('__VITE_DEPLOY_API_URL__').join(DEPLOY_API_URL);
-output = output.split('__VITE_AI_PROXY_URL__').join(AI_PROXY_URL);
+output = output.split('__AI_PROXY_URL__').join(AI_PROXY_URL);
 
 // Known safe patterns that aren't config placeholders
 // __PURE__ is a tree-shaking comment used by bundlers

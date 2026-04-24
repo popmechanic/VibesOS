@@ -4415,6 +4415,15 @@ window.escapeHtml = function(str) {
           updatePreviewOverlay(null, label);
           if (msg.name === 'Write') AsciiAnimation.start();
         }
+      } else if (msg.type === 'tool_detail') {
+        // Granular tool info (emitted after tool_start with a file path
+        // or input summary). Upgrade the thinking-stage label from the
+        // generic "Running Edit..." to "Edit: app.jsx" so the user sees
+        // what Claude is actually touching.
+        if (msg.input_summary) {
+          const label = (TOOL_LABELS[msg.name] || msg.name) + ': ' + msg.input_summary;
+          setThinking(true, null, label);
+        }
       } else if (msg.type === 'tool_result') {
         // Tool completed — update tool block with result
         updateToolResult(msg.name, msg.content, msg.is_error);
@@ -4519,6 +4528,12 @@ window.escapeHtml = function(str) {
           document.getElementById('generateBtn').disabled = false;
         }
         addMessage('system', 'Request cancelled.');
+      } else if (msg.type === 'theme_validation_failed') {
+        // Theme applied, but the creative pass modified app logic and was
+        // reverted to a safe version (colors/fonts only). Surface the
+        // message so the user knows a partial revert happened — without
+        // it the UI would look like a successful theme switch.
+        addMessage('error', msg.message || 'Theme validation failed; applied safe version.');
       } else if (msg.type === 'theme_selected') {
         // Server tells us which theme was selected (including auto-selection)
         currentThemeId = msg.themeId;
