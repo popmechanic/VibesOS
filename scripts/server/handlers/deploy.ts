@@ -7,7 +7,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, statSync } from 'fs';
 import { join } from 'path';
-import { buildPlatformFiles } from '../../lib/deploy-files.js';
+import { buildPlatformFiles, addAppAssets, separateBySize, uploadR2Assets } from '../../lib/deploy-files.js';
 import { getAccessToken } from '../../lib/cli-auth.js';
 import { OIDC_AUTHORITY, OIDC_CLIENT_ID, DEPLOY_API_URL } from '../../lib/auth-constants.js';
 import { provisionInviteLink } from '../../lib/provision-invite-link.js';
@@ -139,11 +139,21 @@ export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, t
 
   onEvent({ type: 'progress', progress: 30, stage: 'Deploying...', elapsed: getElapsed() });
 
-  // Build the files map for the Deploy API
+  // Build the files map for the Deploy API — must mirror the CLI
+  // (scripts/deploy-cloudflare.js) so editor deploys include app-level
+  // assets. Without addAppAssets the app's /assets directory is silently
+  // dropped and images/fonts 404 after deploy.
   const files: Record<string, string> = {
     'index.html': readFileSync(indexHtmlPath, 'utf8'),
     ...buildPlatformFiles(ctx.projectRoot),
   };
+  if (ctx.projectDir) {
+    addAppAssets(join(ctx.projectDir, 'assets'), files);
+  }
+
+  // Large assets go to R2 first; only embedded files are sent to /deploy.
+  const { embed, r2: r2Files } = separateBySize(files);
+  await uploadR2Assets(DEPLOY_API_URL, appName, r2Files, token);
 
   // Deploy via the Deploy API
   let deployUrl = '';
@@ -160,7 +170,7 @@ export async function handleDeploy(ctx: ServerContext, onEvent: EventCallback, t
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ name: appName, files, public: !isPrivate }),
+      body: JSON.stringify({ name: appName, files: embed, public: !isPrivate }),
     });
 
     clearInterval(progressInterval);

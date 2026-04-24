@@ -90,6 +90,48 @@ export function addAppAssets(assetsDir, files) {
 }
 
 /**
+ * Upload large files to R2 via the Deploy API. Warnings on failure —
+ * deploy itself proceeds with just the embedded files, so a flaky R2
+ * upload doesn't block the deploy (the worker will 404 on those assets
+ * until the next deploy, which the caller can see by inspecting the
+ * returned resolved value).
+ *
+ * @param {string} apiUrl - Deploy API base URL
+ * @param {string} appName - Target app name
+ * @param {Record<string, string>} r2Files - Files to upload (may be empty)
+ * @param {string} accessToken - OIDC access token
+ * @param {(msg: string) => void} [log] - Optional logger (defaults to console.log / console.warn)
+ * @returns {Promise<boolean>} true if upload succeeded (or was empty), false if it warned
+ */
+export async function uploadR2Assets(apiUrl, appName, r2Files, accessToken, log) {
+  const logInfo = log || ((m) => console.log(m));
+  const logWarn = log || ((m) => console.warn(m));
+  const count = Object.keys(r2Files).length;
+  if (count === 0) return true;
+  logInfo(`Uploading ${count} large asset(s) to R2...`);
+  try {
+    const resp = await fetch(`${apiUrl}/apps/${appName}/assets`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ files: r2Files }),
+    });
+    if (resp.ok) {
+      logInfo('R2 assets uploaded successfully');
+      return true;
+    }
+    const errText = await resp.text();
+    logWarn(`R2 upload warning: ${errText}`);
+    return false;
+  } catch (e) {
+    logWarn(`R2 upload warning: ${e.message}`);
+    return false;
+  }
+}
+
+/**
  * Separate files into embedded (small) and R2 (large) based on size threshold.
  * index.html is always embedded regardless of size.
  * @param {Record<string, string>} files - Files map
