@@ -934,9 +934,12 @@ export async function runOneShot(
     runState.resultText = (runState.resultText || '') + '\n\n*[Output was truncated at the token limit — the app was written but some follow-up content may be missing.]*';
   }
 
-  // Post-process
-  if (runState.hasEdited) {
-    sanitizeAppJsx(projectRoot);
+  // Post-process. `sanitizeAppJsx` joins its argument with 'app.jsx', so
+  // it needs the app directory (cwd), not the plugin root. Without cwd
+  // there's no file to sanitize — skip rather than silently no-op on
+  // `<plugin-root>/app.jsx`.
+  if (runState.hasEdited && opts.cwd) {
+    sanitizeAppJsx(opts.cwd);
   }
 
   let appJsxValid: boolean | undefined = undefined;
@@ -965,6 +968,3 @@ export async function runOneShot(
   return runState.resultText || null;
 }
 
-// --- Re-exports from legacy module ---
-
-export { runBunScript } from './claude-bridge-legacy.ts';
