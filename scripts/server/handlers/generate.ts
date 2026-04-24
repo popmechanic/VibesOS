@@ -56,12 +56,32 @@ export async function handleGenerate(ctx: ServerContext, onEvent: EventCallback,
   onEvent({ type: 'theme_selected', themeId: result.themeId, themeName: result.themeName, themeBackground: themeColors?.bg || null });
 
   if (result.isReference) {
-    const maxTurns = result.isHtmlRef ? 5 : 8;
+    const maxTurns = result.isHtmlRef ? 10 : 12;
     console.log(`[Generate] Starting (reference path) — ref: ${reference.name} (${result.referenceIntent}), prompt: ${(result.prompt.length / 1024).toFixed(1)}KB`);
-    await runOneShot(result.prompt, { lockType: 'generate', skipChat: true, maxTurns, model, cwd: appDir, tools: result.isHtmlRef ? 'Write' : 'Write,Read' }, onEvent, ctx.projectRoot);
+
+    // Reference preview: show the user their uploaded reference asset in the
+    // iframe while Claude is analyzing it. Only for HTML and image refs;
+    // text-file refs (seed/content/context intents) skip this — their content
+    // doesn't visualize meaningfully and the user already saw it on upload.
+    const refName = reference?.name as string | undefined;
+    const isTextRef = !!refName && /\.(txt|md|csv|tsv|json|xml|rtf)$/i.test(refName);
+    if (refName && !isTextRef) {
+      const refKind = result.isHtmlRef ? 'html' : 'image';
+      const vibesTmpPath = join(ctx.projectRoot, '.vibes-tmp', refName);
+      if (existsSync(vibesTmpPath)) {
+        onEvent({
+          type: 'reference_preview',
+          src: `/reference-frame?name=${encodeURIComponent(refName)}&kind=${refKind}`,
+        });
+      }
+    }
+
+    onEvent({ type: 'generation_stage', stage: 'reading_reference' });
+    await runOneShot(result.prompt, { lockType: 'generate', skipChat: true, maxTurns, model, cwd: appDir, tools: 'Write,Edit,Read', initialStage: 'reading_reference' }, onEvent, ctx.projectRoot);
   } else {
     console.log(`[Generate] Starting — theme: ${result.themeId} (${result.themeName}), prompt: ${(result.prompt.length / 1024).toFixed(1)}KB`);
-    await runOneShot(result.prompt, { lockType: 'generate', skipChat: true, maxTurns: 5, model, cwd: appDir, tools: 'Write' }, onEvent, ctx.projectRoot);
+    onEvent({ type: 'generation_stage', stage: 'foundation' });
+    await runOneShot(result.prompt, { lockType: 'generate', skipChat: true, maxTurns: 10, model, cwd: appDir, tools: 'Write,Edit,Read', initialStage: 'foundation' }, onEvent, ctx.projectRoot);
   }
 
   sanitizeAppJsx(appDir);

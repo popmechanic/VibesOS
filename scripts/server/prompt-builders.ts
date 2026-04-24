@@ -33,6 +33,99 @@ const EFFECT_INSTRUCTIONS = {
   'shader': `MANDATORY: Add a WebGL fragment shader background. Create a fullscreen quad with vertex shader, pass u_time/u_resolution/u_mouse uniforms. Use effects like: aurora (sine wave color mixing), plasma (layered sine interference), noise gradient mesh (hash-based noise with mouse reactivity), or animated color fields. Use precision mediump float. Graceful fallback if WebGL unavailable.`,
 };
 
+/**
+ * The boilerplate JSX block every generated app.jsx must start with.
+ * Shared between the reference and non-reference paths.
+ */
+function USE_VIBES_THEME_TEMPLATE(themeId: string, themeName: string): string {
+  return `\`\`\`jsx
+window.__VIBES_THEMES__ = [{ id: "${themeId}", name: "${themeName}" }];
+
+function useVibesTheme() {
+  const [theme, setTheme] = React.useState(() => localStorage.getItem("vibes-theme") || "${themeId}");
+  React.useEffect(() => {
+    const handler = (e) => { const t = e.detail?.theme; if (t) { setTheme(t); localStorage.setItem("vibes-theme", t); } };
+    document.addEventListener("vibes-design-request", handler);
+    return () => document.removeEventListener("vibes-design-request", handler);
+  }, []);
+  return theme;
+}
+\`\`\``;
+}
+
+/**
+ * Cross-cutting rules that apply to every step of the 2-step generation.
+ * Kept in one place so the reference and non-reference prompts share identical text.
+ *
+ * Note: rules that also appear in RECENCY_REMINDER (no imports, useApp mandatory,
+ * cells scalar, no sync UI, table names literal) are intentionally omitted here —
+ * RECENCY_REMINDER emits earlier in the prompt and already covers those invariants.
+ * This block focuses on the rules specific to the multi-step generation flow.
+ */
+const GLOBAL_STEP_RULES = `=== RULES THAT APPLY TO ALL STEPS ===
+
+- NO TypeScript. End the file with: export default App
+- Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters: → ● « etc. CSS escapes break Babel.
+- Responsive (mobile-first with Tailwind). Use className="btn" for buttons, className="grid-background" on the root element.
+- TinyBase hooks (useRowIds, useCell, useAddRowCallback, useSetCellCallback, useDelRowCallback, useValue, useSortedRowIds, useTable) are PRE-EXISTING GLOBALS — explicit names so you know what's available.
+- useApp() returns { isReady, isSyncing, user }.`;
+
+/**
+ * The "Think about design decisions inline in CSS comments" block.
+ *
+ * Shared between the reference and non-reference prompt paths. Differs only in
+ * the first two bullets (reference mentions extracted tokens; non-reference
+ * names the theme personality) and the word `reference`/`theme` in the mood
+ * phrase.
+ */
+function DESIGN_REASONING_SECTION(opts: { isReference: boolean; themeName?: string }): string {
+  const firstBullet = opts.isReference
+    ? 'Colors, typography, and surfaces extracted from the reference and their mapping to --comp-* tokens'
+    : `How "${opts.themeName}" personality shapes visual choices`;
+  const secondBullet = opts.isReference
+    ? 'Custom SVG illustrations that fit'
+    : 'What custom SVG illustrations fit this app';
+  const moodLabel = opts.isReference ? 'reference' : 'theme';
+  return `=== DESIGN REASONING ===
+
+Briefly note design decisions inside CSS comments in the <style> tag — not as a separate <design> narrative before the Write. Consider:
+- ${firstBullet}
+- ${secondBullet}
+- Animations that match the ${moodLabel} mood (Canvas particles, animated SVG, scroll reveals, card tilt, cursor glow)`;
+}
+
+/**
+ * The core new behavior: tell Claude to produce the app via two tool calls.
+ * Claude Code's native tool loop turns each tool_result into a new assistant turn
+ * with its own fresh max_tokens budget — so we don't need server-side orchestration.
+ */
+const TWO_STEP_INSTRUCTIONS = `=== BUILD app.jsx IN TWO TOOL CALLS ===
+
+Build this app in two separate tool calls, in order. Each step has a specific purpose; do not try to do everything in one call.
+
+STEP 1 — Write app.jsx: the visible skeleton.
+Produce a file that compiles and renders the app's basic shape — even without data or interactions. Include:
+- The exact __VIBES_THEMES__ + useVibesTheme code from above (unchanged)
+- A <style> tag with :root tokens and the four marker sections (/* @theme:tokens */, /* @theme:surfaces */, /* @theme:motion */, {/* @theme:decoration */}) present even when their contents are empty, plus base layout CSS
+- A functioning component tree with visible elements: header with the app title, main content area, whatever structural regions fit this app (sidebar/nav/footer as needed). Components render placeholder/empty states but the layout is real.
+- Basic React hooks for local UI state (useState). NO TinyBase hooks yet. NO event handlers yet.
+- export default App
+
+After STEP 1 the preview should look like the final app in colors, typography, and layout — just without data or polish.
+
+STEP 2 — Edit app.jsx: data, interactions, and polish.
+Read app.jsx (the skeleton you just wrote), then Edit it to add everything else:
+- TinyBase hooks (useRowIds, useCell, useAddRowCallback, useSetCellCallback, useDelRowCallback, useValue)
+- React event handlers, effects, refs
+- useApp() integration; useAI wiring if the app needs it
+- Inside the @theme:surfaces marker: shadows, borders, gradients, glass effects
+- Inside the @theme:motion marker: @keyframes, CSS @property animations, hover effects
+- Inside the @theme:decoration marker: SVG illustrations, Canvas 2D or WebGL backgrounds, decorative patterns
+
+After STEP 2 the app is complete.
+
+IMPORTANT: Do NOT produce a <design> narrative before STEP 1. Any design notes belong inside CSS comments in the <style> tag. Narrative prose counts against the same output budget as your code.`;
+
 // --- Auto-detect reference files from user message keywords ---
 
 const REFERENCE_TRIGGERS: Array<{ keywords: RegExp; file: string; label: string }> = [
@@ -309,19 +402,7 @@ USER REQUEST: "${userPrompt}"
 
 Your app.jsx MUST start with these EXACT lines (copy-paste, do not modify):
 
-\`\`\`jsx
-window.__VIBES_THEMES__ = [{ id: "custom-ref", name: "Custom Reference" }];
-
-function useVibesTheme() {
-  const [theme, setTheme] = React.useState(() => localStorage.getItem("vibes-theme") || "custom-ref");
-  React.useEffect(() => {
-    const handler = (e) => { const t = e.detail?.theme; if (t) { setTheme(t); localStorage.setItem("vibes-theme", t); } };
-    document.addEventListener("vibes-design-request", handler);
-    return () => document.removeEventListener("vibes-design-request", handler);
-  }, []);
-  return theme;
-}
-\`\`\`
+${USE_VIBES_THEME_TEMPLATE('custom-ref', 'Custom Reference')}
 
 Derive ALL :root CSS tokens from the design reference above — do NOT use any predefined theme.
 
@@ -329,24 +410,11 @@ Derive ALL :root CSS tokens from the design reference above — do NOT use any p
 
 ${styleGuide}
 
-=== DESIGN REASONING ===
+${DESIGN_REASONING_SECTION({ isReference: true })}
 
-Briefly note design decisions inside CSS comments in the <style> tag — not as a separate <design> narrative before the Write. Consider:
-- Colors, typography, and surfaces extracted from the reference and their mapping to --comp-* tokens
-- Custom SVG illustrations that fit
-- Animations that match the reference mood (Canvas particles, animated SVG, scroll reveals, card tilt, cursor glow)
+${TWO_STEP_INSTRUCTIONS}
 
-=== WRITE app.jsx ===
-
-Write the complete app to app.jsx. Rules:
-- FIRST: the exact __VIBES_THEMES__ + useVibesTheme code shown above
-- THEN: <style> tag with reference-derived CSS organized into marked sections (see below), plus component styles
-- Add rich visual effects: Canvas 2D backgrounds, animated SVG illustrations, CSS @property animations, hover effects
-- JSX with React hooks (useState, useEffect, useRef, useCallback, useMemo)
-- NO import statements — runs in Babel script block with globals
-- NO TypeScript. End with: export default App
-- Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
-- Responsive (mobile-first with Tailwind). className="btn" for buttons, "grid-background" on root
+${GLOBAL_STEP_RULES}
 
 ${THEME_SECTION_MARKERS}
 ${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;
@@ -403,19 +471,7 @@ USER REQUEST: "${userPrompt}"
 
 Your app.jsx MUST start with these EXACT lines (copy-paste, do not modify):
 
-\`\`\`jsx
-window.__VIBES_THEMES__ = [{ id: "${themeId}", name: "${themeName}" }];
-
-function useVibesTheme() {
-  const [theme, setTheme] = React.useState(() => localStorage.getItem("vibes-theme") || "${themeId}");
-  React.useEffect(() => {
-    const handler = (e) => { const t = e.detail?.theme; if (t) { setTheme(t); localStorage.setItem("vibes-theme", t); } };
-    document.addEventListener("vibes-design-request", handler);
-    return () => document.removeEventListener("vibes-design-request", handler);
-  }, []);
-  return theme;
-}
-\`\`\`
+${USE_VIBES_THEME_TEMPLATE(themeId!, themeName)}
 
 Your <style> tag MUST include these EXACT CSS custom properties from the "${themeName}" theme:
 
@@ -431,24 +487,11 @@ ${themeEssentials || 'Creative, polished, and distinctive.'}
 
 ${styleGuide}
 
-=== DESIGN REASONING ===
+${DESIGN_REASONING_SECTION({ isReference: false, themeName })}
 
-Briefly note design decisions inside CSS comments in the <style> tag — not as a separate <design> narrative before the Write. Consider:
-- How "${themeName}" personality shapes visual choices
-- What custom SVG illustrations fit this app
-- What animations match the theme mood (Canvas particles, animated SVG, scroll reveals, card tilt, cursor glow)
+${TWO_STEP_INSTRUCTIONS}
 
-=== WRITE app.jsx ===
-
-Write the complete app to app.jsx. Rules:
-- FIRST: the exact __VIBES_THEMES__ + useVibesTheme code shown above
-- THEN: <style> tag with theme-sensitive CSS organized into marked sections (see below), plus component styles
-- Add rich visual effects: Canvas 2D backgrounds, animated SVG illustrations, CSS @property animations, hover effects
-- JSX with React hooks (useState, useEffect, useRef, useCallback, useMemo)
-- NO import statements — runs in Babel script block with globals
-- NO TypeScript. End with: export default App
-- Never use CSS unicode escapes (\\2192, \\2022, \\00BB). Use actual Unicode characters instead: → ● « etc. CSS escapes break Babel.
-- Responsive (mobile-first with Tailwind). className="btn" for buttons, "grid-background" on root
+${GLOBAL_STEP_RULES}
 
 ${THEME_SECTION_MARKERS}
 ${useAI ? AI_INSTRUCTIONS_GENERATE : ''}`;

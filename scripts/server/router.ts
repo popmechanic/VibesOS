@@ -13,6 +13,7 @@ import type { ServerContext } from './config.ts';
 import { getRecommendedThemeIds, loadOpenRouterKey } from './config.ts';
 import { resolveProjectDir, resolveAppJsxPath } from './app-context.js';
 import { assembleAppFrame } from './handlers/generate.ts';
+import { serveReferenceFrame } from './handlers/reference-frame.ts';
 import { loadRegistry, saveRegistry, getCloudflareConfig, setCloudflareConfig, getApp, setApp, addRecentProject, getRecentProjects } from '../lib/registry.js';
 import { pickFolder } from '../lib/folder-picker.js';
 import { initVibesJson, readVibesJson, writeVibesJson } from '../lib/vibes-json.js';
@@ -866,6 +867,7 @@ export function createRouter(ctx: ServerContext) {
       case 'GET /animations':               return serveAnimations(ctx);
       case 'GET /skills':                    return serveSkills(ctx);
       case 'GET /app-frame':                return serveAppFrame(ctx, url);
+      case 'GET /reference-frame':          return serveReferenceFrame(ctx, url);
       case 'GET /editor/status':            return editorStatus(ctx);
       case 'POST /editor/auth/login':       return editorAuthLogin(ctx);
       case 'POST /editor/auth/logout':      return editorAuthLogout();

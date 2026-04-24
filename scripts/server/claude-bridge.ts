@@ -8,9 +8,11 @@
  * imports from this module continue to work.
  */
 
+import { basename } from 'path';
 import { createStreamParser } from '../lib/stream-parser.js';
 import { buildPersistentArgs, resolveClaudeBin, cleanEnv } from '../lib/claude-subprocess.js';
 import { translateStreamEvent } from './event-translator.ts';
+import { validateAppJsx } from '../lib/validate-app-jsx.ts';
 
 // --- Types ---
 
@@ -391,6 +393,170 @@ export interface OneShotOpts {
   permissionMode?: string;
   /** Operation type for the lock (default: 'chat'). Set to false to skip auto-locking. */
   lockType?: string | false;
+  /** Initial generation_stage, used by the tool_use counter to decide when
+   * to emit the foundation → interactions transition. Only passed by the
+   * generate handler; chat/theme paths leave it undefined. */
+  initialStage?: 'reading_reference' | 'foundation';
+}
+
+// --- One-Shot Dispatch (extracted for testability) ---
+
+/**
+ * Mutable state accumulated across stream events in a single runOneShot call.
+ * Every field the dispatcher reads or writes lives here — the dispatcher
+ * closes over NO locals, so it's fully unit-testable with a synthetic state
+ * object and a spy onEvent callback.
+ */
+export interface OneShotRunState {
+  toolsUsed: number;
+  hasEdited: boolean;
+  hitMaxTokens: boolean;
+  /** Count of Write/Edit tool_use events. Drives generation_stage transitions. */
+  toolUseSeen: number;
+  currentStage: 'reading_reference' | 'foundation' | 'interactions' | null;
+  resultText: string;
+  errorSent: boolean;
+  /** tool_use_id -> {name, filePath}. Populated on tool_use, consumed on tool_result. */
+  pendingTools: Map<string, { name: string; filePath: string }>;
+  /** Monotonic floor for progress %. `calcProgress` ratchets this so progress
+   * never rewinds within a run. */
+  baseProgress: number;
+}
+
+export function createOneShotRunState(opts: { initialStage?: 'reading_reference' | 'foundation' } = {}): OneShotRunState {
+  return {
+    toolsUsed: 0,
+    hasEdited: false,
+    hitMaxTokens: false,
+    toolUseSeen: 0,
+    currentStage: opts.initialStage ?? null,
+    resultText: '',
+    errorSent: false,
+    pendingTools: new Map(),
+    baseProgress: 0,
+  };
+}
+
+/**
+ * Wall-clock and validator hooks the dispatcher needs. Injected so tests can
+ * supply deterministic stubs (fixed elapsed, fixed progress, stubbed
+ * validateAppJsx).
+ */
+export interface DispatchHelpers {
+  getElapsed: () => number;
+  /** Should return the current { progress, stage }. Implementations are
+   * expected to ratchet state.baseProgress so progress never decreases. */
+  calcProgress: (state: OneShotRunState) => { progress: number; stage: string };
+  /** Parse-check a file. Returns { ok: true } on success, { ok: false, error }
+   * on failure. Defaults to the real `validateAppJsx` — tests pass a stub. */
+  validateAppJsx?: (path: string) => { ok: true } | { ok: false; error: string };
+  /** PID for diagnostic logging only (max_tokens warning). Optional — tests
+   * can omit it; runOneShot supplies the real subprocess pid. */
+  processPid?: number;
+}
+
+/**
+ * Consume one parsed stream-json event. Mutates `state` in place and emits
+ * UI events via `onEvent`. This is the inner body of runOneShot's stream
+ * parser callback, lifted out so it can be exercised by unit tests without
+ * spawning a subprocess.
+ *
+ * Behavior is identical to the pre-refactor inline callback — every read and
+ * write goes through `state.*` instead of closure locals, and wall-clock /
+ * validator access happens via `helpers`.
+ */
+export function dispatchStreamEvent(
+  event: any,
+  state: OneShotRunState,
+  onEvent: EventCallback,
+  helpers: DispatchHelpers,
+): void {
+  const elapsed = helpers.getElapsed();
+  const validate = helpers.validateAppJsx ?? validateAppJsx;
+
+  if (event.type === 'assistant' && event.message?.content) {
+    if (event.message.stop_reason === 'max_tokens') {
+      state.hitMaxTokens = true;
+      const pidLabel = helpers.processPid != null ? ` PID ${helpers.processPid}` : '';
+      console.warn(`[OneShot]${pidLabel} hit max_tokens at ${elapsed}s (tools=${state.toolsUsed}, hasEdited=${state.hasEdited})`);
+    }
+    for (const block of event.message.content) {
+      if (block.type === 'tool_use') {
+        state.toolsUsed++;
+        const toolName = block.name || '';
+        if (toolName === 'Edit' || toolName === 'Write') state.hasEdited = true;
+        const inputSummary = summarizeInput(block);
+
+        if (block.id) {
+          state.pendingTools.set(block.id, { name: toolName, filePath: inputSummary });
+        }
+
+        // Advance the generation stage on Write/Edit boundaries. Read tool
+        // uses don't count — they're setup, not a step boundary.
+        if (toolName === 'Write' || toolName === 'Edit') {
+          state.toolUseSeen++;
+          if (state.toolUseSeen === 1 && state.currentStage === 'reading_reference') {
+            state.currentStage = 'foundation';
+            onEvent({ type: 'generation_stage', stage: 'foundation' });
+          } else if (state.toolUseSeen === 2) {
+            state.currentStage = 'interactions';
+            onEvent({ type: 'generation_stage', stage: 'interactions' });
+          }
+        }
+
+        onEvent({ type: 'tool_detail', name: toolName, input_summary: inputSummary, elapsed });
+        onEvent({ type: 'progress', ...helpers.calcProgress(state), elapsed });
+      }
+      if (block.type === 'text' && block.text) {
+        state.resultText = block.text;
+        onEvent({ type: 'token', text: block.text });
+      }
+    }
+  } else if (event.type === 'stream_event' && event.event?.delta?.text) {
+    onEvent({ type: 'token', text: event.event.delta.text });
+  } else if (event.type === 'tool_result') {
+    const toolDetail = event.tool_use_id ? state.pendingTools.get(event.tool_use_id) : undefined;
+    if (event.tool_use_id) state.pendingTools.delete(event.tool_use_id);
+
+    onEvent({
+      type: 'tool_result',
+      name: event.tool_name || '',
+      content: (typeof event.content === 'string' ? event.content : JSON.stringify(event.content || '')).slice(0, 500),
+      is_error: !!event.is_error,
+      elapsed,
+      _filePath: toolDetail?.filePath || '',
+      _toolName: toolDetail?.name || event.tool_name || '',
+    });
+
+    // After a successful Write/Edit to app.jsx, parse-check the file. If it
+    // parses, signal the UI to refresh the preview iframe. If it fails,
+    // surface the error without reloading — the last-known-good render stays.
+    const wasWriteOrEdit = toolDetail?.name === 'Write' || toolDetail?.name === 'Edit';
+    const targetedAppJsx = typeof toolDetail?.filePath === 'string' && basename(toolDetail.filePath) === 'app.jsx';
+    if (wasWriteOrEdit && targetedAppJsx && !event.is_error) {
+      const v = validate(toolDetail!.filePath);
+      if (v.ok) {
+        onEvent({ type: 'preview_reload' });
+      } else {
+        onEvent({
+          type: 'preview_reload_failed',
+          stage: state.currentStage === 'interactions' ? 'interactions' : 'foundation',
+          error: v.error,
+        });
+      }
+    }
+  } else if (event.type === 'result') {
+    if (event.is_error) {
+      const errMsg = event.result || 'Claude flagged the run as failed';
+      console.error(`[OneShot] Result is_error: ${errMsg}`);
+      onEvent({ type: 'error', message: errMsg });
+      state.errorSent = true;
+    } else {
+      state.resultText = event.result || state.resultText || 'Done.';
+    }
+  } else if (event.type === 'rate_limit_event') {
+    onEvent({ type: 'progress', ...helpers.calcProgress(state), stage: 'Rate limited, waiting...', elapsed });
+  }
 }
 
 export async function runOneShot(
@@ -441,25 +607,18 @@ export async function runOneShot(
   }
 
   let stderrBuffer = '';
-  let resultText = '';
-  let toolsUsed = 0;
-  let hasEdited = false;
-  let errorSent = false;
-  let hitMaxTokens = false;
+  const runState = createOneShotRunState({ initialStage: opts.initialStage });
   const startTime = Date.now();
   let lastStdoutTime = Date.now();
   let killedByTimeout = false;
-  const pendingTools = new Map<string, { name: string; filePath: string }>();
 
   function getElapsed() {
     return Math.round((Date.now() - startTime) / 1000);
   }
 
-  let baseProgress = 0;
-
-  function calcProgressLocal(): { progress: number; stage: string } {
-    const result = calcProgressFromCounters(getElapsed(), toolsUsed, hasEdited, baseProgress);
-    baseProgress = result.progress; // ratchet: progress never decreases in one-shot
+  function calcProgressLocal(state: OneShotRunState = runState): { progress: number; stage: string } {
+    const result = calcProgressFromCounters(getElapsed(), state.toolsUsed, state.hasEdited, state.baseProgress);
+    state.baseProgress = result.progress; // ratchet: progress never decreases in one-shot
     return result;
   }
 
@@ -504,59 +663,11 @@ export async function runOneShot(
   // Read stdout with stream parser
   const parse = createStreamParser((event: any) => {
     lastStdoutTime = Date.now();
-    const elapsed = getElapsed();
-
-    if (event.type === 'assistant' && event.message?.content) {
-      if (event.message.stop_reason === 'max_tokens') {
-        hitMaxTokens = true;
-        console.warn(`[OneShot] PID ${proc.pid} hit max_tokens at ${getElapsed()}s (tools=${toolsUsed}, hasEdited=${hasEdited})`);
-      }
-      for (const block of event.message.content) {
-        if (block.type === 'tool_use') {
-          toolsUsed++;
-          const toolName = block.name || '';
-          if (toolName === 'Edit' || toolName === 'Write') hasEdited = true;
-          const inputSummary = summarizeInput(block);
-
-          if (block.id) {
-            pendingTools.set(block.id, { name: toolName, filePath: inputSummary });
-          }
-
-          onEvent({ type: 'tool_detail', name: toolName, input_summary: inputSummary, elapsed });
-          onEvent({ type: 'progress', ...calcProgressLocal(), elapsed });
-        }
-        if (block.type === 'text' && block.text) {
-          resultText = block.text;
-          onEvent({ type: 'token', text: block.text });
-        }
-      }
-    } else if (event.type === 'stream_event' && event.event?.delta?.text) {
-      onEvent({ type: 'token', text: event.event.delta.text });
-    } else if (event.type === 'tool_result') {
-      const toolDetail = event.tool_use_id ? pendingTools.get(event.tool_use_id) : undefined;
-      if (event.tool_use_id) pendingTools.delete(event.tool_use_id);
-
-      onEvent({
-        type: 'tool_result',
-        name: event.tool_name || '',
-        content: (typeof event.content === 'string' ? event.content : JSON.stringify(event.content || '')).slice(0, 500),
-        is_error: !!event.is_error,
-        elapsed,
-        _filePath: toolDetail?.filePath || '',
-        _toolName: toolDetail?.name || event.tool_name || '',
-      });
-    } else if (event.type === 'result') {
-      if (event.is_error) {
-        const errMsg = event.result || 'Claude flagged the run as failed';
-        console.error(`[OneShot] Result is_error: ${errMsg}`);
-        onEvent({ type: 'error', message: errMsg });
-        errorSent = true;
-      } else {
-        resultText = event.result || resultText || 'Done.';
-      }
-    } else if (event.type === 'rate_limit_event') {
-      onEvent({ type: 'progress', ...calcProgressLocal(), stage: 'Rate limited, waiting...', elapsed });
-    }
+    dispatchStreamEvent(event, runState, onEvent, {
+      getElapsed,
+      calcProgress: calcProgressLocal,
+      processPid: proc.pid,
+    });
   });
 
   const stdoutReader = proc.stdout.getReader();
@@ -592,7 +703,7 @@ export async function runOneShot(
   // Release the operation lock now that the subprocess has exited.
   if (useLock) releaseLock();
 
-  console.log(`[OneShot] Completed in ${getElapsed()}s (${toolsUsed} tools, code ${exitCode})`);
+  console.log(`[OneShot] Completed in ${getElapsed()}s (${runState.toolsUsed} tools, code ${exitCode})`);
 
   // SIGTERM exit: process was cancelled via cancelCurrent()
   if (exitCode === 143 || exitCode === 137) {
@@ -601,7 +712,7 @@ export async function runOneShot(
     return null;
   }
 
-  if (killedByTimeout && !errorSent) {
+  if (killedByTimeout && !runState.errorSent) {
     onEvent({ type: 'error', message: `Claude stopped responding after ${getElapsed()}s. Try again.` });
     return null;
   }
@@ -609,9 +720,9 @@ export async function runOneShot(
   if (exitCode !== 0 && exitCode !== null) {
     const isMaxTurns = stderrBuffer.includes('max_turns') || stderrBuffer.includes('maxTurns');
     if (isMaxTurns) {
-      console.log(`[OneShot] Hit max_turns (hasEdited=${hasEdited}) — treating as success`);
-      resultText = (resultText || '') + '\n\n*[Ran out of turns — send another message to continue where I left off]*';
-    } else if (!errorSent) {
+      console.log(`[OneShot] Hit max_turns (hasEdited=${runState.hasEdited}) — treating as success`);
+      runState.resultText = (runState.resultText || '') + '\n\n*[Ran out of turns — send another message to continue where I left off]*';
+    } else if (!runState.errorSent) {
       onEvent({ type: 'error', message: stderrBuffer.slice(0, 500) || `Claude exited with code ${exitCode}` });
       return null;
     }
@@ -622,37 +733,48 @@ export async function runOneShot(
   // treat as a hard error. When hasEdited, the file was written but trailing
   // content (explanatory text, follow-up edits) may be missing — warn but
   // continue so the user at least sees a working app.
-  if (hitMaxTokens && !errorSent) {
-    if (!hasEdited) {
+  if (runState.hitMaxTokens && !runState.errorSent) {
+    if (!runState.hasEdited) {
       onEvent({
         type: 'error',
         message: 'Claude hit the output token limit before writing the file. Try a simpler prompt, or raise CLAUDE_CODE_MAX_OUTPUT_TOKENS.',
       });
-      errorSent = true;
+      runState.errorSent = true;
       return null;
     }
     console.warn(`[OneShot] max_tokens after file written — trailing content may be truncated`);
-    resultText = (resultText || '') + '\n\n*[Output was truncated at the token limit — the app was written but some follow-up content may be missing.]*';
+    runState.resultText = (runState.resultText || '') + '\n\n*[Output was truncated at the token limit — the app was written but some follow-up content may be missing.]*';
   }
 
   // Post-process
-  if (hasEdited) {
+  if (runState.hasEdited) {
     sanitizeAppJsx(projectRoot);
   }
 
-  if (!errorSent) {
+  let appJsxValid: boolean | undefined = undefined;
+  if (runState.hasEdited && opts.cwd) {
+    const appPath = `${opts.cwd}/app.jsx`;
+    try {
+      appJsxValid = validateAppJsx(appPath).ok;
+    } catch {
+      appJsxValid = false;
+    }
+  }
+
+  if (!runState.errorSent) {
     onEvent({
       type: 'complete',
-      text: resultText || 'Done.',
-      toolsUsed,
+      text: runState.resultText || 'Done.',
+      toolsUsed: runState.toolsUsed,
       elapsed: getElapsed(),
-      hasEdited,
+      hasEdited: runState.hasEdited,
       skipChat: opts.skipChat,
-      maxTokensHit: hitMaxTokens,
+      maxTokensHit: runState.hitMaxTokens,
+      appJsxValid,
     });
   }
 
-  return resultText || null;
+  return runState.resultText || null;
 }
 
 // --- Re-exports from legacy module ---
