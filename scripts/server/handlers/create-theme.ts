@@ -1,6 +1,8 @@
 /**
  * Save current app theme as a reusable catalog theme.
- * Uses one-shot Bun.spawn for the extraction subprocess.
+ * Delegates the Claude subprocess run to `runOneShot` so we don't maintain
+ * a third parallel stream-json loop alongside the persistent bridge and
+ * the theme switcher.
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -8,8 +10,7 @@ import { join } from 'path';
 import { reloadThemes } from '../config.ts';
 import type { ServerContext } from '../config.ts';
 import { resolveAppJsxPath } from '../app-context.js';
-import { buildClaudeArgs, cleanEnv, resolveClaudeBin } from '../../lib/claude-subprocess.js';
-import { createStreamParser } from '../../lib/stream-parser.js';
+import { runOneShot } from '../claude-bridge.ts';
 import type { EventCallback } from '../claude-bridge.ts';
 
 function slugify(text: string): string {
@@ -33,6 +34,7 @@ async function extractThemeFromAppJsx(
   themeId: string,
   themeName: string,
   model: string | undefined,
+  onEvent: EventCallback,
 ): Promise<string> {
   const themeDir = join(projectRoot, 'skills/vibes/themes');
   const archivePath = join(themeDir, 'archive.txt');
@@ -66,84 +68,37 @@ Tasks:
 
 Use oklch() for ALL color values.`;
 
-  const args = buildClaudeArgs({
-    outputFormat: 'stream-json',
-    maxTurns: 10,
-    tools: 'Edit,Read,Write',
-    model,
-    permissionMode: 'bypassPermissions',
-  });
+  console.log(`[SaveTheme] Running one-shot extraction for theme "${themeId}"...`);
 
-  console.log(`[SaveTheme] Spawning claude for theme "${themeId}"...`);
+  // Drop runOneShot's fine-grained progress/tool events — the caller drives
+  // its own wall-clock `saving_theme` status timer because those stream
+  // events don't map cleanly onto a single "extracting theme" UX stage.
+  // Forward errors so the user still sees meaningful failure reasons.
+  const filteredOnEvent: EventCallback = (event) => {
+    if (event.type === 'error') onEvent(event);
+  };
 
-  const proc = Bun.spawn({
-    cmd: [resolveClaudeBin(), ...args],
-    cwd: projectRoot,
-    env: cleanEnv(),
-    stdin: 'pipe',
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
+  const result = await runOneShot(
+    extractionPrompt,
+    {
+      lockType: 'save_theme',
+      skipChat: true,
+      maxTurns: 10,
+      tools: 'Edit,Read,Write',
+      model,
+      permissionMode: 'bypassPermissions',
+      cwd: projectRoot,
+    },
+    filteredOnEvent,
+    projectRoot,
+  );
 
-  proc.stdin.write(extractionPrompt);
-  proc.stdin.end();
-
-  let stderrBuffer = '';
-  let resultText = '';
-
-  // Read stderr
-  const stderrPromise = (async () => {
-    const reader = proc.stderr.getReader();
-    const decoder = new TextDecoder();
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        stderrBuffer += decoder.decode(value, { stream: true });
-      }
-    } catch {}
-  })();
-
-  // Read stdout
-  const parse = createStreamParser((event: any) => {
-    if (event.type === 'assistant' && event.message?.content) {
-      for (const block of event.message.content) {
-        if (block.type === 'text' && block.text) resultText = block.text;
-        if (block.type === 'tool_use') console.log(`[SaveTheme] Tool: ${block.name || ''}`);
-      }
-    } else if (event.type === 'result') {
-      if (event.is_error) console.error(`[SaveTheme] Result is_error: ${event.result}`);
-      else resultText = event.result || resultText || 'Done.';
-    }
-  });
-
-  // Start timeout BEFORE reading stdout so it fires even if the read loop hangs
-  const EXTRACT_TIMEOUT = 240_000;
-  const timeoutId = setTimeout(() => {
-    console.error(`[SaveTheme] Timeout after ${EXTRACT_TIMEOUT / 1000}s — killing subprocess`);
-    proc.kill('SIGTERM');
-  }, EXTRACT_TIMEOUT);
-
-  const reader = proc.stdout.getReader();
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      parse(value);
-    }
-  } catch {}
-
-  const exitCode = await proc.exited;
-  clearTimeout(timeoutId);
-  await stderrPromise;
-
-  if (exitCode !== 0) {
-    console.error(`[SaveTheme] Failed (code ${exitCode}): ${stderrBuffer.slice(0, 300)}`);
-    throw new Error(`Theme save failed (exit code ${exitCode})`);
+  if (result === null) {
+    throw new Error('Theme save was cancelled');
   }
 
   console.log(`[SaveTheme] Theme "${themeId}" created successfully`);
-  return resultText;
+  return result;
 }
 
 /**
@@ -183,7 +138,7 @@ export async function handleSaveTheme(
     }, 2000);
 
     try {
-      await extractThemeFromAppJsx(ctx.projectRoot, appCode, themeId, themeName, model);
+      await extractThemeFromAppJsx(ctx.projectRoot, appCode, themeId, themeName, model, onEvent);
     } finally {
       clearInterval(progressInterval);
     }
